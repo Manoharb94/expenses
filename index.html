@@ -72,6 +72,46 @@ function rangeUI(){
   o.forEach(function(x){h+='<option value="'+x[0]+'"'+(S.range===x[0]?" selected":"")+'>'+x[1]+'</option>'});
   return h+'</select><div class="dates"><div><div class="mute">From</div><input type="date" id="df" value="'+S.from+'"></div><div><div class="mute">To</div><input type="date" id="dt" value="'+S.to+'"></div></div>';
 }
+var PAL=["#1f6f5c","#c9772b","#4b7bb5","#b4432f","#8a6bb1","#d1a52b","#3f9aa8","#a35c7a"];
+function pie(by,total){
+  var ks=Object.keys(by).sort(function(a,b){return by[b]-by[a]}),items=[],rest=0;
+  ks.forEach(function(k,i){if(i<7)items.push([k,by[k]]);else rest+=by[k]});
+  if(rest>0)items.push(["Everything else",rest]);
+  var C=2*Math.PI*40,acc=0,svg='<svg viewBox="0 0 120 120" width="170" height="170" role="img" aria-label="Spending by category"><g transform="rotate(-90 60 60)">';
+  items.forEach(function(it,i){var len=it[1]/total*C;
+    svg+='<circle cx="60" cy="60" r="40" fill="none" stroke="'+PAL[i%8]+'" stroke-width="22" stroke-dasharray="'+len.toFixed(2)+' '+(C-len).toFixed(2)+'" stroke-dashoffset="'+(-acc).toFixed(2)+'"/>';acc+=len});
+  svg+='</g></svg>';
+  var lg='<div style="flex:1;min-width:160px">';
+  items.forEach(function(it,i){lg+='<div class="row" style="margin:5px 0;font-size:14px"><span><i style="display:inline-block;width:11px;height:11px;border-radius:3px;background:'+PAL[i%8]+';margin-right:7px"></i>'+esc(it[0])+'</span><span><b>'+Math.round(it[1]/total*100)+'%</b> <span class="mute">'+money(it[1])+'</span></span></div>'});
+  return '<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:center">'+svg+lg+'</div></div>';
+}
+function prevList(){
+  if(!S.from||!S.to)return null;
+  var a=new Date(S.from+"T00:00:00"),b=new Date(S.to+"T00:00:00"),days=Math.round((b-a)/864e5)+1;
+  var ps=new Date(a),pe=new Date(a);ps.setDate(a.getDate()-days);pe.setDate(a.getDate()-1);
+  var f=iso(ps),t=iso(pe);return S.txns.filter(function(x){var d=x.txn_date||"";return d>=f&&d<=t&&x.type==="out"});
+}
+function catTotals(list){var o={};list.forEach(function(t){var c=t.category||"Needs category";o[c]=(o[c]||0)+Number(t.amount)});return o}
+function insights(L,by,total){
+  var tips=[],DISC={"Food – Dining out":1,"Food – Online delivery":1,"Shopping – Offline":1,"Shopping – Online":1,"Entertainment":1,"Travel":1};
+  var outs=L.filter(function(t){return t.type==="out"}),ks=Object.keys(by).sort(function(a,b){return by[b]-by[a]});
+  if(!ks.length||total<=0)return tips;
+  var top=ks[0];tips.push("<b>"+esc(top)+"</b> is your biggest spend: "+money(by[top])+" ("+Math.round(by[top]/total*100)+"% of the total).");
+  var disc=0;ks.forEach(function(k){if(DISC[k])disc+=by[k]});
+  if(disc>0)tips.push("Eating out, delivery, shopping, entertainment and travel add up to <b>"+money(disc)+"</b> ("+Math.round(disc/total*100)+"%). These are the easiest to trim. Cutting 10% would save about "+money(disc*0.1)+".");
+  var fd=outs.filter(function(t){return t.category==="Food – Online delivery"});
+  if(fd.length>=3)tips.push("You placed <b>"+fd.length+" food delivery orders</b> averaging "+money(sum(fd,"out")/fd.length)+" each. Cooking at home a few of those times would add up.");
+  var pv=prevList();
+  if(pv&&pv.length){var pc=catTotals(pv);
+    ks.forEach(function(k){if(k==="Needs category")return;var was=pc[k]||0,now=by[k];
+      if(now-was>=500&&(was===0||now>=was*1.25))tips.push("<b>"+esc(k)+"</b> is up "+(was?Math.round((now-was)/was*100)+"%":"from nothing")+" compared with the previous period ("+money(was)+" to "+money(now)+").")})}
+  var cnt={};outs.forEach(function(t){var m=t.merchant||"Unknown";(cnt[m]=cnt[m]||{n:0,s:0}).n++;cnt[m].s+=Number(t.amount)});
+  Object.keys(cnt).sort(function(a,b){return cnt[b].s-cnt[a].s}).slice(0,12).some(function(m){var c=cnt[m];
+    if(c.n>=5&&c.s/c.n<600){tips.push("<b>"+c.n+" small payments to "+esc(m)+"</b> total "+money(c.s)+". Small amounts that repeat are easy to miss.");return true}return false});
+  var nc=by["Needs category"]||0;
+  if(nc>0&&nc/total>0.15)tips.push(Math.round(nc/total*100)+"% of your spending has no category yet ("+money(nc)+"). Choose categories so these ideas become more accurate.");
+  return tips.slice(0,6);
+}
 function vHome(){
   var L=S.txns.filter(inRange),pend=S.txns.filter(function(t){return !t.category}).length;
   var people={};L.forEach(function(t){var p=t.person||"?";(people[p]=people[p]||[]).push(t)});
@@ -84,6 +124,10 @@ function vHome(){
   h+='</div>';
   var by={};L.filter(function(t){return t.type==="out"}).forEach(function(t){var c=t.category||"Needs category";by[c]=(by[c]||0)+Number(t.amount)});
   var ks=Object.keys(by).sort(function(a,b){return by[b]-by[a]}),mx=by[ks[0]]||1;
+  var tot=ks.reduce(function(a,k){return a+by[k]},0);
+  if(tot>0){h+='<h2>Where the money goes</h2><div class="card">'+pie(by,tot);
+    var tp=insights(L,by,tot);
+    if(tp.length){h+='<h2>Ideas to spend less</h2><div class="card">';tp.forEach(function(x){h+='<div style="margin:0 0 10px">• '+x+'</div>'});h+='<div class="mute">Simple checks on your own numbers, not financial advice.</div></div>'}}
   h+='<h2>Spending by category</h2><div class="card">';
   if(!ks.length)h+='<span class="mute">Nothing in this period.</span>';
   ks.forEach(function(k){h+='<div style="margin-bottom:10px"><div class="row"><span>'+esc(k)+'</span><b>'+money(by[k])+'</b></div><div class="bar"><i style="width:'+Math.round(by[k]/mx*100)+'%"></i></div></div>'});
@@ -98,10 +142,10 @@ function vList(){
   return h+'</div>';
 }
 function vMe(){
-  return '<h1>Settings</h1><div class="card"><div class="mute">Your name (must match the name in your Shortcut)</div><input id="nm" value="'+esc(S.name)+'"><div class="mute">Household code</div><input id="cd" type="password" value="'+esc(S.code)+'"><div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><button class="btn" id="sv">Save</button></div>';
+  return '<h1>Settings</h1><div class="card"><div class="mute">Your name (must match PERSON in your Gmail script)</div><input id="nm" value="'+esc(S.name)+'"><div class="mute">Household code</div><input id="cd" type="password" value="'+esc(S.code)+'"><div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><button class="btn" id="sv">Save</button></div>';
 }
 function vSetup(){
-  return '<h1>Welcome</h1><div class="card"><div class="mute">Your name (same as in your Shortcut)</div><input id="nm"><div class="mute">Household code</div><input id="cd" type="password"><button class="btn" id="go">Start</button></div>';
+  return '<h1>Welcome</h1><div class="card"><div class="mute">Your name (same as PERSON in your Gmail script)</div><input id="nm"><div class="mute">Household code</div><input id="cd" type="password"><button class="btn" id="go">Start</button></div>';
 }
 function render(){
   var el=document.getElementById("app"),nav=document.getElementById("nav");
@@ -139,6 +183,7 @@ function pick(t,auto){
 document.getElementById("nav").onclick=function(e){var t=e.target.dataset&&e.target.dataset.t;if(t){S.tab=t;render()}};
 document.addEventListener("visibilitychange",function(){if(!document.hidden&&S.code)load()});
 setInterval(function(){if(S.code&&!document.hidden&&!document.getElementById("sheet").innerHTML)load()},30000);
+try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
 S.name=ls("name")||"";S.code=ls("code")||"";S.cur=ls("cur")||"₹";
 preset("month");if(S.code&&S.name)load();else render();
 </script>
