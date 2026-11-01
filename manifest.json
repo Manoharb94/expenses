@@ -1,0 +1,1 @@
+{"name": "Our Expenses", "short_name": "Expenses", "start_url": "./", "display": "standalone", "background_color": "#1f6f5c", "theme_color": "#1f6f5c", "icons": [{"src": "icon.png", "sizes": "512x512", "type": "image/png"}]}
