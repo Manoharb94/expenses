@@ -379,7 +379,7 @@ function pick(t){
   sh.innerHTML=h;
   document.getElementById("later").onclick=function(){sh.innerHTML=""};
   sh.querySelectorAll("[data-c]").forEach(function(b){b.onclick=async function(){
-    var cat=CATS[+b.dataset.c],only=document.getElementById("po").checked,note=g("pn").trim();sh.innerHTML="";
+    var cat=CATS[+b.dataset.c],only=document.getElementById("po").checked||!t.merchant_key||t.merchant_key==="unknown",note=g("pn").trim();sh.innerHTML="";
     try{
       if(only){var body={category:cat};if(note||t.note)body.note=note||null;
         await api("transactions?id=eq."+t.id,{method:"PATCH",headers:{Prefer:"return=minimal"},body:JSON.stringify(body)})}
