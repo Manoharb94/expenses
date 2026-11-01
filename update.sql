@@ -9,10 +9,13 @@ begin
   if t is null then return new; end if;
   t := regexp_replace(t, 'https?://[^[:space:]>]+', ' ', 'g');
   -- 1) amount written right next to "debited/credited/sent/spent/paid"
+  a := regexp_match(t, '(?:^|\n)[ \t]*(?:Rs|INR)\.?[ ]?([0-9][0-9,]*(?:\.[0-9]{1,2})?)', 'i');
+  if a is null then
   a := regexp_match(t, '(?:\m(?:Rs|INR)\.?|₹)\s?([0-9][0-9,]*(?:\.[0-9]{1,2})?)\s+(?:has been |is |was |were )?(?:successfully )?(?:debited|credited|deposited|withdrawn)', 'i');
   if a is null then a := regexp_match(t, '(?:debited|credited|sent|spent|paid|received|withdrawn)\s+(?:by\s+|with\s+|for\s+)?(?:\m(?:Rs|INR)\.?|₹)\s?([0-9][0-9,]*(?:\.[0-9]{1,2})?)', 'i'); end if;
   -- 2) fallback: first real "Rs"/"INR"/₹ amount (not letters inside another word)
   if a is null then a := regexp_match(t, '(?:\m(?:Rs|INR)\.?|₹)\s?([0-9][0-9,]*(?:\.[0-9]{1,2})?)', 'i'); end if;
+  end if;
   if a is not null then new.amount := replace(a[1], ',', '')::numeric; end if;
   -- type: whichever keyword appears first in the message
   new.type := null;
@@ -56,7 +59,6 @@ begin
   end if;
   return new;
 end $$;
-
 
 -- RUN 3: your own UPI ID is a transfer between you and your wife
 insert into merchants (merchant_key, name, category) values ('er-manoharb-1-okaxis','er.manoharb-1@okaxis','Transfer between us') on conflict (merchant_key) do update set category = excluded.category;
