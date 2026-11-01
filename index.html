@@ -45,9 +45,9 @@ nav button{flex:1;border:0;background:none;color:var(--mute);padding:10px 2px;fo
 <div id="sheet"></div>
 <script>
 var URLB="https://fwxhclagrwlzxvsmaekt.supabase.co/rest/v1/",KEY="sb_publishable_PiCUzSknFyCfGfEVzTiQbg_qEkBYwL_";
-var TRF="Transfer between us",IGN="Ignore (don't count)",UNC="Others (no category yet)";
-var CATS=["Groceries – Offline","Groceries – Online","Shopping – Offline","Shopping – Online","Food – Dining out","Food – Online delivery","Transport","Fuel","Bills & Utilities","Rent / EMI","Health","Entertainment","Travel","Education","Family & Friends","Salary / Income","Other",TRF,IGN];
-var NOBUD={"Salary / Income":1};NOBUD[TRF]=1;NOBUD[IGN]=1;
+var TRF="Transfer between us",IGN="Ignore (don't count)",UNC="Others (no category yet)",CCB="Credit card bill (paid)";
+var CATS=["Groceries – Offline","Groceries – Online","Shopping – Offline","Shopping – Online","Food – Dining out","Food – Online delivery","Transport","Fuel","Bills & Utilities","Rent / EMI","Health","Entertainment","Travel","Education","Family & Friends","Salary / Income","Other",TRF,CCB,IGN];
+var NOBUD={"Salary / Income":1};NOBUD[TRF]=1;NOBUD[IGN]=1;NOBUD[CCB]=1;
 var S={tab:"home",range:"month",from:"",to:"",rp:"this",hf:"all",pf:"",txns:[],budgets:[],fixed:[],planErr:"",cur:"₹",code:"",name:"",err:"",loaded:false};
 function ls(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
@@ -73,11 +73,19 @@ async function load(){
   if(S.loaded&&!S.pf)S.pf=S.name;
   render();
 }
+function pdate(off){var n=new Date(),ms=S.ms||1,m=n.getMonth()+off;
+  if(n.getDate()<Math.min(ms,new Date(n.getFullYear(),n.getMonth()+1,0).getDate()))m--;
+  return new Date(n.getFullYear(),m,Math.min(ms,new Date(n.getFullYear(),m+1,0).getDate()))}
+function pend(off){var d=pdate(off+1);d.setDate(d.getDate()-1);return d}
+function pkey(ds){if(!ds)return "";var d=new Date(ds+"T00:00:00"),m=d.getMonth();
+  if(d.getDate()<Math.min(S.ms||1,new Date(d.getFullYear(),m+1,0).getDate()))m--;return ym(new Date(d.getFullYear(),m,1))}
+function plabel(off){var a=pdate(off),b=pend(off),o={day:"numeric",month:"short"};
+  return (S.ms||1)===1?a.toLocaleString("en-IN",{month:"long",year:"numeric"}):a.toLocaleString("en-IN",o)+" – "+b.toLocaleString("en-IN",o)+" "+b.getFullYear()}
 function preset(r){var n=new Date();S.range=r;
-  if(r==="month"){S.from=iso(new Date(n.getFullYear(),n.getMonth(),1));S.to=iso(n)}
-  else if(r==="last"){S.from=iso(new Date(n.getFullYear(),n.getMonth()-1,1));S.to=iso(new Date(n.getFullYear(),n.getMonth(),0))}
+  if(r==="month"){S.from=iso(pdate(0));S.to=iso(n)}
+  else if(r==="last"){S.from=iso(pdate(-1));S.to=iso(pend(-1))}
   else if(r==="all"){S.from="";S.to=""}}
-function isCount(t){return t.category!==TRF&&t.category!==IGN}
+function isCount(t){return t.category!==TRF&&t.category!==IGN&&t.category!==CCB}
 function personOK(t){return !S.pf||S.pf==="__both"||t.person===S.pf}
 function inRange(t){var d=t.txn_date||"";return personOK(t)&&(!S.from||d>=S.from)&&(!S.to||d<=S.to)}
 function sum(l,ty){return l.filter(function(t){return t.type===ty}).reduce(function(a,t){return a+Number(t.amount)},0)}
@@ -137,8 +145,8 @@ function insights(Lc,by,total){
   return tips.slice(0,6);
 }
 /* ---------- budgets and fixed items ---------- */
-function spentThisMonth(){var key=ym(new Date()),o={};
-  S.txns.forEach(function(t){if(t.type==="out"&&isCount(t)&&(t.txn_date||"").slice(0,7)===key){var c=t.category||UNC;o[c]=(o[c]||0)+Number(t.amount)}});return o}
+function spentThisMonth(){var key=monthKey(0),o={};
+  S.txns.forEach(function(t){if(t.type==="out"&&isCount(t)&&pkey(t.txn_date)===key){var c=t.category||UNC;o[c]=(o[c]||0)+Number(t.amount)}});return o}
 function occurs(f,m){
   if(f.freq==="yearly")return Number(f.month||1)===m;
   if(f.freq==="quarterly")return (((m-Number(f.month||1))%3)+3)%3===0;
@@ -151,17 +159,17 @@ function dueSoon(){
     var diff=Math.round((d-t0)/864e5);if(diff>=0&&diff<=7)out.push({f:f,d:d,diff:diff})}});
   return out.sort(function(a,b){return a.diff-b.diff})}
 /* ---------- forecast ---------- */
-function monthStart(off){var n=new Date();return new Date(n.getFullYear(),n.getMonth()+off,1)}
+function monthStart(off){return pdate(off)}
 function monthKey(off){return ym(monthStart(off))}
-function txIn(key){return S.txns.filter(function(t){return personOK(t)&&(t.txn_date||"").slice(0,7)===key})}
+function txIn(key){return S.txns.filter(function(t){return personOK(t)&&pkey(t.txn_date)===key})}
 function fixedCats(){var o={};S.fixed.forEach(function(f){if(f.category)o[f.category]=1});return o}
 function monthVar(key,type){var fc=fixedCats();
   return txIn(key).filter(function(t){return t.type===type&&isCount(t)&&(type==="in"||!fc[t.category])}).reduce(function(a,t){return a+Number(t.amount)},0)}
 function forecastBase(){
-  var now=new Date(),cur=ym(now),mine=S.txns.filter(personOK).filter(function(t){return t.txn_date});
+  var now=new Date(),cur=monthKey(0),mine=S.txns.filter(personOK).filter(function(t){return t.txn_date});
   if(!mine.length)return {n:0,out:0,inn:0,basis:"no data yet"};
-  var earliest=mine.map(function(t){return t.txn_date.slice(0,7)}).sort()[0];
-  if(earliest>=cur){var day=now.getDate(),dim=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
+  var earliest=mine.map(function(t){return pkey(t.txn_date)}).sort()[0];
+  if(earliest>=cur){var day=Math.round((new Date(iso(now)+"T00:00:00")-pdate(0))/864e5)+1,dim=Math.round((pdate(1)-pdate(0))/864e5);
     return {n:0,out:monthVar(cur,"out")/day*dim,inn:monthVar(cur,"in")/day*dim,basis:"this month so far, projected to a full month"}}
   var ks=[];for(var i=1;i<=3;i++){var k=monthKey(-i);if(k<earliest)break;ks.push(k)}
   var o=0,n=0;ks.forEach(function(k){o+=monthVar(k,"out");n+=monthVar(k,"in")});
@@ -186,6 +194,18 @@ function forecastView(n){
   return h;
 }
 /* ---------- views ---------- */
+function isCard(t){return t.kind==="card"||t.category===CCB}
+function cardSums(L){
+  var sp=L.filter(function(t){return t.kind==="card"&&t.type==="out"&&isCount(t)});
+  var bank=L.filter(function(t){return t.category===CCB&&t.kind!=="card"&&t.type==="out"});
+  var cr=L.filter(function(t){return t.category===CCB&&t.kind==="card"&&t.type==="in"});
+  var paid=sum(bank,"out")||sum(cr,"in");
+  return {spent:sum(sp,"out"),n:sp.length,paid:paid};
+}
+function cardBlock(L){
+  var c=cardSums(L);if(!c.n&&!c.paid)return '';
+  return '<h2>Credit card</h2><div class="card"><div class="row" style="margin:4px 0"><span>Spent on card ('+c.n+' payments)</span><b class="out">'+money(c.spent)+'</b></div><div class="row" style="margin:4px 0"><span>Card bill payments made</span><b>'+money(c.paid)+'</b></div><div class="row" style="margin:4px 0"><span>Spent minus paid</span><b>'+money(c.spent-c.paid)+'</b></div><div class="note">Card spends count in Total spent. Bill payments from your bank are left out so nothing is counted twice.</div></div>';
+}
 function trfBlock(L){
   var tr=L.filter(function(t){return t.category===TRF});if(!tr.length)return '';
   var by={};tr.forEach(function(t){var p=t.person||"?";by[p]=by[p]||{s:0,r:0};if(t.type==="out")by[p].s+=Number(t.amount);else by[p].r+=Number(t.amount)});
@@ -202,7 +222,8 @@ function vHome(){
   if(pend)h+='<div class="card row"><span>'+pend+' need a category</span><button class="btn s" id="fix">Review</button></div>';
   var nOut=Lc.filter(function(t){return t.type==="out"}).length,nIn=Lc.length-nOut;
   var who=S.pf==="__both"?"by both of us":(S.pf===S.name?"by you":"by "+S.pf);
-  h+='<div class="grid"><div class="card"><div class="mute">Total spent '+esc(who)+'</div><div style="font-size:24px;font-weight:700" class="out">'+money(sum(Lc,"out"))+'</div><div class="mute">'+nOut+' payments, every category</div></div><div class="card"><div class="mute">Money received</div><div style="font-size:24px;font-weight:700" class="in">'+money(sum(Lc,"in"))+'</div><div class="mute">'+nIn+' credits</div></div></div>';
+  h+='<div class="grid"><div class="card"><div class="mute">Total spent '+esc(who)+'</div><div style="font-size:24px;font-weight:700" class="out">'+money(sum(Lc,"out"))+'</div><div class="mute">'+nOut+' payments, every category'+(cardSums(L).n?' · bank '+money(sum(Lc.filter(function(t){return t.kind!=="card"}),"out"))+' · card '+money(cardSums(L).spent):'')+'</div></div><div class="card"><div class="mute">Money received</div><div style="font-size:24px;font-weight:700" class="in">'+money(sum(Lc,"in"))+'</div><div class="mute">'+nIn+' credits</div></div></div>';
+  h+=cardBlock(L);
   h+=trfBlock(L);
   if(S.pf==="__both"&&Object.keys(people).length>1){h+='<h2>By person</h2><div class="grid">';
     Object.keys(people).forEach(function(p){h+='<div class="card"><div class="mute">'+esc(p)+(p===S.name?" (you)":"")+'</div><div style="font-size:20px;font-weight:700" class="out">'+money(sum(people[p],"out"))+'</div><div class="mute">received '+money(sum(people[p],"in"))+'</div></div>'});
@@ -227,19 +248,19 @@ function listFilter(){
   var L=S.txns.filter(inRange),hf=S.hf||"all";
   var F=L.filter(function(t){
     if(hf==="out")return t.type==="out"&&isCount(t);if(hf==="in")return t.type==="in"&&isCount(t);
-    if(hf==="none")return !t.category;if(hf==="trf")return t.category===TRF;return true});
+    if(hf==="none")return !t.category;if(hf==="trf")return t.category===TRF;if(hf==="card")return isCard(t);return true});
   return {L:L,F:F,hf:hf};
 }
 function vList(){
   var r=listFilter(),L=r.L,F=r.F,hf=r.hf;
-  var n={all:L.length,out:L.filter(function(t){return t.type==="out"&&isCount(t)}).length,in:L.filter(function(t){return t.type==="in"&&isCount(t)}).length,none:L.filter(function(t){return !t.category}).length,trf:L.filter(function(t){return t.category===TRF}).length};
+  var n={all:L.length,out:L.filter(function(t){return t.type==="out"&&isCount(t)}).length,in:L.filter(function(t){return t.type==="in"&&isCount(t)}).length,none:L.filter(function(t){return !t.category}).length,trf:L.filter(function(t){return t.category===TRF}).length,card:L.filter(isCard).length};
   var h='<h1>History</h1>'+rangeUI()+'<div class="row" style="margin-bottom:10px"><button class="btn ghost s" id="addx">+ Add cash / other</button><button class="btn ghost s" id="csvb">Export CSV</button></div><div class="tabs">';
-  [["all","All"],["out","Spent"],["in","Received"],["trf","Transfers"],["none","No category"]].forEach(function(x){h+='<button class="tab'+(hf===x[0]?" on":"")+'" data-hf="'+x[0]+'">'+x[1]+' ('+n[x[0]]+')</button>'});
-  var line=hf==="trf"?'Sent '+money(sum(F,"out"))+' · Received '+money(sum(F,"in")):'Spent '+money(sum(F.filter(isCount),"out"))+' · Received '+money(sum(F.filter(isCount),"in"));
+  [["all","All"],["out","Spent"],["in","Received"],["trf","Transfers"],["card","Credit card"],["none","No category"]].forEach(function(x){h+='<button class="tab'+(hf===x[0]?" on":"")+'" data-hf="'+x[0]+'">'+x[1]+' ('+n[x[0]]+')</button>'});
+  var cs=cardSums(F),line=hf==="card"?'Card spends '+money(cs.spent)+' · Bill payments '+money(cs.paid):hf==="trf"?'Sent '+money(sum(F,"out"))+' · Received '+money(sum(F,"in")):'Spent '+money(sum(F.filter(isCount),"out"))+' · Received '+money(sum(F.filter(isCount),"in"));
   h+='</div><div class="mute" style="margin:0 0 8px">'+line+'. Tap a payment to choose its category.</div><div class="card">';
   if(!F.length)h+='<span class="mute">Nothing here for these dates.</span>';
   F.forEach(function(t){
-    h+='<div class="tx tap" data-cat="'+t.id+'"><div class="row"><b>'+esc(t.merchant||"Unknown")+'</b><b class="'+t.type+'">'+(t.type==="out"?"−":"+")+money(t.amount)+'</b></div><div class="row"><span class="mute">'+esc(t.txn_date||"")+' · '+esc(t.person||"")+'</span><span><span class="tag'+(t.category?'':' warn')+'">'+esc(t.category||"Choose category")+'</span>'+(t.person===S.name?'<button class="x" data-del="'+t.id+'" aria-label="Delete">×</button>':'')+'</span></div>'+(t.note?'<div class="note">'+esc(t.note)+'</div>':'')+'</div>';
+    h+='<div class="tx tap" data-cat="'+t.id+'"><div class="row"><b>'+esc(t.merchant||"Unknown")+'</b><b class="'+t.type+'">'+(t.type==="out"?"−":"+")+money(t.amount)+'</b></div><div class="row"><span class="mute">'+esc(t.txn_date||"")+' · '+esc(t.person||"")+'</span><span>'+(t.kind==="card"?'<span class="tag">💳 card</span> ':'')+'<span class="tag'+(t.category?'':' warn')+'">'+esc(t.category||"Choose category")+'</span>'+(t.person===S.name?'<button class="x" data-del="'+t.id+'" aria-label="Delete">×</button>':'')+'</span></div>'+(t.note?'<div class="note">'+esc(t.note)+'</div>':'')+'</div>';
   });
   return h+'</div>';
 }
@@ -251,10 +272,11 @@ function vReports(){
   if(S.rp==="next")return h+forecastView(1);
   if(S.rp==="year")return h+forecastView(12);
   var off=S.rp==="last"?-1:0,key=monthKey(off),items=txIn(key),Lc=items.filter(isCount);
-  var label=monthStart(off).toLocaleString("en-IN",{month:"long",year:"numeric"});
+  var label=plabel(off);
   var spent=sum(Lc,"out"),rec=sum(Lc,"in");
   h+='<h2>'+esc(label)+(off===0?" (so far)":"")+'</h2><div class="grid"><div class="card"><div class="mute">Spent</div><div style="font-size:22px;font-weight:700" class="out">'+money(spent)+'</div></div><div class="card"><div class="mute">Money received</div><div style="font-size:22px;font-weight:700" class="in">'+money(rec)+'</div></div></div>';
   h+='<div class="card row"><span>Left over (received − spent)</span><b class="'+(rec-spent>=0?"in":"out")+'">'+money(rec-spent)+'</b></div>';
+  h+=cardBlock(items);
   h+=trfBlock(items);
   var by=catTotals(Lc.filter(function(t){return t.type==="out"})),pby=catTotals(txIn(monthKey(off-1)).filter(isCount).filter(function(t){return t.type==="out"}));
   var ks=Object.keys(by).sort(function(a,b){return by[b]-by[a]});
@@ -285,8 +307,15 @@ function vPlan(){
   h+='</select><button class="btn" id="fadd">Add fixed expense</button><div class="note">Fixed items feed the forecast. Everyday spending in the same category is left out of the average, so nothing is counted twice.</div></div>';
   return h;
 }
+function salaryDay(){
+  var mine=S.txns.filter(function(t){return t.type==="in"&&t.txn_date&&t.person===S.name});
+  var c=mine.filter(function(t){return t.category==="Salary / Income"});
+  if(!c.length){var lim=iso(new Date(Date.now()-90*864e5));c=mine.filter(function(t){return isCount(t)&&t.txn_date>=lim}).sort(function(a,b){return b.amount-a.amount}).slice(0,1)}
+  if(!c.length)return null;
+  c.sort(function(a,b){return a.txn_date<b.txn_date?1:-1});var t=c[0];
+  return {day:Number(t.txn_date.slice(8,10)),amount:t.amount,date:t.txn_date}}
 function vMe(){
-  return '<h1>Settings</h1><div class="card"><div class="mute">Your name (must match PERSON in your Gmail script)</div><input id="nm" value="'+esc(S.name)+'"><div class="mute">Household code</div><input id="cd" type="password" value="'+esc(S.code)+'"><div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><button class="btn" id="sv">Save</button></div>';
+  return '<h1>Settings</h1><div class="card"><div class="mute">Your name (must match PERSON in your Gmail script)</div><input id="nm" value="'+esc(S.name)+'"><div class="mute">Household code</div><input id="cd" type="password" value="'+esc(S.code)+'"><div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><div class="mute">Your month starts on day (1 = normal calendar month)</div><input id="ms" type="number" inputmode="numeric" min="1" max="31" value="'+(S.ms||1)+'"><button class="btn ghost s" id="msal" style="margin-bottom:10px">Use my salary credit day</button><div class="note" id="msn">This is saved on this phone only. Set the same day on the other phone. Reports, budgets and forecasts all follow it.</div><button class="btn" id="sv">Save</button></div>';
 }
 function vSetup(){
   return '<h1>Welcome</h1><div class="card"><div class="mute">Your name (same as PERSON in your Gmail script)</div><input id="nm"><div class="mute">Household code</div><input id="cd" type="password"><button class="btn" id="go">Start</button></div>';
@@ -312,7 +341,10 @@ function render(){
   el.querySelectorAll("[data-del]").forEach(function(b){b.onclick=async function(e){e.stopPropagation();if(confirm("Delete this transaction?")){try{await api("transactions?id=eq."+b.dataset.del,{method:"DELETE"})}catch(x){alert(x.message)}load()}}});
   var ax=q("addx");if(ax)ax.onclick=addSheet;
   var cb=q("csvb");if(cb)cb.onclick=function(){csv(listFilter().F)};
-  var sv=q("sv");if(sv)sv.onclick=function(){S.name=g("nm").trim()||S.name;S.code=g("cd").trim()||S.code;S.cur=g("cu")||"₹";ls("name",S.name);ls("code",S.code);ls("cur",S.cur);S.tab="home";load()};
+  var ma=q("msal");if(ma)ma.onclick=function(){var r=salaryDay(),n=q("msn");
+    if(!r){n.textContent="No salary credit found yet. Mark your salary payee as Salary / Income in History first.";return}
+    q("ms").value=r.day;n.textContent="Found "+money(r.amount)+" credited on "+r.date+". Day "+r.day+" filled in. Press Save."};
+  var sv=q("sv");if(sv)sv.onclick=function(){S.ms=Math.min(31,Math.max(1,parseInt(g("ms"),10)||1));ls("ms",S.ms);if(S.range==="month"||S.range==="last")preset(S.range);S.name=g("nm").trim()||S.name;S.code=g("cd").trim()||S.code;S.cur=g("cu")||"₹";ls("name",S.name);ls("code",S.code);ls("cur",S.cur);S.tab="home";load()};
   var svb=q("svb");if(svb)svb.onclick=saveBudgets;
   var fa=q("fadd");if(fa)fa.onclick=addFixed;
   el.querySelectorAll("[data-fdel]").forEach(function(b){b.onclick=async function(){if(confirm("Remove this fixed expense?")){try{await api("fixed_items?id=eq."+b.dataset.fdel,{method:"DELETE"})}catch(x){alert(x.message)}load()}}});
@@ -334,8 +366,8 @@ async function addFixed(){
   catch(e){alert("Could not save: "+e.message)}
 }
 function csv(F){
-  var rows=[["Date","Person","Type","Payee","Category","Amount","Note"]];
-  F.forEach(function(t){rows.push([t.txn_date,t.person,t.type,t.merchant,t.category||"",t.amount,t.note||""])});
+  var rows=[["Date","Person","Type","Source","Payee","Category","Amount","Note"]];
+  F.forEach(function(t){rows.push([t.txn_date,t.person,t.type,t.kind||"bank",t.merchant,t.category||"",t.amount,t.note||""])});
   var txt=rows.map(function(r){return r.map(function(c){return '"'+String(c==null?"":c).replace(/"/g,'""')+'"'}).join(",")}).join("\r\n");
   var a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["﻿"+txt],{type:"text/csv"}));a.download="expenses.csv";document.body.appendChild(a);a.click();a.remove();
 }
@@ -380,7 +412,7 @@ function idle(){return !document.hidden&&S.code&&S.tab!=="plan"&&S.tab!=="me"&&!
 document.addEventListener("visibilitychange",function(){if(idle())load()});
 setInterval(function(){if(idle())load()},30000);
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
-S.pf=ls("pf")||"";S.name=ls("name")||"";S.code=ls("code")||"";S.cur=ls("cur")||"₹";
+S.pf=ls("pf")||"";S.name=ls("name")||"";S.code=ls("code")||"";S.cur=ls("cur")||"₹";S.ms=parseInt(ls("ms"),10)||1;
 preset("month");if(S.code&&S.name)load();else render();
 </script>
 </body>
