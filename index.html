@@ -45,9 +45,10 @@ nav button{flex:1;border:0;background:none;color:var(--mute);padding:10px 2px;fo
 <div id="sheet"></div>
 <script>
 var URLB="https://fwxhclagrwlzxvsmaekt.supabase.co/rest/v1/",KEY="sb_publishable_PiCUzSknFyCfGfEVzTiQbg_qEkBYwL_";
-var TRF="Transfer between us",IGN="Ignore (don't count)",UNC="Others (no category yet)",CCB="Credit card bill (paid)";
-var CATS=["Groceries – Offline","Groceries – Online","Shopping – Offline","Shopping – Online","Food – Dining out","Food – Online delivery","Transport","Fuel","Bills & Utilities","Rent / EMI","Health","Entertainment","Travel","Education","Home loan EMI","Kid education","Kid day care","Maid","Cook","Car cleaning","Electricity bill","Gas bill","Family donation","Family & Friends","Salary / Income","Other",TRF,CCB,IGN];
-var NOBUD={"Salary / Income":1};NOBUD[TRF]=1;NOBUD[IGN]=1;NOBUD[CCB]=1;
+var TRF="Transfer between us",IGN="Ignore (don't count)",UNC="Others (no category yet)",CCB="Credit card bill (paid)",LOUT="Lend out",LIN="Lend in";
+var CATS=["Groceries – Offline","Groceries – Online","Shopping – Offline","Shopping – Online","Food – Dining out","Food – Online delivery","Transport","Fuel","Bills & Utilities","Rent / EMI","Health","Entertainment","Travel","Education","Home loan EMI","Kid education","Kid day care","Maid","Cook","Car cleaning","Electricity bill","Gas bill","Family donation","Family & Friends","Salary / Income","Other",LOUT,LIN,TRF,CCB,IGN];
+var NOBUD={"Salary / Income":1};NOBUD[TRF]=1;NOBUD[IGN]=1;NOBUD[CCB]=1;NOBUD[LOUT]=1;NOBUD[LIN]=1;
+var NOBUDGET={};for(var k in NOBUD)NOBUDGET[k]=1;["Rent / EMI","Education","Home loan EMI","Kid education","Kid day care","Maid","Cook","Car cleaning","Electricity bill","Gas bill","Family donation","Family & Friends"].forEach(function(c){NOBUDGET[c]=1});
 var S={tab:"home",range:"month",from:"",to:"",rp:"this",hf:"all",pf:"",txns:[],budgets:[],fixed:[],planErr:"",cur:"₹",code:"",name:"",err:"",loaded:false};
 function ls(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
@@ -85,7 +86,7 @@ function preset(r){var n=new Date();S.range=r;
   if(r==="month"){S.from=iso(pdate(0));S.to=iso(n)}
   else if(r==="last"){S.from=iso(pdate(-1));S.to=iso(pend(-1))}
   else if(r==="all"){S.from="";S.to=""}}
-function isCount(t){return t.category!==TRF&&t.category!==IGN&&t.category!==CCB}
+function isCount(t){return t.category!==TRF&&t.category!==IGN&&t.category!==CCB&&t.category!==LOUT&&t.category!==LIN}
 function personOK(t){return !S.pf||S.pf==="__both"||t.person===S.pf}
 function inRange(t){var d=t.txn_date||"";return personOK(t)&&(!S.from||d>=S.from)&&(!S.to||d<=S.to)}
 function sum(l,ty){return l.filter(function(t){return t.type===ty}).reduce(function(a,t){return a+Number(t.amount)},0)}
@@ -213,6 +214,21 @@ function trfBlock(L){
   Object.keys(by).forEach(function(p){h+='<div class="row" style="margin:4px 0"><span>'+esc(p)+'</span><span>sent <b>'+money(by[p].s)+'</b> · received <b>'+money(by[p].r)+'</b></span></div>'});
   return h+'<div class="note">Money moved between you two. It is left out of spending and money received.</div></div>';
 }
+function lendBlock(){
+  var by={},any=false;
+  S.txns.filter(function(t){return personOK(t)&&(t.category===LOUT||t.category===LIN)}).forEach(function(t){
+    any=true;var k=t.merchant||"Unknown",o=by[k]=by[k]||{lent:0,back:0,took:0,paid:0},a=Number(t.amount);
+    if(t.category===LOUT){if(t.type==="out")o.lent+=a;else o.back+=a}else{if(t.type==="in")o.took+=a;else o.paid+=a}});
+  if(!any)return '';
+  var rows=Object.keys(by).map(function(k){var o=by[k],net=Math.round((o.lent-o.back-(o.took-o.paid))*100)/100;return {k:k,o:o,net:net}});
+  rows.sort(function(a,b){return (a.net===0)-(b.net===0)||Math.abs(b.net)-Math.abs(a.net)});
+  var get=0,owe=0;rows.forEach(function(r){if(r.net>0)get+=r.net;else if(r.net<0)owe-=r.net});
+  var h='<h2>Lending</h2><div class="card"><div class="grid" style="margin-bottom:8px"><div><div class="mute">You will get</div><b class="in">'+money(get)+'</b></div><div><div class="mute">You have to pay</div><b class="out">'+money(owe)+'</b></div></div>';
+  rows.forEach(function(r){var o=r.o,st=r.net>0?'owes you <b class="in">'+money(r.net)+'</b>':r.net<0?'you owe <b class="out">'+money(-r.net)+'</b>':'<span class="mute">settled ✓</span>';
+    var d=[];if(o.lent)d.push("lent "+money(o.lent));if(o.back)d.push("got back "+money(o.back));if(o.took)d.push("borrowed "+money(o.took));if(o.paid)d.push("paid back "+money(o.paid));
+    h+='<div style="margin:8px 0"><div class="row"><span>'+esc(r.k)+'</span><span>'+st+'</span></div><div class="note">'+d.join(" · ")+'</div></div>'});
+  return h+'<div class="note">Money you lend or borrow is not counted as spending or income. When the same amount comes back, the person shows as settled. This covers all dates.</div></div>';
+}
 function vHome(){
   var L=S.txns.filter(inRange),Lc=L.filter(isCount),pend=S.txns.filter(function(t){return personOK(t)&&!t.category&&t.type==="out"}).length;
   var people={};Lc.forEach(function(t){var p=t.person||"?";(people[p]=people[p]||[]).push(t)});
@@ -225,6 +241,7 @@ function vHome(){
   h+='<div class="grid"><div class="card"><div class="mute">Total spent '+esc(who)+'</div><div style="font-size:24px;font-weight:700" class="out">'+money(sum(Lc,"out"))+'</div><div class="mute">'+nOut+' payments, every category'+(cardSums(L).n?' · bank '+money(sum(Lc.filter(function(t){return t.kind!=="card"}),"out"))+' · card '+money(cardSums(L).spent):'')+'</div></div><div class="card"><div class="mute">Money received</div><div style="font-size:24px;font-weight:700" class="in">'+money(sum(Lc,"in"))+'</div><div class="mute">'+nIn+' credits</div></div></div>';
   h+=cardBlock(L);
   h+=trfBlock(L);
+  h+=lendBlock();
   if(S.pf==="__both"&&Object.keys(people).length>1){h+='<h2>By person</h2><div class="grid">';
     Object.keys(people).forEach(function(p){h+='<div class="card"><div class="mute">'+esc(p)+(p===S.name?" (you)":"")+'</div><div style="font-size:20px;font-weight:700" class="out">'+money(sum(people[p],"out"))+'</div><div class="mute">received '+money(sum(people[p],"in"))+'</div></div>'});
     h+='</div>'}
@@ -248,14 +265,14 @@ function listFilter(){
   var L=S.txns.filter(inRange),hf=S.hf||"all";
   var F=L.filter(function(t){
     if(hf==="out")return t.type==="out"&&isCount(t);if(hf==="in")return t.type==="in"&&isCount(t);
-    if(hf==="none")return !t.category;if(hf==="trf")return t.category===TRF;if(hf==="card")return isCard(t);return true});
+    if(hf==="none")return !t.category;if(hf==="trf")return t.category===TRF;if(hf==="card")return isCard(t);if(hf==="lend")return t.category===LOUT||t.category===LIN;return true});
   return {L:L,F:F,hf:hf};
 }
 function vList(){
   var r=listFilter(),L=r.L,F=r.F,hf=r.hf;
-  var n={all:L.length,out:L.filter(function(t){return t.type==="out"&&isCount(t)}).length,in:L.filter(function(t){return t.type==="in"&&isCount(t)}).length,none:L.filter(function(t){return !t.category}).length,trf:L.filter(function(t){return t.category===TRF}).length,card:L.filter(isCard).length};
+  var n={all:L.length,out:L.filter(function(t){return t.type==="out"&&isCount(t)}).length,in:L.filter(function(t){return t.type==="in"&&isCount(t)}).length,none:L.filter(function(t){return !t.category}).length,trf:L.filter(function(t){return t.category===TRF}).length,card:L.filter(isCard).length,lend:L.filter(function(t){return t.category===LOUT||t.category===LIN}).length};
   var h='<h1>History</h1>'+rangeUI()+'<div class="row" style="margin-bottom:10px"><button class="btn ghost s" id="addx">+ Add cash / other</button><button class="btn ghost s" id="csvb">Export CSV</button></div><div class="tabs">';
-  [["all","All"],["out","Spent"],["in","Received"],["trf","Transfers"],["card","Credit card"],["none","No category"]].forEach(function(x){h+='<button class="tab'+(hf===x[0]?" on":"")+'" data-hf="'+x[0]+'">'+x[1]+' ('+n[x[0]]+')</button>'});
+  [["all","All"],["out","Spent"],["in","Received"],["trf","Transfers"],["card","Credit card"],["lend","Lending"],["none","No category"]].forEach(function(x){h+='<button class="tab'+(hf===x[0]?" on":"")+'" data-hf="'+x[0]+'">'+x[1]+' ('+n[x[0]]+')</button>'});
   var cs=cardSums(F),line=hf==="card"?'Card spends '+money(cs.spent)+' · Bill payments '+money(cs.paid):hf==="trf"?'Sent '+money(sum(F,"out"))+' · Received '+money(sum(F,"in")):'Spent '+money(sum(F.filter(isCount),"out"))+' · Received '+money(sum(F.filter(isCount),"in"));
   h+='</div><div class="mute" style="margin:0 0 8px">'+line+'. Tap a payment to choose its category.</div><div class="card">';
   if(!F.length)h+='<span class="mute">Nothing here for these dates.</span>';
@@ -291,7 +308,7 @@ function vPlan(){
   if(S.planErr)h+='<div class="card out">'+esc(S.planErr)+'<div class="note">Run the setup SQL in Supabase, then reload this page.</div></div>';
   var bm={};S.budgets.forEach(function(b){bm[b.category]=Number(b.amount)});var sp=spentThisMonth();
   h+='<h2>Monthly budgets (both of us, this month)</h2><div class="card">';
-  CATS.filter(function(c){return !NOBUD[c]}).forEach(function(c){
+  CATS.filter(function(c){return !NOBUDGET[c]}).forEach(function(c){
     var a=bm[c]||"",s=sp[c]||0;
     h+='<div style="margin-bottom:10px"><div class="row"><span>'+esc(c)+'</span><input data-bud="'+esc(c)+'" type="number" inputmode="numeric" placeholder="Budget" value="'+a+'" style="width:120px;margin:0"></div>';
     if(a)h+='<div class="bar"><i class="'+(s>a?"over":"")+'" style="width:'+Math.min(100,Math.round(s/a*100))+'%"></i></div><div class="note">Spent '+money(s)+' · '+(s>a?'over by '+money(s-a):'left '+money(a-s))+'</div>';
