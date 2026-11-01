@@ -46,7 +46,7 @@ nav button{flex:1;border:0;background:none;color:var(--mute);padding:10px 2px;fo
 <script>
 var URLB="https://fwxhclagrwlzxvsmaekt.supabase.co/rest/v1/",KEY="sb_publishable_PiCUzSknFyCfGfEVzTiQbg_qEkBYwL_";
 var TRF="Transfer between us",IGN="Ignore (don't count)",UNC="Others (no category yet)",CCB="Credit card bill (paid)";
-var CATS=["Groceries – Offline","Groceries – Online","Shopping – Offline","Shopping – Online","Food – Dining out","Food – Online delivery","Transport","Fuel","Bills & Utilities","Rent / EMI","Health","Entertainment","Travel","Education","Family & Friends","Salary / Income","Other",TRF,CCB,IGN];
+var CATS=["Groceries – Offline","Groceries – Online","Shopping – Offline","Shopping – Online","Food – Dining out","Food – Online delivery","Transport","Fuel","Bills & Utilities","Rent / EMI","Health","Entertainment","Travel","Education","Home loan EMI","Kid education","Kid day care","Maid","Cook","Car cleaning","Electricity bill","Gas bill","Family donation","Family & Friends","Salary / Income","Other",TRF,CCB,IGN];
 var NOBUD={"Salary / Income":1};NOBUD[TRF]=1;NOBUD[IGN]=1;NOBUD[CCB]=1;
 var S={tab:"home",range:"month",from:"",to:"",rp:"this",hf:"all",pf:"",txns:[],budgets:[],fixed:[],planErr:"",cur:"₹",code:"",name:"",err:"",loaded:false};
 function ls(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
@@ -300,9 +300,9 @@ function vPlan(){
   h+='<h2>Fixed expenses (home loan, school fees…)</h2><div class="card">';
   if(!S.fixed.length)h+='<span class="mute">None added yet.</span>';
   S.fixed.forEach(function(f){h+='<div class="row" style="margin:6px 0"><span>'+esc(f.name)+'<div class="mute">'+(f.freq==="monthly"?"monthly":f.freq)+', day '+f.day+(f.category?' · '+esc(f.category):'')+'</div></span><span><b>'+money(f.amount)+'</b><button class="x" data-fdel="'+f.id+'" aria-label="Delete">×</button></span></div>'});
-  h+='<hr style="border:0;border-top:1px solid var(--line);margin:12px 0"><input id="fn" placeholder="Name (e.g. Home loan EMI)"><input id="fa" type="number" inputmode="decimal" placeholder="Amount"><input id="fd" type="number" inputmode="numeric" placeholder="Day of month (1-31)"><select id="ff"><option value="monthly">Every month</option><option value="quarterly">Every 3 months</option><option value="yearly">Once a year</option></select><div class="mute">Month it is due (for 3-monthly or yearly)</div><select id="fm">';
+  h+='<hr style="border:0;border-top:1px solid var(--line);margin:12px 0"><input id="fn" placeholder="Name (e.g. Home loan EMI)"><input id="fa" type="number" inputmode="decimal" placeholder="Amount"><input id="fd" type="number" inputmode="numeric" placeholder="Day of month (1-31)"><select id="ff"><option value="monthly">Every month</option><option value="quarterly">Every 3 months</option><option value="yearly">Once a year</option></select><div id="fmw" style="display:none"><div class="mute">Month it is due</div><select id="fm">';
   for(var m=1;m<=12;m++)h+='<option value="'+m+'">'+new Date(2026,m-1,1).toLocaleString("en-IN",{month:"long"})+'</option>';
-  h+='</select><div class="mute">Category</div><select id="fc"><option value="">No category</option>';
+  h+='</select></div><div class="mute">Category</div><select id="fc"><option value="">No category</option>';
   CATS.filter(function(c){return !NOBUD[c]}).forEach(function(c){h+='<option>'+esc(c)+'</option>'});
   h+='</select><button class="btn" id="fadd">Add fixed expense</button><div class="note">Fixed items feed the forecast. Everyday spending in the same category is left out of the average, so nothing is counted twice.</div></div>';
   return h;
@@ -347,6 +347,7 @@ function render(){
   var sv=q("sv");if(sv)sv.onclick=function(){S.ms=Math.min(31,Math.max(1,parseInt(g("ms"),10)||1));ls("ms",S.ms);if(S.range==="month"||S.range==="last")preset(S.range);S.name=g("nm").trim()||S.name;S.code=g("cd").trim()||S.code;S.cur=g("cu")||"₹";ls("name",S.name);ls("code",S.code);ls("cur",S.cur);S.tab="home";load()};
   var svb=q("svb");if(svb)svb.onclick=saveBudgets;
   var fa=q("fadd");if(fa)fa.onclick=addFixed;
+  var ff=q("ff");if(ff)ff.onchange=function(){q("fmw").style.display=ff.value==="monthly"?"none":"block"};
   el.querySelectorAll("[data-fdel]").forEach(function(b){b.onclick=async function(){if(confirm("Remove this fixed expense?")){try{await api("fixed_items?id=eq."+b.dataset.fdel,{method:"DELETE"})}catch(x){alert(x.message)}load()}}});
 }
 /* ---------- actions ---------- */
