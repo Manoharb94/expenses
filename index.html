@@ -59,17 +59,26 @@ async function api(path,opt){
 async function load(){
   try{S.txns=await api("transactions?select=*&order=txn_date.desc,created_at.desc&limit=2000")||[];S.err="";S.loaded=true}
   catch(e){S.err="Could not load: "+e.message}
-  render();if(S.loaded&&!document.getElementById("sheet").innerHTML&&!S.snooze)askNext();
+  if(S.loaded&&!S.pf)S.pf=S.name;render();
 }
 function iso(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())}
 function preset(r){var n=new Date();S.range=r;
   if(r==="month"){S.from=iso(new Date(n.getFullYear(),n.getMonth(),1));S.to=iso(n)}
   else if(r==="last"){S.from=iso(new Date(n.getFullYear(),n.getMonth()-1,1));S.to=iso(new Date(n.getFullYear(),n.getMonth(),0))}
   else if(r==="all"){S.from="";S.to=""}}
-function inRange(t){var d=t.txn_date||"";return (!S.from||d>=S.from)&&(!S.to||d<=S.to)}
+function personOK(t){return !S.pf||S.pf==="__both"||t.person===S.pf}
+function inRange(t){var d=t.txn_date||"";return personOK(t)&&(!S.from||d>=S.from)&&(!S.to||d<=S.to)}
 function sum(l,ty){return l.filter(function(t){return t.type===ty}).reduce(function(a,t){return a+Number(t.amount)},0)}
+function personUI(){
+  var seen={};S.txns.forEach(function(t){if(t.person)seen[t.person]=1});seen[S.name]=1;
+  var names=Object.keys(seen).sort(function(a,b){return a===S.name?-1:b===S.name?1:a<b?-1:1});
+  var h='<div class="mute">Show expenses of</div><select id="pf">';
+  names.forEach(function(n){h+='<option value="'+esc(n)+'"'+(S.pf===n?" selected":"")+'>'+esc(n)+(n===S.name?" (you)":"")+'</option>'});
+  if(names.length>1)h+='<option value="__both"'+(S.pf==="__both"?" selected":"")+'>Both of us</option>';
+  return h+'</select>';
+}
 function rangeUI(){
-  var o=[["month","This month"],["last","Last month"],["all","All time"],["custom","Custom"]],h='<select id="rg">';
+  var o=[["month","This month"],["last","Last month"],["all","All time"],["custom","Custom"]],h=personUI()+'<div class="mute">Period</div><select id="rg">';
   o.forEach(function(x){h+='<option value="'+x[0]+'"'+(S.range===x[0]?" selected":"")+'>'+x[1]+'</option>'});
   return h+'</select><div class="dates"><div><div class="mute">From</div><input type="date" id="df" value="'+S.from+'"></div><div><div class="mute">To</div><input type="date" id="dt" value="'+S.to+'"></div></div>';
 }
@@ -92,7 +101,7 @@ function prevList(){
   if(!S.from||!S.to)return null;
   var a=new Date(S.from+"T00:00:00"),b=new Date(S.to+"T00:00:00"),days=Math.round((b-a)/864e5)+1;
   var ps=new Date(a),pe=new Date(a);ps.setDate(a.getDate()-days);pe.setDate(a.getDate()-1);
-  var f=iso(ps),t=iso(pe);return S.txns.filter(function(x){var d=x.txn_date||"";return d>=f&&d<=t&&x.type==="out"});
+  var f=iso(ps),t=iso(pe);return S.txns.filter(function(x){var d=x.txn_date||"";return personOK(x)&&d>=f&&d<=t&&x.type==="out"});
 }
 function catTotals(list){var o={};list.forEach(function(t){var c=t.category||UNC;o[c]=(o[c]||0)+Number(t.amount)});return o}
 function insights(L,by,total){
@@ -116,15 +125,18 @@ function insights(L,by,total){
   return tips.slice(0,6);
 }
 function vHome(){
-  var L=S.txns.filter(inRange),pend=S.txns.filter(function(t){return !t.category}).length;
+  var L=S.txns.filter(inRange),pend=S.txns.filter(function(t){return personOK(t)&&!t.category&&t.type==="out"}).length;
   var people={};L.forEach(function(t){var p=t.person||"?";(people[p]=people[p]||[]).push(t)});
   var h='<h1>Our Expenses</h1>'+rangeUI();
   if(S.err)h+='<div class="card out">'+esc(S.err)+'</div>';
   if(S.loaded&&!S.txns.length&&!S.err)h+='<div class="card mute">No transactions yet. If you expected some, check the household code in Settings.</div>';
-  if(pend)h+='<div class="card row"><span>'+pend+' need a category</span><button class="btn s" id="fix">Choose</button></div>';
-  h+='<div class="card"><div class="mute">Total spent together</div><div class="big out">'+money(sum(L,"out"))+'</div><div class="mute">Money in: <span class="in">'+money(sum(L,"in"))+'</span></div></div><div class="grid">';
-  Object.keys(people).forEach(function(p){h+='<div class="card"><div class="mute">'+esc(p)+(p===S.name?" (you)":"")+'</div><div style="font-size:20px;font-weight:700" class="out">'+money(sum(people[p],"out"))+'</div><div class="mute">in '+money(sum(people[p],"in"))+'</div></div>'});
-  h+='</div>';
+  if(pend)h+='<div class="card row"><span>'+pend+' need a category</span><button class="btn s" id="fix">Review</button></div>';
+  var nOut=L.filter(function(t){return t.type==="out"}).length,nIn=L.length-nOut;
+  var who=S.pf==="__both"?"by both of us":(S.pf===S.name?"by you":"by "+S.pf);
+  h+='<div class="grid"><div class="card"><div class="mute">Total spent '+esc(who)+'</div><div style="font-size:24px;font-weight:700" class="out">'+money(sum(L,"out"))+'</div><div class="mute">'+nOut+' payments, every category</div></div><div class="card"><div class="mute">Money received</div><div style="font-size:24px;font-weight:700" class="in">'+money(sum(L,"in"))+'</div><div class="mute">'+nIn+' credits</div></div></div>';
+  if(S.pf==="__both"&&Object.keys(people).length>1){h+='<h2>By person</h2><div class="grid">';
+    Object.keys(people).forEach(function(p){h+='<div class="card"><div class="mute">'+esc(p)+(p===S.name?" (you)":"")+'</div><div style="font-size:20px;font-weight:700" class="out">'+money(sum(people[p],"out"))+'</div><div class="mute">received '+money(sum(people[p],"in"))+'</div></div>'});
+    h+='</div>'}
   var by={};L.filter(function(t){return t.type==="out"}).forEach(function(t){var c=t.category||UNC;by[c]=(by[c]||0)+Number(t.amount)});
   var ks=Object.keys(by).sort(function(a,b){return by[b]-by[a]}),mx=by[ks[0]]||1;
   var tot=ks.reduce(function(a,k){return a+by[k]},0);
@@ -162,10 +174,11 @@ function render(){
   nav.classList.remove("hide");
   nav.querySelectorAll("button").forEach(function(b){b.classList.toggle("on",b.dataset.t===S.tab)});
   el.innerHTML=S.tab==="home"?vHome():S.tab==="list"?vList():vMe();
+  var pfe=document.getElementById("pf");if(pfe)pfe.onchange=function(){S.pf=pfe.value;ls("pf",S.pf);render()};
   var rg=document.getElementById("rg");if(rg)rg.onchange=function(){if(rg.value==="custom")S.range="custom";else preset(rg.value);render()};
   var df=document.getElementById("df");if(df)df.onchange=function(){S.from=df.value;S.range="custom";render()};
   var dt=document.getElementById("dt");if(dt)dt.onchange=function(){S.to=dt.value;S.range="custom";render()};
-  var f=document.getElementById("fix");if(f)f.onclick=function(){S.snooze=false;askNext()};
+  var f=document.getElementById("fix");if(f)f.onclick=function(){S.tab="list";S.hf="none";render()};
   el.querySelectorAll("[data-cat]").forEach(function(b){b.onclick=function(){var t=S.txns.filter(function(x){return x.id===b.dataset.cat})[0];if(t)pick(t,false)}});
   el.querySelectorAll("[data-hf]").forEach(function(b){b.onclick=function(){S.hf=b.dataset.hf;render()}});
   el.querySelectorAll("[data-del]").forEach(function(b){b.onclick=async function(e){e.stopPropagation();if(confirm("Delete this transaction?")){try{await api("transactions?id=eq."+b.dataset.del,{method:"DELETE"})}catch(e){alert(e.message)}load()}}});
@@ -193,7 +206,7 @@ document.getElementById("nav").onclick=function(e){var t=e.target.dataset&&e.tar
 document.addEventListener("visibilitychange",function(){if(!document.hidden&&S.code)load()});
 setInterval(function(){if(S.code&&!document.hidden&&!document.getElementById("sheet").innerHTML)load()},30000);
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
-S.name=ls("name")||"";S.code=ls("code")||"";S.cur=ls("cur")||"₹";
+S.pf=ls("pf")||"";S.name=ls("name")||"";S.code=ls("code")||"";S.cur=ls("cur")||"₹";
 preset("month");if(S.code&&S.name)load();else render();
 </script>
 </body>
