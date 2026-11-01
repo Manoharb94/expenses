@@ -7,6 +7,7 @@ language plpgsql security definer set search_path = public as $$
 declare a text[]; d text[]; m text[]; r text[]; t text := new.raw; pi int; po int;
 begin
   if t is null then return new; end if;
+  t := regexp_replace(t, 'https?://[^[:space:]>]+', ' ', 'g');
   -- 1) amount written right next to "debited/credited/sent/spent/paid"
   a := regexp_match(t, '(?:\m(?:Rs|INR)\.?|₹)\s?([0-9][0-9,]*(?:\.[0-9]{1,2})?)\s+(?:has been |is |was |were )?(?:successfully )?(?:debited|credited|deposited|withdrawn)', 'i');
   if a is null then a := regexp_match(t, '(?:debited|credited|sent|spent|paid|received|withdrawn)\s+(?:by\s+|with\s+|for\s+)?(?:\m(?:Rs|INR)\.?|₹)\s?([0-9][0-9,]*(?:\.[0-9]{1,2})?)', 'i'); end if;
@@ -55,6 +56,7 @@ begin
   end if;
   return new;
 end $$;
+
 
 -- RUN 3: your own UPI ID is a transfer between you and your wife
 insert into merchants (merchant_key, name, category) values ('er-manoharb-1-okaxis','er.manoharb-1@okaxis','Transfer between us') on conflict (merchant_key) do update set category = excluded.category;
