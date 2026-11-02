@@ -429,7 +429,7 @@ function unplannedBlock(Lc){
   l.slice(0,5).forEach(function(t){h+='<div class="row mute" style="margin:4px 0"><span>'+esc(t.merchant||"Unknown")+' · '+esc(t.txn_date||"")+'</span><span>'+money(t.amount)+'</span></div>'});
   return h+'<div class="note">Already included in Total expenses.</div></div>';
 }
-function incomeBlock(Lc){
+function incomeBlock(Lc,L){
   var ins=Lc.filter(function(t){return t.type==="in"}),both=S.pf==="__both",who=both?persons():[S.pf||S.name];
   var h='<h2>Income</h2><div class="card">',grand=0;
   who.forEach(function(p){
@@ -438,9 +438,15 @@ function incomeBlock(Lc){
     h+='<div style="margin:8px 0"><div class="row"><b>'+esc(p)+(p===S.name?" (you)":"")+'</b><b class="in">'+money(tot)+'</b></div>';
     Object.keys(by).sort(function(a,b){return by[b]-by[a]}).forEach(function(c){h+='<div class="row mute" style="margin:3px 0"><span>'+esc(c)+'</span><span>'+money(by[c])+'</span></div>'});
     if(!l.length)h+='<div class="note">No income in this period.</div>';
+    var tr=(L||[]).filter(function(t){return t.category===TRF&&t.person===p}),sent=0,got=0;
+    tr.forEach(function(t){if(t.type==="out")sent+=Number(t.amount);else got+=Number(t.amount)});
+    if(sent>0||got>0){var bal=tot-sent+got;
+      if(sent>0)h+='<div class="row" style="margin:3px 0"><span>Sent to family</span><span class="out">−'+money(sent)+'</span></div>';
+      if(got>0)h+='<div class="row" style="margin:3px 0"><span>Received from family</span><span class="in">+'+money(got)+'</span></div>';
+      h+='<div class="row" style="margin-top:6px;padding-top:6px;border-top:1px dashed var(--line)"><b>Balance after transfers</b><b class="'+(bal>=0?"in":"out")+'">'+money(bal)+'</b></div>'}
     h+='</div>'});
   if(both&&who.length>1)h+='<div class="row" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line)"><b>Together</b><b class="in">'+money(grand)+'</b></div>';
-  return h+'<div class="note">Tap an income payment in History once and choose Salary / Income or Rental income. Later payments from the same payer file themselves.</div></div>';
+  return h+'<div class="note">Tap an income payment in History once and choose Salary / Income or Rental income. Later payments from the same payer file themselves. Money sent to a family member is taken off the sender’s balance.</div></div>';
 }
 function dueIn(f,from,to){
   var a=new Date(from+"T00:00:00"),b=new Date(to+"T00:00:00"),n=0,y=a.getFullYear(),m=a.getMonth();
@@ -567,7 +573,7 @@ function vHome(){
   var P=prevInfo(),F=flowCalc(L,Lc,X);
   h+=heroBlock(X,F,P,who,nOut,L);
   h+=timeChart(X,pdt.from,pdt.to);
-  h+=incomeBlock(Lc);
+  h+=incomeBlock(Lc,L);
   h+=mandBlock(X);
   h+=unplannedBlock(Lc);
   h+=cardBlock(L);
