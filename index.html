@@ -46,10 +46,10 @@ nav button{flex:1;border:0;background:none;color:var(--mute);padding:10px 2px;fo
 <script>
 var URLB="https://fwxhclagrwlzxvsmaekt.supabase.co/rest/v1/",KEY="sb_publishable_PiCUzSknFyCfGfEVzTiQbg_qEkBYwL_";
 var TRF="Transfer between us",IGN="Ignore (don't count)",UNC="Others (no category yet)",CCB="Credit card bill (paid)",LOUT="Lend out",LIN="Lend in",UNPL="Unplanned expense",RENT="Rental income";
-var CATS=["Groceries – Offline","Groceries – Online","Shopping – Offline","Shopping – Online","Food – Dining out","Food – Online delivery","Transport","Fuel","Bills & Utilities","Rent / EMI","Health","Entertainment","Travel","Education","Home loan EMI","Kid education","Kid day care","Maid","Cook","Car cleaning","Electricity bill","Gas bill","Family donation",UNPL,"Family & Friends","Salary / Income",RENT,"Other",LOUT,LIN,TRF,CCB,IGN];
+var CATS=["Groceries – Offline","Groceries – Online","Shopping – Offline","Shopping – Online","Food – Dining out","Food – Online delivery","Transport","Fuel","Bills & Utilities","Rent / EMI","Health","Beauty / Salon","Entertainment","Travel","Education","Home loan EMI","Kid education","Kid day care","Kid expense","Maid","Cook","Car cleaning","Electricity bill","Gas bill","Family donation",UNPL,"Family & Friends","Salary / Income",RENT,"Other",LOUT,LIN,TRF,CCB,IGN];
 var NOBUD={"Salary / Income":1};NOBUD[TRF]=1;NOBUD[IGN]=1;NOBUD[CCB]=1;NOBUD[LOUT]=1;NOBUD[LIN]=1;NOBUD[UNPL]=1;NOBUD[RENT]=1;
 var NOBUDGET={};for(var k in NOBUD)NOBUDGET[k]=1;["Rent / EMI","Education","Home loan EMI","Kid education","Kid day care","Maid","Cook","Car cleaning","Electricity bill","Gas bill","Family donation","Family & Friends"].forEach(function(c){NOBUDGET[c]=1});
-var S={tab:"home",range:"month",from:"",to:"",rp:"this",hf:"all",pf:"",txns:[],budgets:[],fixed:[],planErr:"",goals:[],goalErr:"",cur:"₹",code:"",name:"",err:"",loaded:false};
+var S={tab:"home",range:"month",from:"",to:"",rp:"this",hf:"all",pf:"",txns:[],budgets:[],fixed:[],planErr:"",goals:[],gents:[],lrows:{},goalErr:"",cur:"₹",code:"",name:"",err:"",loaded:false};
 function ls(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
 function money(n){return S.cur+Number(n).toLocaleString("en-IN",{maximumFractionDigits:2})}
@@ -67,7 +67,8 @@ async function loadPlan(){
   try{S.budgets=await api("budgets?select=*")||[];S.fixed=await api("fixed_items?select=*&order=created_at.asc")||[];S.planErr=""}
   catch(e){S.planErr="Plan tables are not set up yet ("+e.message.slice(0,80)+")"}
   try{S.goals=await api("goals?select=*&order=created_at.asc")||[];S.goalErr=""}
-  catch(e){S.goals=[];S.goalErr="Goals are not set up yet"}
+  catch(e){S.goals=[];S.goalErr="Goals are not set up yet. Run goals.sql in Supabase."}
+  try{S.gents=await api("goal_entries?select=*&order=created_at.asc")||[]}catch(e){S.gents=null}
 }
 async function load(){
   try{S.txns=await api("transactions?select=*&order=txn_date.desc,created_at.desc&limit=3000")||[];S.err="";S.loaded=true}
@@ -232,13 +233,14 @@ function lendBlock(){
   var by={},any=false;
   S.txns.filter(function(t){return personOK(t)&&(t.category===LOUT||t.category===LIN)}).forEach(function(t){
     any=true;var k=t.merchant||"Unknown",o=by[k]=by[k]||{lent:0,back:0,took:0,paid:0,e:[]},a=Number(t.amount);
-    if(t.category===LOUT){if(t.type==="out"){o.lent+=a;o.e.push([t.txn_date,"lent",a])}else{o.back+=a;o.e.push([t.txn_date,"got back",a])}}
-    else{if(t.type==="in"){o.took+=a;o.e.push([t.txn_date,"borrowed",a])}else{o.paid+=a;o.e.push([t.txn_date,"paid back",a])}}});
+    if(t.category===LOUT){if(t.type==="out"){o.lent+=a;o.e.push([t.txn_date,"lent",a,t.note])}else{o.back+=a;o.e.push([t.txn_date,"got back",a,t.note])}}
+    else{if(t.type==="in"){o.took+=a;o.e.push([t.txn_date,"borrowed",a,t.note])}else{o.paid+=a;o.e.push([t.txn_date,"paid back",a,t.note])}}});
   if(!any)return '';
   var rows=Object.keys(by).map(function(k){var o=by[k],r1=Math.round((o.lent-o.back)*100)/100,r2=Math.round((o.took-o.paid)*100)/100;return {k:k,o:o,r1:r1,r2:r2,net:Math.round((r1-r2)*100)/100,open:Math.abs(r1)+Math.abs(r2)}});
   rows.sort(function(a,b){return (a.open===0)-(b.open===0)||b.open-a.open});
   var get=0,owe=0;rows.forEach(function(r){if(r.net>0)get+=r.net;else if(r.net<0)owe-=r.net});
-  var h='<h2>Lending</h2><div class="card"><div class="grid" style="margin-bottom:8px"><div><div class="mute">You will get</div><b class="in">'+money(get)+'</b></div><div><div class="mute">You have to pay</div><b class="out">'+money(owe)+'</b></div></div>';
+  S.lrows={};
+  var h='<h2>Lending</h2><div class="card"><button class="btn ghost s" style="margin-bottom:10px" data-lnew="1">+ New lend / borrow entry</button><div class="grid" style="margin-bottom:8px"><div><div class="mute">You will get</div><b class="in">'+money(get)+'</b></div><div><div class="mute">You have to pay</div><b class="out">'+money(owe)+'</b></div></div>';
   function line(label,total,done,rem,who){
     var pct=total>0?Math.min(100,Math.round(done/total*100)):0;
     return '<div style="margin:6px 0"><div class="row"><span class="mute">'+label+' '+money(total)+'</span><span>'+(rem===0?'<span class="mute">settled ✓</span>':who+' <b class="'+(rem>0&&who==="still to get"?"in":"out")+'">'+money(Math.abs(rem))+'</b>')+'</span></div><div class="bar"><i style="width:'+pct+'%"></i></div><div class="note">'+(who==="still to get"?'Got back ':'Paid back ')+money(done)+' of '+money(total)+' ('+pct+'%)</div></div>'}
@@ -247,7 +249,8 @@ function lendBlock(){
     if(o.lent||o.back)h+=line("You lent",o.lent,o.back,r.r1,"still to get");
     if(o.took||o.paid)h+=line("You borrowed",o.took,o.paid,r.r2,"still to pay");
     o.e.sort(function(a,b){return a[0]<b[0]?1:-1});
-    h+='<div class="note">'+o.e.slice(0,4).map(function(x){return esc(x[0]||"")+' '+x[1]+' '+money(x[2])}).join(' · ')+'</div></div>'});
+    S.lrows[r.k]={r1:r.r1,r2:r.r2};
+    h+='<div class="note">'+o.e.slice(0,5).map(function(x){return esc(x[0]||"")+' '+x[1]+' '+money(x[2])+(x[3]?' ("'+esc(x[3])+'")':'')}).join(' · ')+'</div><button class="btn ghost s" style="margin-top:6px" data-lt="'+encodeURIComponent(r.k)+'">Tally / add or subtract</button></div>'});
   return h+'<div class="note">Lent or borrowed money is not counted as spending or income. Part payments are fine: each row shows how much is still open. To link a repayment to the same person, tap it, choose Lend out or Lend in, and type the same name. This covers all dates.</div></div>';
 }
 function unplannedBlock(Lc){
@@ -339,7 +342,7 @@ function listFilter(){
 function vList(emb){
   var r=listFilter(),L=r.L,F=r.F,hf=r.hf;
   var n={all:L.length,out:L.filter(function(t){return t.type==="out"&&isCount(t)}).length,in:L.filter(function(t){return t.type==="in"&&isCount(t)}).length,none:L.filter(function(t){return !t.category}).length,trf:L.filter(function(t){return t.category===TRF}).length,card:L.filter(isCard).length,lend:L.filter(function(t){return t.category===LOUT||t.category===LIN}).length,unpl:L.filter(function(t){return t.category===UNPL}).length};
-  var h=(emb?'<h2 id="hist">History</h2>':'<h1>History</h1>'+rangeUI())+'<div class="row" style="margin-bottom:10px"><button class="btn ghost s" id="addx">+ Add cash / other</button><button class="btn ghost s" id="csvb">Export CSV</button></div><div class="tabs">';
+  var h=(emb?'<h2 id="hist">History</h2>':'<h1>History</h1>'+rangeUI())+'<div class="row" style="margin-bottom:10px"><button class="btn ghost s" id="addx">+ Add cash / other</button><button class="btn ghost s" data-lnew="1">+ Lend / borrow</button><button class="btn ghost s" id="csvb">Export CSV</button></div><div class="tabs">';
   [["all","All"],["out","Spent"],["in","Received"],["trf","Transfers"],["card","Credit card"],["lend","Lending"],["unpl","Unplanned"],["none","No category"]].forEach(function(x){h+='<button class="tab'+(hf===x[0]?" on":"")+'" data-hf="'+x[0]+'">'+x[1]+' ('+n[x[0]]+')</button>'});
   var cs=cardSums(F),line=hf==="card"?'Card spends '+money(cs.spent)+' · Bill payments '+money(cs.paid):hf==="trf"?'Sent '+money(sum(F,"out"))+' · Received '+money(sum(F,"in")):'Spent '+money(sum(F.filter(isCount),"out"))+' · Received '+money(sum(F.filter(isCount),"in"));
   h+='</div><div class="mute" style="margin:0 0 8px">'+line+'. Tap a payment to choose its category.</div><div class="card">';
@@ -411,6 +414,23 @@ function goalCalc(g){
   if(g.due){var n=new Date(),d=new Date(g.due+"T00:00:00");ml=Math.max(1,Math.ceil((d-n)/(30.44*864e5)));if(d<n)ml=0}
   if(rem>0)pm=ml>0?rem/ml:rem;
   return {tg:tg,sv:sv,rem:rem,ml:ml,pm:pm,pct:tg>0?Math.min(100,Math.round(sv/tg*100)):0}}
+function goalMonthly(g){
+  if(S.gents===null)return '<div class="note">Run the updated goals.sql in Supabase to track savings month by month.</div>';
+  var ents=S.gents.filter(function(e){return e.goal_id===g.id}),c=goalCalc(g),sumE=0;ents.forEach(function(e){sumE+=Number(e.amount)});
+  var start=new Date(g.created_at||Date.now()),now=new Date(),initial=Math.max(0,c.sv-sumE),N=0,mt=0;
+  if(g.due){N=Math.max(1,Math.ceil((new Date(g.due+"T00:00:00")-start)/(30.44*864e5)));mt=Math.max(0,(c.tg-initial)/N)}
+  var months=[],y=start.getFullYear(),m=start.getMonth();
+  while(y<now.getFullYear()||(y===now.getFullYear()&&m<=now.getMonth())){months.push([y,m]);m++;if(m>11){m=0;y++}}
+  months=months.slice(-6);
+  var h='<div class="mute" style="margin-top:12px">Saved each month'+(mt>0?' (target about '+money(mt)+' a month)':'')+'</div>';
+  months.forEach(function(mm){var key=mm[0]+"-"+pad(mm[1]+1),amt=0;
+    ents.forEach(function(e){if(String(e.created_at||"").slice(0,7)===key)amt+=Number(e.amount)});
+    var pct=mt>0?Math.round(amt/mt*100):null,label=new Date(mm[0],mm[1],1).toLocaleString("en-IN",{month:"short",year:"2-digit"});
+    var w=pct===null?(amt>0?100:0):Math.min(100,pct);
+    h+='<div style="margin:6px 0"><div class="row"><span>'+label+'</span><b>'+money(amt)+(pct===null?'':' · '+pct+'%')+'</b></div><div class="bar"><i style="width:'+w+'%;'+(pct!==null&&pct<100?'background:#d1a52b':'')+'"></i></div></div>'});
+  if(!g.due)h+='<div class="note">Add a target date to a new goal to see each month as a percentage of what you need.</div>';
+  return h;
+}
 function vGoals(){
   var h='<h1>Goals</h1>';
   if(S.goalErr)h+='<div class="card out">'+esc(S.goalErr)+'<div class="note">Run the Goals SQL in Supabase, then reload this page.</div></div>';
@@ -421,7 +441,7 @@ function vGoals(){
   S.goals.forEach(function(g){var c=goalCalc(g),done=c.rem===0;
     h+='<div class="card"><div class="row"><b>'+esc(g.name)+'</b><button class="x" data-gd="'+g.id+'" aria-label="Delete">×</button></div><div class="bar" style="height:12px"><i style="width:'+c.pct+'%"></i></div><div class="row" style="margin-top:6px"><span>'+money(c.sv)+' of '+money(c.tg)+'</span><b>'+c.pct+'%</b></div>';
     h+='<div class="note">'+(done?'Goal reached 🎉':(g.due?'Target '+esc(g.due)+' · '+(c.ml>0?c.ml+' month'+(c.ml>1?'s':'')+' left · save about <b>'+money(c.pm)+'</b> a month':'date has passed · '+money(c.rem)+' still to go'):money(c.rem)+' still to go'))+'</div>';
-    h+='<button class="btn ghost s" style="margin-top:8px" data-gm="'+g.id+'">+ Add money</button></div>'});
+    h+=goalMonthly(g)+'<button class="btn ghost s" style="margin-top:8px" data-gm="'+g.id+'">+ Add money</button></div>'});
   h+='<h2>New goal</h2><div class="card"><input id="gn" placeholder="Goal name (e.g. Car, Goa trip)"><input id="gt" type="number" inputmode="decimal" placeholder="Target amount"><input id="gs" type="number" inputmode="decimal" placeholder="Already saved (optional)"><div class="mute">Target date (optional)</div><input id="gdt" type="date"><button class="btn" id="gadd">Add goal</button><div class="note">Goals are shared. You both see them and can add money. Add money when you set savings aside; the app does not move any real money.</div></div>';
   return h;
 }
@@ -434,7 +454,9 @@ async function addGoal(){
 async function goalMoney(id){
   var gl=S.goals.filter(function(x){return x.id===id})[0];if(!gl)return;
   var v=parseFloat(prompt("How much to add to "+gl.name+"? (use a minus to take money out)"));if(!v)return;
-  try{await api("goals?id=eq."+id,{method:"PATCH",headers:{Prefer:"return=minimal"},body:JSON.stringify({saved:Math.max(0,Number(gl.saved||0)+v)})});await loadPlan();render()}
+  try{await api("goals?id=eq."+id,{method:"PATCH",headers:{Prefer:"return=minimal"},body:JSON.stringify({saved:Math.max(0,Number(gl.saved||0)+v)})});
+    if(S.gents!==null){try{await api("goal_entries",{method:"POST",headers:{Prefer:"return=minimal"},body:JSON.stringify({goal_id:id,amount:v})})}catch(x){}}
+    await loadPlan();render()}
   catch(e){alert("Could not save: "+e.message)}
 }
 function vSetup(){
@@ -468,6 +490,8 @@ function render(){
   var svb=q("svb");if(svb)svb.onclick=saveBudgets;
   var fa=q("fadd");if(fa)fa.onclick=addFixed;
   var ga=q("gadd");if(ga)ga.onclick=addGoal;
+  el.querySelectorAll("[data-lt]").forEach(function(b){b.onclick=function(){lendSheet(decodeURIComponent(b.dataset.lt))}});
+  el.querySelectorAll("[data-lnew]").forEach(function(b){b.onclick=function(){lendSheet("")}});
   el.querySelectorAll("[data-gm]").forEach(function(b){b.onclick=function(){goalMoney(b.dataset.gm)}});
   el.querySelectorAll("[data-gd]").forEach(function(b){b.onclick=async function(){if(confirm("Delete this goal?")){try{await api("goals?id=eq."+b.dataset.gd,{method:"DELETE"})}catch(x){alert(x.message)}await loadPlan();render()}}});
   var ff=q("ff");if(ff)ff.onchange=function(){q("fmw").style.display=ff.value==="monthly"?"none":"block"};
@@ -494,6 +518,23 @@ function csv(F){
   F.forEach(function(t){rows.push([t.txn_date,t.person,t.type,t.kind||"bank",t.merchant,t.category||"",t.amount,t.note||""])});
   var txt=rows.map(function(r){return r.map(function(c){return '"'+String(c==null?"":c).replace(/"/g,'""')+'"'}).join(",")}).join("\r\n");
   var a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["﻿"+txt],{type:"text/csv"}));a.download="expenses.csv";document.body.appendChild(a);a.click();a.remove();
+}
+function lendSheet(name){
+  var sh=document.getElementById("sheet"),lr=S.lrows[name]||{r1:0,r2:0},def=lr.r2>0&&lr.r1<=0?"i|out":"o|in",rem=lr.r1>0?lr.r1:(lr.r2>0?lr.r2:0);
+  var opt=[["o|in","They paid me back (subtracts from what they owe)"],["o|out","I lent more (adds to what they owe)"],["i|out","I paid them back (subtracts from what I owe)"],["i|in","I borrowed more (adds to what I owe)"]];
+  var h='<div class="sheet"><div><b>'+(name?'Tally with '+esc(name):'New lend / borrow entry')+'</b><div class="mute" style="margin:4px 0 10px">Record a part payment, cash, or an extra amount. It will not count as spending or income.</div>'+(name?'':'<input id="lp" list="pl" placeholder="Person name"><datalist id="pl">'+lendNames()+'</datalist>')+'<select id="lw">';
+  opt.forEach(function(o){h+='<option value="'+o[0]+'"'+(o[0]===def?" selected":"")+'>'+o[1]+'</option>'});
+  h+='</select><input id="la" type="number" inputmode="decimal" placeholder="Amount">'+(rem>0?'<button class="btn ghost s" id="lr" style="margin-bottom:8px">Use full remaining '+money(rem)+'</button>':'')+'<input id="lc" placeholder="Comment (optional)"><input id="ld" type="date" value="'+iso(new Date())+'"><button class="btn" id="ls">Save</button><button class="btn ghost" style="margin-top:8px" id="lx">Cancel</button></div></div>';
+  sh.innerHTML=h;
+  document.getElementById("lx").onclick=function(){sh.innerHTML=""};
+  var lrb=document.getElementById("lr");if(lrb)lrb.onclick=function(){document.getElementById("la").value=rem};
+  document.getElementById("ls").onclick=async function(){
+    var nm=(name||g("lp")).trim(),a=parseFloat(g("la")),w=g("lw").split("|");
+    if(!nm||!(a>0)){alert("Enter the person's name and an amount");return}
+    var body={amount:a,type:w[1],merchant:nm,merchant_key:mk(nm),category:w[0]==="o"?LOUT:LIN,note:g("lc").trim()||null,txn_date:g("ld")||iso(new Date()),person:S.name};
+    try{await api("transactions",{method:"POST",headers:{Prefer:"return=minimal"},body:JSON.stringify(body)});sh.innerHTML="";load()}
+    catch(e){alert("Could not save: "+e.message)}
+  };
 }
 function lendNames(){var seen={};S.txns.forEach(function(t){if(t.category===LOUT||t.category===LIN)seen[t.merchant||""]=1});return Object.keys(seen).filter(Boolean).map(function(n){return '<option value="'+esc(n)+'">'}).join("")}
 function pick(t){
