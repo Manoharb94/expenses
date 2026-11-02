@@ -58,6 +58,10 @@ nav button i{font-style:normal;font-size:19px;line-height:1}nav button.on{backgr
 .btn{box-shadow:0 2px 6px rgba(31,111,92,.25)}.btn.ghost{box-shadow:none}
 .bar{height:9px;border-radius:5px}
 .ttip{position:absolute;z-index:5;background:#1d1d1b;color:#fff;border-radius:10px;padding:8px 10px;font-size:12px;line-height:1.5;pointer-events:none;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.25)}.ttip b{display:block;font-size:12px}
+.code{font:700 26px/1.2 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.18em;background:var(--chip);border-radius:10px;padding:12px;text-align:center;margin:8px 0;user-select:all}
+.alink{background:none;border:0;color:var(--acc);font:inherit;padding:8px 0;text-decoration:underline;cursor:pointer}
+.amsg{min-height:20px;margin:0 0 10px;font-size:14px;color:#b4432f}.amsg.ok{color:var(--acc)}
+.brand{text-align:center;font-size:44px;margin:18px 0 0}.seg{display:flex;gap:6px;margin-bottom:12px}.seg button{flex:1}
 </style>
 </head>
 <body>
@@ -79,11 +83,111 @@ function ym(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)}
 function iso(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())}
 function mk(n){return String(n).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"unknown"}
 async function api(path,opt){
-  opt=opt||{};var h={apikey:KEY,"x-household":S.code,"Content-Type":"application/json"};
-  for(var k in (opt.headers||{}))h[k]=opt.headers[k];opt.headers=h;
-  var r=await fetch(URLB+path,opt),t=await r.text();
+  opt=opt||{};await ensureToken();
+  var ch=opt.headers||{},h={apikey:KEY,"x-household":S.code,"Content-Type":"application/json"};
+  if(S.auth)h.Authorization="Bearer "+S.auth.access;
+  for(var k in ch)h[k]=ch[k];
+  var o2={};for(var k2 in opt)o2[k2]=opt[k2];o2.headers=h;
+  var r=await fetch(URLB+path,o2),t=await r.text();
+  if(r.status===401&&S.auth&&!opt._retry){try{await refreshSess()}catch(e){throw e}var o3={};for(var k3 in opt)o3[k3]=opt[k3];o3.headers=ch;o3._retry=1;return api(path,o3)}
+  if(r.status===401&&S.auth){logoutLocal("Please log in again.");throw new Error("Please log in again.")}
   if(!r.ok)throw new Error(r.status+" "+t);return t?JSON.parse(t):null;
 }
+
+/* ---------- accounts, login, family ---------- */
+var AUTHB=URLB.replace("/rest/v1/","/auth/v1/");
+S.auth=null;S.view="";S.amsg="";S.aok=false;S.profile=null;S.members=null;S.fmode="create";S.newCode="";
+function authMsg(o,st){var c=o.error_code||o.code||"",m=o.msg||o.message||o.error_description||o.error||("Error "+st);
+  var M={invalid_credentials:"Wrong email or password.",user_already_exists:"This email already has an account. Please log in.",email_exists:"This email already has an account. Please log in.",email_not_confirmed:"Please confirm your email first. Check your inbox.",weak_password:"Choose a stronger password (at least 8 characters).",over_email_send_rate_limit:"Too many emails sent. Please wait a few minutes and try again.",over_request_rate_limit:"Too many tries. Please wait a few minutes and try again.",signup_disabled:"New sign-ups are switched off in Supabase.",validation_failed:"Enter a valid email address.",email_address_invalid:"Enter a valid email address.",same_password:"Choose a password different from the old one.",user_not_found:"Wrong email or password."};
+  return M[c]||m}
+function errText(e){var m=String(e&&e.message||e);if(e&&e.name==="TypeError")return "Could not reach the server. Check your internet and try again.";
+  if(/PGRST202|Could not find the function|schema cache/.test(m))return "Accounts are not set up yet. Run auth.sql in Supabase, then try again.";
+  var j=m.replace(/^\d+\s/,"");try{var o=JSON.parse(j);m=o.message||o.msg||o.error_description||o.error||m}catch(x){}return m}
+async function authFetch(path,method,body,token){
+  var h={apikey:KEY,"Content-Type":"application/json"};if(token)h.Authorization="Bearer "+token;
+  var r=await fetch(AUTHB+path,{method:method,headers:h,body:body?JSON.stringify(body):undefined});
+  var t=await r.text(),o={};try{o=t?JSON.parse(t):{}}catch(e){}
+  if(!r.ok){var e=new Error(authMsg(o,r.status));e.status=r.status;throw e}return o}
+function saveSess(o){S.auth={access:o.access_token,refresh:o.refresh_token,exp:o.expires_at||(Math.floor(Date.now()/1000)+(o.expires_in||3600)),email:(o.user&&o.user.email)||(S.auth&&S.auth.email)||""};ls("sb",JSON.stringify(S.auth))}
+function refreshSess(){
+  if(S.refreshing)return S.refreshing;
+  S.refreshing=(async function(){try{
+    if(!S.auth||!S.auth.refresh)throw new Error("Please log in again.");
+    var r=await fetch(AUTHB+"token?grant_type=refresh_token",{method:"POST",headers:{apikey:KEY,"Content-Type":"application/json"},body:JSON.stringify({refresh_token:S.auth.refresh})});
+    if(!r.ok){logoutLocal("Your session ended. Please log in again.");throw new Error("Please log in again.")}
+    saveSess(await r.json())}finally{S.refreshing=null}})();
+  return S.refreshing}
+async function ensureToken(){if(S.auth&&S.auth.exp-60<Date.now()/1000)await refreshSess()}
+function logoutLocal(msg){S.auth=null;ls("sb","");S.profile=null;S.code="";S.name="";S.txns=[];S.budgets=[];S.fixed=[];S.goals=[];S.gents=[];S.members=null;S.loaded=false;S.tab="home";S.view="login";S.amsg=msg||"";S.aok=false;if(typeof render==="function")render()}
+async function loadMembers(){try{S.members=await api("members?select=user_id,display_name,role&order=created_at.asc")||[]}catch(e){S.members=[]}}
+async function enter(){
+  S.view="";
+  try{S.profile=await api("rpc/my_profile",{method:"POST",body:"{}"})}
+  catch(e){if(!S.auth)return;S.view="err";S.amsg=errText(e);render();return}
+  if(!S.profile){S.view="family";S.amsg="";render();return}
+  S.code=S.profile.household_id;S.name=S.profile.display_name;ls("name","");ls("code","");S.view="";S.pf=ls("pf")||S.name;load()}
+function parseHash(){var o={};try{new URLSearchParams(location.hash.replace(/^#/,"")).forEach(function(v,k){o[k]=v})}catch(e){}return o}
+async function boot(){
+  var hp=parseHash();
+  if(hp.access_token){
+    saveSess({access_token:hp.access_token,refresh_token:hp.refresh_token,expires_in:parseInt(hp.expires_in,10)||3600});
+    try{history.replaceState(null,"",location.pathname+location.search)}catch(e){}
+    if(hp.type==="recovery"){S.view="newpw";render();return}
+  }else if(hp.error_description){
+    S.view="login";S.amsg=hp.error_description.replace(/\+/g," ");try{history.replaceState(null,"",location.pathname+location.search)}catch(e){}render();return}
+  if(!S.auth){S.view="login";render();return}
+  render();await enter()}
+function authView(){
+  var v=S.view,legacy=!!ls("code"),h='<div class="brand">💸</div><h1 style="text-align:center">Our Expenses</h1><div class="card">';
+  var inp=function(id,ph,type,ac,val){return '<input id="'+id+'" type="'+type+'" placeholder="'+ph+'" autocomplete="'+ac+'"'+(type==="email"?' inputmode="email" autocapitalize="off" autocorrect="off"':'')+(val?' value="'+esc(val)+'"':'')+'>'};
+  var btn=function(a,t){return '<button class="btn" data-a="'+a+'">'+t+'</button>'};
+  var lnk=function(a,t){return '<div style="text-align:center"><button class="alink" data-a="'+a+'">'+t+'</button></div>'};
+  var msg='<div id="amsg" class="amsg'+(S.aok?" ok":"")+'">'+esc(S.amsg)+'</div>';
+  if(v==="login"){h+='<h2 style="margin-top:0">Log in</h2>'+(legacy?'<div class="note" style="margin-bottom:10px">The app now uses accounts. Create an account, then join your family with the invite code. Your saved expenses stay as they are.</div>':'')+inp("a_em","Email","email","email",S.lastEmail)+inp("a_pw","Password","password","current-password")+msg+btn("login","Log in")+lnk("go-forgot","Forgot password?")+lnk("go-signup","New here? Create an account")}
+  else if(v==="signup"){h+='<h2 style="margin-top:0">Create account</h2>'+inp("a_em","Email","email","email",S.lastEmail)+inp("a_pw","Password (8+ characters)","password","new-password")+inp("a_pw2","Repeat password","password","new-password")+msg+btn("signup","Create account")+lnk("go-login","I already have an account")}
+  else if(v==="forgot"){h+='<h2 style="margin-top:0">Reset password</h2><div class="note" style="margin-bottom:10px">Enter your email. We will send a link to choose a new password.</div>'+inp("a_em","Email","email","email",S.lastEmail)+msg+btn("forgot","Send reset link")+lnk("go-login","Back to log in")}
+  else if(v==="newpw"){h+='<h2 style="margin-top:0">Choose a new password</h2>'+inp("a_pw","New password (8+ characters)","password","new-password")+inp("a_pw2","Repeat new password","password","new-password")+msg+btn("newpw","Save password")}
+  else if(v==="family"){var c=S.fmode==="create";
+    h+='<h2 style="margin-top:0">Your family</h2><div class="seg"><button class="btn s '+(c?'':'ghost')+'" data-a="ftab-c">Start a family</button><button class="btn s '+(c?'ghost':'')+'" data-a="ftab-j">Join with a code</button></div>'+
+      (c?'<div class="note" style="margin-bottom:10px">You will get an invite code to share with your family.</div>'+inp("f_fam","Family name (optional)","text","off")+inp("f_nm","Your name, e.g. Manohar","text","given-name")+'<div class="note" style="margin-bottom:10px">Use the same name as PERSON in your Gmail script.</div>'+msg+btn("fcreate","Create family")
+        :'<div class="note" style="margin-bottom:10px">Ask the family owner for the invite code (Settings, Family members).</div>'+inp("f_code","Invite code","text","off")+inp("f_nm","Your name, e.g. Manjari","text","given-name")+'<div class="note" style="margin-bottom:10px">Use the same name as PERSON in your Gmail script.</div>'+msg+btn("fjoin","Join family"))+lnk("out","Log out")}
+  else if(v==="invite"){h+='<h2 style="margin-top:0">Family created</h2><div class="note">Share this code with your family. They create an account, tap <b>Join with a code</b> and enter it.</div><div class="code">'+esc(S.newCode)+'</div><button class="btn ghost" data-a="copy" style="margin-bottom:10px">Copy code</button>'+btn("cont","Continue")}
+  else if(v==="err"){h+='<h2 style="margin-top:0">Something went wrong</h2>'+msg+btn("retry","Try again")+lnk("out","Log out")}
+  else h+='<div class="mute">Loading…</div>';
+  return h+'</div>'}
+async function authAction(a){
+  var m=function(t,ok){var e=document.getElementById("amsg");if(e){e.textContent=t||"";e.className="amsg"+(ok?" ok":"")}};
+  var go=function(v,t,ok){S.view=v;S.amsg=t||"";S.aok=!!ok;render()};
+  var em=function(){S.lastEmail=g("a_em").trim().toLowerCase();return S.lastEmail};
+  if(a==="go-login"){em();return go("login")}if(a==="go-signup"){em();return go("signup")}if(a==="go-forgot"){em();return go("forgot")}
+  if(a==="ftab-c"){S.fmode="create";return go("family")}if(a==="ftab-j"){S.fmode="join";return go("family")}
+  if(a==="out"){try{if(S.auth)await authFetch("logout","POST",null,S.auth.access)}catch(e){}return logoutLocal("")}
+  if(a==="copy"){try{await navigator.clipboard.writeText(S.newCode);toast("Code copied")}catch(e){toast("Press and hold the code to copy")}return}
+  if(a==="cont"||a==="retry"){S.view="";render();return enter()}
+  var btn=document.querySelector("[data-a='"+a+"']"),old=btn?btn.textContent:"";
+  var busy=function(on){if(btn){btn.disabled=on;btn.textContent=on?"Please wait…":old}};
+  m("");
+  try{
+    if(a==="login"){var e1=em(),pw=g("a_pw");if(!e1||!pw)return m("Enter your email and password.");busy(true);
+      var o=await authFetch("token?grant_type=password","POST",{email:e1,password:pw});saveSess(o);S.auth.email=S.auth.email||e1;ls("sb",JSON.stringify(S.auth));S.view="";render();await enter();return}
+    if(a==="signup"){var e2=em(),p1=g("a_pw"),p2=g("a_pw2");if(!e2)return m("Enter your email.");if(p1.length<8)return m("Password needs at least 8 characters.");if(p1!==p2)return m("The two passwords do not match.");busy(true);
+      var o2=await authFetch("signup","POST",{email:e2,password:p1});
+      if(o2.access_token){saveSess(o2);S.view="";render();await enter();return}
+      return go("login","Account created. Check your email to confirm it, then log in.",true)}
+    if(a==="forgot"){var e3=em();if(!e3)return m("Enter your email.");busy(true);
+      await authFetch("recover?redirect_to="+encodeURIComponent(location.origin+location.pathname),"POST",{email:e3});
+      busy(false);return m("If this email has an account, a reset link is on its way. Check your inbox and spam.",true)}
+    if(a==="newpw"){var n1=g("a_pw"),n2=g("a_pw2");if(n1.length<8)return m("Password needs at least 8 characters.");if(n1!==n2)return m("The two passwords do not match.");busy(true);
+      await authFetch("user","PUT",{password:n1},S.auth.access);S.view="";S.amsg="";render();toast("Password changed");await enter();return}
+    if(a==="fcreate"){var nm=g("f_nm").trim();if(nm.length<2)return m("Enter your name.");busy(true);
+      var r=await api("rpc/create_household",{method:"POST",body:JSON.stringify({p_name:g("f_fam").trim(),p_display:nm})});
+      S.newCode=r.invite_code;return go("invite")}
+    if(a==="fjoin"){var cd=g("f_code").trim(),nm2=g("f_nm").trim();if(!cd)return m("Enter the invite code.");if(nm2.length<2)return m("Enter your name.");busy(true);
+      await api("rpc/join_household",{method:"POST",body:JSON.stringify({p_code:cd,p_display:nm2})});S.view="";render();toast("Welcome!");await enter();return}
+  }catch(e){busy(false);m(errText(e))}}
+function bindAuth(el){
+  el.querySelectorAll("[data-a]").forEach(function(b){b.onclick=function(){authAction(b.dataset.a)}});
+  el.querySelectorAll("input").forEach(function(i){i.onkeydown=function(e){if(e.key==="Enter"){var pb=el.querySelector(".btn:not(.ghost):not(.s)[data-a]");if(pb)pb.click()}}})}
 async function loadPlan(){
   try{S.budgets=await api("budgets?select=*")||[];S.fixed=await api("fixed_items?select=*&order=created_at.asc")||[];S.planErr=""}
   catch(e){S.planErr="Plan tables are not set up yet ("+e.message.slice(0,80)+")"}
@@ -518,7 +622,15 @@ function salaryDay(){
   c.sort(function(a,b){return a.txn_date<b.txn_date?1:-1});var t=c[0];
   return {day:Number(t.txn_date.slice(8,10)),amount:t.amount,date:t.txn_date}}
 function vMe(){
-  return '<h1>Settings</h1><div class="card"><div class="mute">Your name (must match PERSON in your Gmail script)</div><input id="nm" value="'+esc(S.name)+'"><div class="mute">Household code</div><input id="cd" type="password" value="'+esc(S.code)+'"><div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><div class="mute">Your month starts on day (1 = normal calendar month)</div><input id="ms" type="number" inputmode="numeric" min="1" max="31" value="'+(S.ms||1)+'"><button class="btn ghost s" id="msal" style="margin-bottom:10px">Use my salary credit day</button><div class="note" id="msn">This is saved on this phone only. Set the same day on the other phone. Reports, budgets and forecasts all follow it.</div><button class="btn" id="sv">Save</button></div>';
+  var p=S.profile||{},own=p.role==="owner";
+  var h='<h1>Settings</h1><div class="card"><div class="mute">Logged in as</div><div style="margin-bottom:8px"><b>'+esc(p.email||(S.auth&&S.auth.email)||"")+'</b></div><div class="mute">Family</div><div style="margin-bottom:8px"><b>'+esc(p.family_name||"")+'</b> · you are <b>'+esc(S.name)+'</b>'+(own?" (owner)":"")+'</div><div class="note">Your name must match PERSON in your Gmail script. It cannot be changed here because past payments are saved under it.</div><button class="btn ghost s" id="lo" style="margin-top:10px">Log out</button></div>';
+  h+='<h2>Family members</h2><div class="card">';
+  if(S.members===null)h+='<span class="mute">Loading…</span>';
+  else S.members.forEach(function(m){h+='<div class="row" style="margin:6px 0"><span>'+esc(m.display_name)+(m.user_id===p.user_id?" (you)":"")+' <span class="mute">· '+(m.role==="owner"?"owner":"member")+'</span></span>'+(own&&m.user_id!==p.user_id?'<button class="btn ghost s" data-rm="'+esc(m.user_id)+'">Remove</button>':'')+'</div>'});
+  if(own)h+='<div class="mute" style="margin-top:12px">Invite code</div><div class="code">'+esc(p.invite_code||"")+'</div><div class="row" style="gap:8px"><button class="btn ghost s" id="cpy">Copy</button><button class="btn ghost s" id="ncode">New code</button></div><div class="note">To add someone: they open the app, tap Create account, then Join with a code, and enter this. Share it only with family (up to 6 people). New code stops the old one working.</div>';
+  else h+='<div class="note" style="margin-top:8px">To add another person, ask the family owner for the invite code.</div>';
+  h+='</div><h2>This phone</h2><div class="card"><div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><div class="mute">Your month starts on day (1 = normal calendar month)</div><input id="ms" type="number" inputmode="numeric" min="1" max="31" value="'+(S.ms||1)+'"><button class="btn ghost s" id="msal" style="margin-bottom:10px">Use my salary credit day</button><div class="note" id="msn">This is saved on this phone only. Set the same day on the other phone. Reports, budgets and forecasts all follow it.</div><button class="btn" id="sv">Save</button></div>';
+  return h;
 }
 function leftOver(){
   var pf=S.pf;S.pf="__both";var key=monthKey(0),Lc=S.txns.filter(function(t){return pkey(t.txn_date)===key&&isCount(t)});
@@ -593,14 +705,10 @@ async function goalMoney(id){
     await loadPlan();render()}
   catch(e){alert("Could not save: "+e.message)}
 }
-function vSetup(){
-  return '<h1>Welcome</h1><div class="card"><div class="mute">Your name (same as PERSON in your Gmail script)</div><input id="nm"><div class="mute">Household code</div><input id="cd" type="password"><button class="btn" id="go">Start</button></div>';
-}
 function g(id){var e=document.getElementById(id);return e?e.value:""}
 function render(){
   var el=document.getElementById("app"),nav=document.getElementById("nav");
-  if(!S.code||!S.name){nav.classList.add("hide");el.innerHTML=vSetup();
-    document.getElementById("go").onclick=function(){var n=g("nm").trim(),c=g("cd").trim();if(!n||!c)return;S.name=n;S.code=c;ls("name",n);ls("code",c);load()};return}
+  if(S.view||!S.code||!S.name){nav.classList.add("hide");el.innerHTML=authView();bindAuth(el);return}
   if(S.pf&&S.pf!=="__both"&&persons().indexOf(S.pf)<0)S.pf=S.name;
   nav.classList.remove("hide");
   nav.querySelectorAll("button").forEach(function(b){b.classList.toggle("on",b.dataset.t===S.tab)});
@@ -619,7 +727,11 @@ function render(){
   var ma=q("msal");if(ma)ma.onclick=function(){var r=salaryDay(),n=q("msn");
     if(!r){n.textContent="No salary credit found yet. Mark your salary payee as Salary / Income in History first.";return}
     q("ms").value=r.day;n.textContent="Found "+money(r.amount)+" credited on "+r.date+". Day "+r.day+" filled in. Press Save."};
-  var sv=q("sv");if(sv)sv.onclick=function(){S.ms=Math.min(31,Math.max(1,parseInt(g("ms"),10)||1));ls("ms",S.ms);if(S.range==="month"||S.range==="last")preset(S.range);S.name=g("nm").trim()||S.name;S.code=g("cd").trim()||S.code;S.cur=g("cu")||"₹";ls("name",S.name);ls("code",S.code);ls("cur",S.cur);S.tab="home";load()};
+  var sv=q("sv");if(sv)sv.onclick=function(){S.ms=Math.min(31,Math.max(1,parseInt(g("ms"),10)||1));ls("ms",S.ms);if(S.range==="month"||S.range==="last")preset(S.range);S.cur=g("cu")||"₹";ls("cur",S.cur);S.tab="home";load()};
+  var lo=q("lo");if(lo)lo.onclick=function(){authAction("out")};
+  var cpy=q("cpy");if(cpy)cpy.onclick=async function(){try{await navigator.clipboard.writeText(S.profile.invite_code);toast("Code copied")}catch(e){toast("Press and hold the code to copy")}};
+  var nc=q("ncode");if(nc)nc.onclick=async function(){if(!confirm("Make a new code? The old one will stop working."))return;try{S.profile.invite_code=await api("rpc/regenerate_invite",{method:"POST",body:"{}"});toast("New code ready");render()}catch(e){showErr(errText(e))}};
+  el.querySelectorAll("[data-rm]").forEach(function(b){b.onclick=async function(){if(!confirm("Remove this person from the family? Their saved payments stay."))return;try{await api("rpc/remove_member",{method:"POST",body:JSON.stringify({p_user:b.dataset.rm})});await loadMembers();render()}catch(e){showErr(errText(e))}}});
   var svb=q("svb");if(svb)svb.onclick=saveBudgets;
   var fa=q("fadd");if(fa)fa.onclick=addFixed;
   var ga=q("gadd");if(ga)ga.onclick=addGoal;
@@ -718,13 +830,15 @@ document.addEventListener("click",function(e){
 function showErr(m){var b=document.getElementById("errbar");if(!b){b=document.createElement("div");b.id="errbar";b.style.cssText="position:fixed;top:0;left:0;right:0;background:#b4432f;color:#fff;padding:8px 12px;font-size:13px;z-index:99";b.onclick=function(){b.remove()};document.body.appendChild(b)}b.textContent="Problem: "+m+" (tap to close, and send me this message)"}
 window.addEventListener("error",function(e){showErr(e.message)});
 window.addEventListener("unhandledrejection",function(e){showErr(String(e.reason&&e.reason.message||e.reason))});
-document.getElementById("nav").onclick=function(e){var bt=e.target.closest&&e.target.closest("button[data-t]");var t=bt&&bt.dataset.t;if(t){S.tab=t;render();if(t==="plan"||t==="goals")loadPlan().then(render)}};
+document.getElementById("nav").onclick=function(e){var bt=e.target.closest&&e.target.closest("button[data-t]");var t=bt&&bt.dataset.t;if(t){S.tab=t;render();if(t==="plan"||t==="goals")loadPlan().then(render);if(t==="me")loadMembers().then(render)}};
 function idle(){return !document.hidden&&S.code&&S.tab!=="plan"&&S.tab!=="goals"&&S.tab!=="me"&&!document.getElementById("sheet").innerHTML}
 document.addEventListener("visibilitychange",function(){if(idle())load()});
 setInterval(function(){if(idle())load()},30000);
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
-S.pf=ls("pf")||"";S.name=ls("name")||"";S.code=ls("code")||"";S.cur=ls("cur")||"₹";S.ms=parseInt(ls("ms"),10)||1;
-preset("month");if(S.code&&S.name)load();else render();
+S.pf=ls("pf")||"";S.cur=ls("cur")||"₹";S.ms=parseInt(ls("ms"),10)||1;
+try{S.auth=JSON.parse(ls("sb")||"null")}catch(e){S.auth=null}
+window.addEventListener("hashchange",function(){if(/access_token|error_description/.test(location.hash))boot()});
+preset("month");boot();
 </script>
 </body>
 </html>
