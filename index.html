@@ -230,7 +230,7 @@ async function loadPlan(){
 async function load(){
   try{S.txns=await api("transactions?select=*&order=txn_date.desc,created_at.desc&limit=3000")||[];S.err="";S.loaded=true}
   catch(e){S.err="Could not load: "+e.message}
-  if(S.loaded)await loadPlan();
+  if(S.loaded){await loadPlan();await loadMembers()}
   if(S.loaded&&!S.pf)S.pf=S.name;
   render();
 }
@@ -250,12 +250,13 @@ function isCount(t){return t.category!==TRF&&t.category!==IGN&&t.category!==CCB&
 function personOK(t){return !S.pf||S.pf==="__both"||t.person===S.pf}
 function inRange(t){var d=t.txn_date||"";return personOK(t)&&(!S.from||d>=S.from)&&(!S.to||d<=S.to)}
 function sum(l,ty){return l.filter(function(t){return t.type===ty}).reduce(function(a,t){return a+Number(t.amount)},0)}
-function persons(){var seen={};S.txns.forEach(function(t){if(t.person)seen[t.person]=1});if(S.name)seen[S.name]=1;
+function persons(){var seen={};S.txns.forEach(function(t){if(t.person)seen[t.person]=1});if(S.name)seen[S.name]=1;(S.members||[]).forEach(function(m){if(m.display_name)seen[m.display_name]=1});
   return Object.keys(seen).sort(function(a,b){return a===S.name?-1:b===S.name?1:a<b?-1:1})}
+function allWord(cap){var n=persons().length;return n>2?(cap?'Everyone':'everyone'):(cap?'Both of us':'both of us')}
 function personUI(){
   var names=persons(),h='<div class="mute">Show expenses of</div><select id="pf">';
   names.forEach(function(n){h+='<option value="'+esc(n)+'"'+(S.pf===n?" selected":"")+'>'+esc(n)+(n===S.name?" (you)":"")+'</option>'});
-  if(names.length>1)h+='<option value="__both"'+(S.pf==="__both"?" selected":"")+'>Both of us</option>';
+  if(names.length>1)h+='<option value="__both"'+(S.pf==="__both"?" selected":"")+'>'+allWord(true)+'</option>';
   return h+'</select>';
 }
 function rangeUI(){
@@ -482,7 +483,7 @@ function flowBlock(F){
   var h='<h2>Money flow</h2><div class="card"><div style="font-size:14px;line-height:1.7">'+parts.join(' <span class="mute">→</span> ')+' <span class="mute">=</span> <b class="'+(F.left>=0?'in':'out')+'">'+money(Math.abs(F.left))+(F.left>=0?' left':' short')+'</b></div>';
   h+='<div class="stack"'+(F.left<0?' style="box-shadow:0 0 0 2px var(--out)"':'')+'>'+seg(F.mand,"#4b7bb5")+seg(F.ev,"#c9772b")+seg(Math.max(F.lend,0),"#8a6bb1")+seg(Math.max(F.left,0),"#1f6f5c")+'</div>';
   h+='<div class="lg"><span><i style="background:#4b7bb5"></i>Mandatory</span><span><i style="background:#c9772b"></i>Everyday</span><span><i style="background:#8a6bb1"></i>Lending</span><span><i style="background:#1f6f5c"></i>Left</span></div>';
-  return h+'<div class="note">Mandatory is counted when "Both of us" is selected. Transfers between you two are left out.</div></div>'}
+  return h+'<div class="note">Mandatory is counted when "'+allWord(true)+'" is selected. Transfers between family members are left out.</div></div>'}
 function heroBlock(X,F,P,who,nOut,L){
   var h='<div class="hero"><small>Total expenses '+esc(who)+'</small><div class="hb">'+money(X.total)+'</div>';
   if(P)h+='<div>'+arrow(X.total,P.X.total)+' <span style="font-size:12px;opacity:.85">vs '+esc(P.label)+' ('+money(P.X.total)+')</span></div>';
@@ -544,7 +545,7 @@ function whoSpent(Lc,X,P){
   return h+'</div>'}
 function mandBlock(x){
   if(!S.fixed.length)return '';
-  if(!x.useM)return '<div class="card mute">Mandatory expenses (EMIs, fees, maid…) are included when you choose <b>Both of us</b>.</div>';
+  if(!x.useM)return '<div class="card mute">Mandatory expenses (EMIs, fees, maid…) are included when you choose <b>'+allWord(true)+'</b>.</div>';
   var h='<h2>Mandatory expenses</h2><div class="card">';
   x.rows.forEach(function(r){h+='<div class="row" style="margin:5px 0"><span>'+esc(r.f.name)+'</span><b>'+(r.amt>0?money(r.amt):'<span class="mute">not due</span>')+'</b></div>'});
   return h+'<div class="row" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line)"><b>Total mandatory</b><b class="out">'+money(x.mand)+'</b></div><div class="note">Included in Total expenses. Payments filed under these same categories (for example your EMI payee as Home loan EMI) are not counted a second time.</div></div>';
@@ -557,7 +558,7 @@ function vHome(){
   if(S.loaded&&!S.txns.length&&!S.err)h+='<div class="card mute">No transactions yet. If you expected some, check the household code in Settings.</div>';
   if(pend)h+='<div class="card row"><span>'+pend+' need a category</span><button class="btn s" id="fix">Review</button></div>';
   var nOut=Lc.filter(function(t){return t.type==="out"}).length,nIn=Lc.length-nOut,pdt=periodDates(),X=expenseSplit(Lc,pdt.from,pdt.to);
-  var who=S.pf==="__both"?"by both of us":(S.pf===S.name?"by you":"by "+S.pf);
+  var who=S.pf==="__both"?"by "+allWord():(S.pf===S.name?"by you":"by "+S.pf);
   var P=prevInfo(),F=flowCalc(L,Lc,X);
   h+=heroBlock(X,F,P,who,nOut,L);
   h+=timeChart(X,pdt.from,pdt.to);
