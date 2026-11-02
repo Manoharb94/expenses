@@ -225,6 +225,118 @@ function bindSc(){
   var cb=document.getElementById("sccopy");if(cb)cb.onclick=async function(){if(await copyText(scriptText())){toast("Script copied. Now tap Open Google Script.")}else{var t=document.getElementById("sctxt");if(t){t.parentNode.open=true}toast("Could not copy. Press and hold the script below, choose Select all, then Copy.")}};
   document.querySelectorAll("[data-bank]").forEach(function(i){i.onchange=async function(){var sel=[];document.querySelectorAll("[data-bank]").forEach(function(x){if(x.checked)sel.push(x.dataset.bank)});S.sc.banks=sel;try{await api("rpc/set_my_banks",{method:"POST",body:JSON.stringify({p_banks:sel})});toast("Saved")}catch(e){showErr(errText(e))}}});
   var kb=document.getElementById("sckey");if(kb)kb.onclick=async function(){if(!confirm("Make a new key? Your current script stops working until you paste the new one."))return;try{await api("rpc/regenerate_ingest_key",{method:"POST",body:"{}"});await loadSc();var c=document.getElementById("sccard");if(c){c.innerHTML=scInner();bindSc()}toast("New key ready. Copy the script again.")}catch(e){showErr(errText(e))}}}
+
+/* ---------- statement import ---------- */
+var XLSX_URL="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+S.st=null;S.imports=null;S.stsel="";
+function loadXlsx(){return new Promise(function(res,rej){if(window.XLSX)return res();var x=document.createElement("script");x.src=XLSX_URL;x.onload=function(){res()};x.onerror=function(){rej(new Error("Could not load the spreadsheet reader. Check your internet and try again."))};document.head.appendChild(x)})}
+function stNum(x){var v=parseFloat(String(x==null?"":x).replace(/,/g,""));return isNaN(v)?0:v}
+function stInfo(n0,refc){
+  var n=String(n0||"").replace(/\s+/g," ").trim(),pt=n.split("-"),m,o={m:"",rrn:"",c:""};
+  var rc=String(refc||"").trim();
+  if(/^UPIRET/i.test(n)){o.m="UPI refund";return o}
+  if(/^UPI-/i.test(n)){o.m=(pt[1]||"").trim();m=n.match(/-(\d{12})-(?:UPI|TIPS)/i);if(m)o.rrn=m[1];else if(/^0+\d{12}$/.test(rc))o.rrn=rc.slice(-12);return o}
+  if(/^(NEFT|RTGS|IMPS)\b/i.test(n)){o.m=(pt[2]||pt[1]||n).trim();return o}
+  if(/^ACH D-/i.test(n)){m=n.match(/^ACH D-\s*(.+?)-[A-Z0-9]+$/i);o.m=(m?m[1]:n.replace(/^ACH D-\s*/i,"")).trim();return o}
+  if(/^IB BILLPAY DR/i.test(n)){m=n.match(/(\d{4})$/);o.m="Credit card bill"+(m?" (HDFC …"+m[1]+")":"");o.c=CCB;return o}
+  if(/^EXC PYMT/i.test(n)){o.m="Credit card refund";return o}
+  if(/^POS\b/i.test(n)){m=n.match(/\d{2}[A-Z]{3}\d{2}\s+\d{2}:\d{2}:\d{2}\s+(.+)$/);o.m=(m?m[1]:"Card payment").trim();return o}
+  if(/^(ATW|NWD)-/i.test(n)){o.m="ATM cash withdrawal";return o}
+  if(/-TPT-/i.test(n)){m=n.match(/-TPT-(?:.*-)?([^-]+)$/);o.m=(m?m[1]:"Bank transfer").trim();return o}
+  if(/INSTAALERTCHG|DEBIT CARD|DC INTL POS|CHRG|CHARGES|MARKUP/i.test(n)){o.m="HDFC Bank charges";return o}
+  if(/^INTEREST/i.test(n)){o.m="HDFC interest";return o}
+  if(/^CBDT/i.test(n)){o.m="Income tax (CBDT)";return o}
+  o.m=n.slice(0,40);return o}
+function parseHdfc(aoa){
+  var hi=-1,i,r;
+  for(i=0;i<aoa.length;i++){r=aoa[i]||[];if(String(r[0]).trim().toLowerCase()==="date"&&/narration/i.test(String(r[1]))){hi=i;break}}
+  if(hi<0)throw new Error("This does not look like an HDFC account statement (no Date and Narration columns). Download it from NetBanking as Excel or CSV.");
+  var hd=aoa[hi].map(function(x){return String(x||"").toLowerCase()}),
+      ix=function(re){for(var k=0;k<hd.length;k++)if(re.test(hd[k]))return k;return -1},
+      cr=ix(/chq|ref/),cw=ix(/withdraw/),cp=ix(/deposit/),rows=[],sd=0,sc=0;
+  if(cw<0||cp<0)throw new Error("Could not find the Withdrawal and Deposit columns.");
+  for(i=hi+1;i<aoa.length;i++){r=aoa[i]||[];
+    var m=String(r[0]).trim().match(/^(\d{2})\/(\d{2})\/(\d{2,4})$/);if(!m)continue;
+    var w=stNum(r[cw]),p=stNum(r[cp]);if(!(w>0||p>0))continue;
+    var d=(m[3].length===2?"20"+m[3]:m[3])+"-"+m[2]+"-"+m[1],inf=stInfo(r[1],r[cr]),out=w>0,amt=Math.round((out?w:p)*100)/100;
+    var ref=inf.rrn||("S"+d+"-"+String(r[cr]||"").trim()+"-"+rows.length);
+    rows.push({d:d,a:amt,t:out?"out":"in",m:inf.m,r:ref,c:inf.c,n:String(r[1]||"").replace(/\s+/g," ").trim()});
+    if(out)sd+=amt;else sc+=amt}
+  if(!rows.length)throw new Error("No transactions found in this file.");
+  var sum={},k2,j;
+  for(i=0;i<aoa.length;i++){r=aoa[i]||[];if(String(r[0]).trim().toLowerCase()==="opening balance"){var vr=aoa[i+1]||[];
+    for(j=0;j<r.length;j++){var h=String(r[j]).trim().toLowerCase();if(h==="opening balance")sum.opening=stNum(vr[j]);else if(h==="debits")sum.debits=stNum(vr[j]);else if(h==="credits")sum.credits=stNum(vr[j]);else if(h.indexOf("closing")===0)sum.closing=stNum(vr[j])}break}}
+  var ds=rows.map(function(x){return x.d}).sort(),has=sum.opening!=null&&sum.closing!=null;
+  var bal=has?Math.abs(sum.opening+sc-sd-sum.closing)<0.5:null,tie=sum.debits!=null?Math.abs(sum.debits-sd)<0.5&&Math.abs(sum.credits-sc)<0.5:null;
+  return {rows:rows,from:ds[0],to:ds[ds.length-1],debits:Math.round(sd*100)/100,credits:Math.round(sc*100)/100,opening:sum.opening,closing:sum.closing,balance_ok:bal,summary_ok:tie}}
+/* ---------- end statement import ---------- */
+
+function stBadge(ok,t){return '<span class="tag'+(ok?'':' warn')+'">'+(ok?'✓ ':'⚠ ')+t+'</span>'}
+async function loadImports(){try{S.imports=await api("statement_imports?select=*&order=created_at.desc")||[]}catch(e){S.imports=[];S.impErr=errText(e)}}
+function stReplaceInfo(p,f,t){var l=S.txns.filter(function(x){return x.person===p&&x.txn_date>=f&&x.txn_date<=t&&!x.source&&x.raw});return {n:l.length,sum:sum(l,"out")}}
+function vStmt(){
+  var h='<h2>Bank statements</h2><div class="card"><div class="note" style="margin:0 0 8px">Use this to fill in the days before your email alerts started, or to check them. For the dates you choose, the statement replaces the email-alert payments. Your cash, lending and tally entries are not touched.</div>';
+  var st=S.st;
+  if(!st){h+='<div class="mute">Statement file (HDFC NetBanking: Excel or CSV)</div><input type="file" id="stf" accept=".xls,.xlsx,.csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"><div id="stmsg" class="note"></div>'}
+  else{var rp=stReplaceInfo(st.person,st.from2,st.to2);
+    h+='<div class="row"><b>'+esc(st.file)+'</b><button class="btn ghost s" id="stx">Choose another</button></div>';
+    h+='<div class="note" style="margin:6px 0">'+st.rows.length+' payments · '+esc(st.from)+' to '+esc(st.to)+' · out '+money(st.debits)+' · in '+money(st.credits)+'</div><div style="margin-bottom:8px">'+(st.balance_ok==null?'':stBadge(st.balance_ok,st.balance_ok?'opening + in − out = closing balance':'balances do not add up'))+' '+(st.summary_ok==null?'':stBadge(st.summary_ok,st.summary_ok?'matches the statement totals':'differs from statement totals'))+'</div>';
+    h+='<div class="mute">Whose account is this?</div><select id="stp">'+persons().map(function(n){return '<option value="'+esc(n)+'"'+(n===st.person?' selected':'')+'>'+esc(n)+(n===S.name?' (you)':'')+'</option>'}).join('')+'</select>';
+    h+='<div class="grid"><div><div class="mute">From</div><input type="date" id="stfrom" value="'+esc(st.from2)+'"></div><div><div class="mute">To</div><input type="date" id="stto" value="'+esc(st.to2)+'"></div></div>';
+    h+='<div class="note" id="strep" style="margin:0 0 8px">For '+esc(st.person)+', this replaces '+rp.n+' email-alert payment'+(rp.n===1?'':'s')+' ('+money(rp.sum)+') between these dates. They are only hidden, and come back if you remove the import.</div><button class="btn" id="stgo">Import statement</button><div id="stmsg" class="note"></div>'}
+  h+='</div>';
+  var im=S.imports;
+  h+='<h2>Imported statements</h2><div class="card">';
+  if(im===null)h+='<span class="mute">Loading…</span>';
+  else if(S.impErr)h+='<span class="out">'+esc(S.impErr)+'</span><div class="note">If this mentions step5.sql, run it in Supabase first.</div>';
+  else if(!im.length)h+='<span class="mute">Nothing imported yet.</span>';
+  else im.forEach(function(x){var on=S.stsel===x.id;
+    h+='<div class="tx tap" data-imp="'+esc(x.id)+'"><div class="row"><b>'+esc(x.person)+' · '+esc(x.from_date)+' to '+esc(x.to_date)+'</b><span>'+(on?'▾':'▸')+'</span></div><div class="row mute"><span>'+x.rows_in+' payments · out '+money(x.debits)+' · in '+money(x.credits)+'</span></div><div style="margin-top:4px">'+(x.balance_ok==null?'':stBadge(x.balance_ok,x.balance_ok?'balance checks out':'balance mismatch'))+(x.rows_file>x.rows_in?' '+stBadge(false,(x.rows_file-x.rows_in)+' skipped as duplicates'):'')+'</div></div>'});
+  h+='</div>';
+  var sel=(im||[]).filter(function(x){return x.id===S.stsel})[0];
+  if(sel)h+=vStmtAnalysis(sel);
+  return h}
+function vStmtAnalysis(x){
+  var rows=S.txns.filter(function(t){return t.batch_id===x.id}),mo={},h='<h2>This statement: '+esc(x.from_date)+' to '+esc(x.to_date)+'</h2><div class="card">';
+  rows.forEach(function(t){var k=(t.txn_date||"").slice(0,7),o=mo[k]=mo[k]||{out:0,inn:0,sp:0,n:0},a=Number(t.amount);o.n++;if(t.type==="out"){o.out+=a;if(isCount(t))o.sp+=a}else o.inn+=a});
+  var ks=Object.keys(mo).sort(),mx=Math.max.apply(null,ks.map(function(k){return Math.max(mo[k].out,mo[k].inn)}))||1;
+  h+='<div class="note" style="margin:0 0 8px">Money out of the bank includes loan EMIs, card bills and transfers. “Counted as spending” leaves out transfers between you, card-bill payments and lending, so it matches the rest of the app.</div>';
+  ks.forEach(function(k){var o=mo[k];h+='<div class="cr"><div class="row"><b>'+esc(plabelFor(k))+'</b><span class="mute">'+o.n+' payments</span></div><div class="row"><span>Money out</span><b class="out">'+money(o.out)+'</b></div><div class="bar"><i style="width:'+Math.round(o.out/mx*100)+'%;background:#b4432f"></i></div><div class="row"><span>Money in</span><b class="in">'+money(o.inn)+'</b></div><div class="bar"><i style="width:'+Math.round(o.inn/mx*100)+'%"></i></div><div class="row mute"><span>Counted as spending</span><span>'+money(o.sp)+'</span></div></div>'});
+  h+='</div>';
+  var outs=rows.filter(function(t){return t.type==="out"&&isCount(t)}),ev=outs.reduce(function(a,t){return a+Number(t.amount)},0);
+  h+=topPayees({outs:outs,ev:ev});
+  var big=rows.filter(function(t){return t.type==="out"}).sort(function(a,b){return b.amount-a.amount}).slice(0,8);
+  if(big.length){h+='<h2>Biggest payments out</h2><div class="card">';big.forEach(function(t){h+='<div class="row" style="margin:6px 0"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(t.merchant||"Unknown")+' <span class="mute">'+esc(t.txn_date)+'</span></span><b class="out">'+money(t.amount)+'</b></div>'});h+='</div>'}
+  h+='<div class="card"><button class="btn ghost s" data-undo="'+esc(x.id)+'">Remove this import</button><div class="note">Removing it brings back the email-alert payments for these dates.</div></div>';
+  return h}
+function plabelFor(k){var p=k.split("-"),d=new Date(+p[0],+p[1]-1,1);return d.toLocaleString("en-IN",{month:"long",year:"numeric"})}
+function bindStmt(){
+  var f=document.getElementById("stf");
+  if(f)f.onchange=async function(){var file=f.files&&f.files[0],msg=document.getElementById("stmsg");if(!file)return;if(msg){msg.className="note";msg.textContent="Reading the file…"}
+    try{await loadXlsx();var buf=await file.arrayBuffer(),wb=XLSX.read(buf,{type:"array"}),ws=wb.Sheets[wb.SheetNames[0]],aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:""}),r=parseHdfc(aoa);
+      r.file=file.name;r.person=S.name;r.from2=r.from;r.to2=r.to;S.st=r;render()}
+    catch(e){if(msg){msg.className="note out";msg.textContent=errText(e)}}};
+  var x=document.getElementById("stx");if(x)x.onclick=function(){S.st=null;render()};
+  var sp=document.getElementById("stp");if(sp)sp.onchange=function(){S.st.person=sp.value;stRefresh()};
+  var sf=document.getElementById("stfrom");if(sf)sf.onchange=function(){S.st.from2=sf.value;stRefresh()};
+  var stt=document.getElementById("stto");if(stt)stt.onchange=function(){S.st.to2=stt.value;stRefresh()};
+  var go=document.getElementById("stgo");if(go)go.onclick=stImport;
+  document.querySelectorAll("[data-imp]").forEach(function(b){b.onclick=function(){S.stsel=S.stsel===b.dataset.imp?"":b.dataset.imp;render()}});
+  document.querySelectorAll("[data-undo]").forEach(function(b){b.onclick=async function(){if(!confirm("Remove this import? The email-alert payments for these dates come back."))return;try{await api("rpc/undo_statement",{method:"POST",body:JSON.stringify({p_batch:b.dataset.undo})});S.stsel="";await load();await loadImports();render();toast("Import removed")}catch(e){showErr(errText(e))}}})}
+function stRefresh(){var st=S.st,e=document.getElementById("strep");if(!e||!st)return;var rp=stReplaceInfo(st.person,st.from2,st.to2);e.textContent="For "+st.person+", this replaces "+rp.n+" email-alert payment"+(rp.n===1?"":"s")+" ("+money(rp.sum)+") between these dates. They are only hidden, and come back if you remove the import."}
+async function stImport(){
+  var st=S.st,msg=document.getElementById("stmsg"),btn=document.getElementById("stgo");if(!st)return;
+  if(!st.from2||!st.to2||st.from2>st.to2){if(msg){msg.className="note out";msg.textContent="Check the From and To dates."}return}
+  var rows=st.rows.filter(function(r){return r.d>=st.from2&&r.d<=st.to2});if(!rows.length){if(msg){msg.className="note out";msg.textContent="No payments fall between these dates."}return}
+  if(!confirm("Import "+rows.length+" payments for "+st.person+" from "+st.from2+" to "+st.to2+"?"))return;
+  btn.disabled=true;btn.textContent="Importing…";
+  try{var res=await api("rpc/import_statement",{method:"POST",body:JSON.stringify({p_person:st.person,p_from:st.from2,p_to:st.to2,p_rows:rows,p_meta:{file:st.file,opening:st.opening,closing:st.closing,balance_ok:st.balance_ok}})});
+    var fd=0,fc=0;rows.forEach(function(r){if(r.t==="out")fd+=r.a;else fc+=r.a});
+    var ok=Math.abs(res.debits-fd)<0.5&&Math.abs(res.credits-fc)<0.5;
+    S.st=null;S.stsel=res.batch;await load();await loadImports();render();
+    toast("Imported "+res.inserted+" payments");
+    var m2=document.getElementById("stmsg");if(m2){m2.className="note";m2.textContent="Imported "+res.inserted+" payments ("+res.replaced+" email-alert payments replaced, "+res.carried+" categories kept, "+res.needs_category+" need a category). "+(ok?"Totals match the file.":"Totals differ from the file by "+money(Math.abs(res.debits-fd)+Math.abs(res.credits-fc))+" (duplicates skipped).")}
+  }catch(e){btn.disabled=false;btn.textContent="Import statement";if(msg){msg.className="note out";msg.textContent=errText(e)}}}
 async function loadPlan(){
   try{S.budgets=await api("budgets?select=*")||[];S.fixed=await api("fixed_items?select=*&order=created_at.asc")||[];S.planErr=""}
   catch(e){S.planErr="Plan tables are not set up yet ("+e.message.slice(0,80)+")"}
@@ -233,8 +345,9 @@ async function loadPlan(){
   try{S.gents=await api("goal_entries?select=*&order=created_at.asc")||[]}catch(e){S.gents=null}
 }
 async function load(){
-  try{S.txns=await api("transactions?select=*&order=txn_date.desc,created_at.desc&limit=3000")||[];S.err="";S.loaded=true}
-  catch(e){S.err="Could not load: "+e.message}
+  var q0="transactions?select=*&order=txn_date.desc,created_at.desc&limit=5000";
+  try{S.txns=await api(q0+"&hidden=eq.false")||[];S.err="";S.loaded=true}
+  catch(e){try{S.txns=await api(q0)||[];S.err="";S.loaded=true}catch(e2){S.err="Could not load: "+e2.message}}
   if(S.loaded){await loadPlan();await loadMembers()}
   if(S.loaded&&!S.pf)S.pf=S.name;
   render();
@@ -608,10 +721,11 @@ function vList(emb){
   return h+'</div>';
 }
 function vReports(){
-  var opts=[["last","Last month"],["this","This month so far"],["next","Next month (forecast)"],["year","Next 12 months (forecast)"]];
+  var opts=[["last","Last month"],["this","This month so far"],["next","Next month (forecast)"],["year","Next 12 months (forecast)"],["stmt","Bank statements (upload)"]];
   var h='<h1>Reports</h1>'+personUI()+'<div class="mute">Report</div><select id="rp">';
   opts.forEach(function(o){h+='<option value="'+o[0]+'"'+(S.rp===o[0]?" selected":"")+'>'+o[1]+'</option>'});
   h+='</select>';
+  if(S.rp==="stmt")return h+vStmt();
   if(S.rp==="next")return h+forecastView(1);
   if(S.rp==="year")return h+forecastView(12);
   var off=S.rp==="last"?-1:0,key=monthKey(off),items=txIn(key),Lc=items.filter(isCount);
@@ -762,7 +876,7 @@ function render(){
   var rg=q("rg");if(rg)rg.onchange=function(){if(rg.value==="custom")S.range="custom";else preset(rg.value);render()};
   var df=q("df");if(df)df.onchange=function(){S.from=df.value;S.range="custom";render()};
   var dt=q("dt");if(dt)dt.onchange=function(){S.to=dt.value;S.range="custom";render()};
-  var rp=q("rp");if(rp)rp.onchange=function(){S.rp=rp.value;render()};
+  var rp=q("rp");if(rp)rp.onchange=function(){S.rp=rp.value;if(S.rp==="stmt"&&S.imports===null)loadImports().then(render);render()};
   var f=q("fix");if(f)f.onclick=function(){S.tab="home";S.hf="none";render();var e=q("hist");if(e)e.scrollIntoView()};
   el.querySelectorAll("[data-hf]").forEach(function(b){b.onclick=function(){S.hf=b.dataset.hf;render()}});
   el.querySelectorAll("[data-cat]").forEach(function(b){b.onclick=function(){var t=S.txns.filter(function(x){return x.id===b.dataset.cat})[0];if(t)pick(t)}});
@@ -772,7 +886,7 @@ function render(){
     if(!r){n.textContent="No salary credit found yet. Mark your salary payee as Salary / Income in History first.";return}
     q("ms").value=r.day;n.textContent="Found "+money(r.amount)+" credited on "+r.date+". Day "+r.day+" filled in. Press Save."};
   var sv=q("sv");if(sv)sv.onclick=function(){S.ms=Math.min(31,Math.max(1,parseInt(g("ms"),10)||1));ls("ms",S.ms);if(S.range==="month"||S.range==="last")preset(S.range);S.cur=g("cu")||"₹";ls("cur",S.cur);S.tab="home";load()};
-  bindSc();
+  bindSc();bindStmt();
   var lo=q("lo");if(lo)lo.onclick=function(){authAction("out")};
   var cpy=q("cpy");if(cpy)cpy.onclick=async function(){toast(await copyText(S.profile.invite_code)?"Code copied":"Press and hold the code to copy")};
   var nc=q("ncode");if(nc)nc.onclick=async function(){if(!confirm("Make a new code? The old one will stop working."))return;try{S.profile.invite_code=await api("rpc/regenerate_invite",{method:"POST",body:"{}"});toast("New code ready");render()}catch(e){showErr(errText(e))}};
@@ -875,7 +989,7 @@ document.addEventListener("click",function(e){
 function showErr(m){var b=document.getElementById("errbar");if(!b){b=document.createElement("div");b.id="errbar";b.style.cssText="position:fixed;top:0;left:0;right:0;background:#b4432f;color:#fff;padding:8px 12px;font-size:13px;z-index:99";b.onclick=function(){b.remove()};document.body.appendChild(b)}b.textContent="Problem: "+m+" (tap to close, and send me this message)"}
 window.addEventListener("error",function(e){showErr(e.message)});
 window.addEventListener("unhandledrejection",function(e){showErr(String(e.reason&&e.reason.message||e.reason))});
-document.getElementById("nav").onclick=function(e){var bt=e.target.closest&&e.target.closest("button[data-t]");var t=bt&&bt.dataset.t;if(t){S.tab=t;render();if(t==="plan"||t==="goals")loadPlan().then(render);if(t==="me")Promise.all([loadMembers(),loadSc()]).then(render)}};
+document.getElementById("nav").onclick=function(e){var bt=e.target.closest&&e.target.closest("button[data-t]");var t=bt&&bt.dataset.t;if(t){S.tab=t;render();if(t==="plan"||t==="goals")loadPlan().then(render);if(t==="me")Promise.all([loadMembers(),loadSc()]).then(render);if(t==="rep"&&S.rp==="stmt")loadImports().then(render)}};
 function idle(){return !document.hidden&&S.code&&S.tab!=="plan"&&S.tab!=="goals"&&S.tab!=="me"&&!document.getElementById("sheet").innerHTML}
 document.addEventListener("visibilitychange",function(){if(idle())load()});
 setInterval(function(){if(idle())load()},30000);
