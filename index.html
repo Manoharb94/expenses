@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="manifest" href="manifest.json">
@@ -137,6 +137,11 @@ async function boot(){
     S.view="login";S.amsg=hp.error_description.replace(/\+/g," ");try{history.replaceState(null,"",location.pathname+location.search)}catch(e){}render();return}
   if(!S.auth){S.view="login";render();return}
   render();await enter()}
+async function copyText(t){
+  try{if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(t);return true}}catch(e){}
+  var a=document.createElement("textarea");a.value=t;a.setAttribute("readonly","");a.style.cssText="position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;font-size:16px;border:0;padding:0";
+  document.body.appendChild(a);var ok=false;try{a.select();a.setSelectionRange(0,t.length);ok=document.execCommand("copy")}catch(e){}
+  document.body.removeChild(a);return ok}
 function authView(){
   var v=S.view,legacy=!!ls("code"),h='<div class="brand">💸</div><h1 style="text-align:center">Our Expenses</h1><div class="card">';
   var inp=function(id,ph,type,ac,val){return '<input id="'+id+'" type="'+type+'" placeholder="'+ph+'" autocomplete="'+ac+'"'+(type==="email"?' inputmode="email" autocapitalize="off" autocorrect="off"':'')+(val?' value="'+esc(val)+'"':'')+'>'};
@@ -162,7 +167,7 @@ async function authAction(a){
   if(a==="go-login"){em();return go("login")}if(a==="go-signup"){em();return go("signup")}if(a==="go-forgot"){em();return go("forgot")}
   if(a==="ftab-c"){S.fmode="create";return go("family")}if(a==="ftab-j"){S.fmode="join";return go("family")}
   if(a==="out"){try{if(S.auth)await authFetch("logout","POST",null,S.auth.access)}catch(e){}return logoutLocal("")}
-  if(a==="copy"){try{await navigator.clipboard.writeText(S.newCode);toast("Code copied")}catch(e){toast("Press and hold the code to copy")}return}
+  if(a==="copy"){toast(await copyText(S.newCode)?"Code copied":"Press and hold the code to copy");return}
   if(a==="cont"||a==="retry"){S.view="";render();return enter()}
   var btn=document.querySelector("[data-a='"+a+"']"),old=btn?btn.textContent:"";
   var busy=function(on){if(btn){btn.disabled=on;btn.textContent=on?"Please wait…":old}};
@@ -207,7 +212,7 @@ function scInner(){
   h+='<div class="note" style="margin:0 0 6px"><b>1.</b> Tick the banks you get alerts from</div><div style="margin-bottom:10px">';
   (S.banks||[]).forEach(function(b){h+='<label style="display:flex;align-items:center;gap:10px;padding:6px 0"><input type="checkbox" data-bank="'+esc(b.key)+'" style="width:20px;height:20px;margin:0"'+((c.banks||[]).indexOf(b.key)>=0?' checked':'')+'><span>'+esc(b.label)+'</span>'+(b.beta?'<span class="tag warn">beta</span>':'')+'</label>'});
   h+='<div class="note">Changes reach your script within 5 minutes, no need to copy again. “beta” banks are read, but their alert wording may not be understood yet.</div></div>';
-  h+='<div class="note" style="margin:0 0 6px"><b>2.</b> Copy your personal script</div><button class="btn s" id="sccopy" style="margin-bottom:6px">Copy script</button><details style="margin-bottom:10px"><summary class="mute" style="cursor:pointer">If copying does not work, show the script</summary><textarea readonly id="sctxt" rows="6" style="width:100%;font-size:12px;margin-top:6px">'+esc(scriptText())+'</textarea></details>';
+  h+='<div class="note" style="margin:0 0 6px"><b>2.</b> Copy your personal script</div><button class="btn s" id="sccopy" style="margin-bottom:6px">Copy script</button><details style="margin-bottom:10px"><summary class="mute" style="cursor:pointer">If copying does not work, show the script</summary><textarea readonly id="sctxt" rows="6" style="width:100%;font-size:16px;margin-top:6px">'+esc(scriptText())+'</textarea></details>';
   h+='<div class="note" style="margin:0 0 6px"><b>3.</b> Open Google Script, select all the old text, paste, press Save</div><a class="btn ghost s" style="display:inline-block;text-decoration:none;margin-bottom:10px" target="_blank" rel="noopener" href="https://script.google.com/create">Open Google Script</a>';
   h+='<div class="note" style="margin:0 0 10px"><b>4.</b> In the function list at the top choose <b>setup</b>, press <b>Run</b>, and allow access (Advanced, then Go to project). Sign in with the Gmail that receives your bank alerts. Use a computer or your phone browser in Desktop mode.</div>';
   h+='<div class="note"><b>5.</b> The status above turns to ✓ Connected. Old alerts from the last 60 days load first, then new ones every 5 minutes.</div>';
@@ -217,7 +222,7 @@ function scInner(){
 async function loadSc(){try{S.sc=await api("rpc/my_script_config",{method:"POST",body:"{}"});if(!S.banks)S.banks=await api("rpc/bank_list",{method:"POST",body:"{}"})}catch(e){S.sc=S.sc||{err:errText(e)}}}
 async function refreshSc(){var d=document.getElementById("scstat");if(!d||S.view)return;try{S.sc=await api("rpc/my_script_config",{method:"POST",body:"{}"});d=document.getElementById("scstat");if(d)d.innerHTML=scStat()}catch(e){}}
 function bindSc(){
-  var cb=document.getElementById("sccopy");if(cb)cb.onclick=async function(){try{await navigator.clipboard.writeText(scriptText());toast("Script copied. Now tap Open Google Script.")}catch(e){var t=document.getElementById("sctxt");if(t){t.parentNode.open=true;t.focus();t.select()}toast("Select the text and copy it")}};
+  var cb=document.getElementById("sccopy");if(cb)cb.onclick=async function(){if(await copyText(scriptText())){toast("Script copied. Now tap Open Google Script.")}else{var t=document.getElementById("sctxt");if(t){t.parentNode.open=true}toast("Could not copy. Press and hold the script below, choose Select all, then Copy.")}};
   document.querySelectorAll("[data-bank]").forEach(function(i){i.onchange=async function(){var sel=[];document.querySelectorAll("[data-bank]").forEach(function(x){if(x.checked)sel.push(x.dataset.bank)});S.sc.banks=sel;try{await api("rpc/set_my_banks",{method:"POST",body:JSON.stringify({p_banks:sel})});toast("Saved")}catch(e){showErr(errText(e))}}});
   var kb=document.getElementById("sckey");if(kb)kb.onclick=async function(){if(!confirm("Make a new key? Your current script stops working until you paste the new one."))return;try{await api("rpc/regenerate_ingest_key",{method:"POST",body:"{}"});await loadSc();var c=document.getElementById("sccard");if(c){c.innerHTML=scInner();bindSc()}toast("New key ready. Copy the script again.")}catch(e){showErr(errText(e))}}}
 async function loadPlan(){
@@ -763,7 +768,7 @@ function render(){
   var sv=q("sv");if(sv)sv.onclick=function(){S.ms=Math.min(31,Math.max(1,parseInt(g("ms"),10)||1));ls("ms",S.ms);if(S.range==="month"||S.range==="last")preset(S.range);S.cur=g("cu")||"₹";ls("cur",S.cur);S.tab="home";load()};
   bindSc();
   var lo=q("lo");if(lo)lo.onclick=function(){authAction("out")};
-  var cpy=q("cpy");if(cpy)cpy.onclick=async function(){try{await navigator.clipboard.writeText(S.profile.invite_code);toast("Code copied")}catch(e){toast("Press and hold the code to copy")}};
+  var cpy=q("cpy");if(cpy)cpy.onclick=async function(){toast(await copyText(S.profile.invite_code)?"Code copied":"Press and hold the code to copy")};
   var nc=q("ncode");if(nc)nc.onclick=async function(){if(!confirm("Make a new code? The old one will stop working."))return;try{S.profile.invite_code=await api("rpc/regenerate_invite",{method:"POST",body:"{}"});toast("New code ready");render()}catch(e){showErr(errText(e))}};
   el.querySelectorAll("[data-rm]").forEach(function(b){b.onclick=async function(){if(!confirm("Remove this person from the family? Their saved payments stay."))return;try{await api("rpc/remove_member",{method:"POST",body:JSON.stringify({p_user:b.dataset.rm})});await loadMembers();render()}catch(e){showErr(errText(e))}}});
   var svb=q("svb");if(svb)svb.onclick=saveBudgets;
