@@ -70,9 +70,9 @@ nav button i{font-style:normal;font-size:19px;line-height:1}nav button.on{backgr
 <div id="sheet"></div>
 <script>
 var URLB="https://fwxhclagrwlzxvsmaekt.supabase.co/rest/v1/",KEY="sb_publishable_PiCUzSknFyCfGfEVzTiQbg_qEkBYwL_";
-var TRF="Transfer between us",IGN="Ignore (don't count)",UNC="Others (no category yet)",CCB="Credit card bill (paid)",LOUT="Lend out",LIN="Lend in",UNPL="Unplanned expense",RENT="Rental income";
-var CATS=["Groceries – Offline","Groceries – Online","Shopping – Offline","Shopping – Online","Food – Dining out","Food – Online delivery","Transport","Fuel","Bills & Utilities","Rent / EMI","Health","Beauty / Salon","Entertainment","Travel","Education","Home loan EMI","Kid education","Kid day care","Kid expense","Maid","Cook","Car cleaning","Electricity bill","Gas bill","Family donation",UNPL,"Family & Friends","Salary / Income",RENT,"Other",LOUT,LIN,TRF,CCB,IGN];
-var NOBUD={"Salary / Income":1};NOBUD[TRF]=1;NOBUD[IGN]=1;NOBUD[CCB]=1;NOBUD[LOUT]=1;NOBUD[LIN]=1;NOBUD[UNPL]=1;NOBUD[RENT]=1;
+var TRF="Transfer between us",IGN="Ignore (don't count)",UNC="Others (no category yet)",CCB="Credit card bill (paid)",LOUT="Lend out",LIN="Lend in",UNPL="Unplanned expense",RENT="Rental income",PASS="Pass-through (received & sent on)";
+var CATS=["Groceries – Offline","Groceries – Online","Shopping – Offline","Shopping – Online","Food – Dining out","Food – Online delivery","Transport","Fuel","Bills & Utilities","Rent / EMI","Health","Beauty / Salon","Entertainment","Travel","Education","Home loan EMI","Kid education","Kid day care","Kid expense","Maid","Cook","Car cleaning","Electricity bill","Gas bill","Family donation",UNPL,"Family & Friends","GPay wallet","Trips","Salary / Income",RENT,"Other",LOUT,LIN,TRF,PASS,CCB,IGN];
+var NOBUD={"Salary / Income":1};NOBUD[TRF]=1;NOBUD[IGN]=1;NOBUD[CCB]=1;NOBUD[LOUT]=1;NOBUD[LIN]=1;NOBUD[UNPL]=1;NOBUD[RENT]=1;NOBUD[PASS]=1;
 var NOBUDGET={};for(var k in NOBUD)NOBUDGET[k]=1;["Rent / EMI","Education","Home loan EMI","Kid education","Kid day care","Maid","Cook","Car cleaning","Electricity bill","Gas bill","Family donation","Family & Friends"].forEach(function(c){NOBUDGET[c]=1});
 var S={tab:"home",range:"month",from:"",to:"",rp:"this",hf:"all",pf:"",txns:[],budgets:[],fixed:[],planErr:"",goals:[],gents:[],lrows:{},goalErr:"",cur:"₹",code:"",name:"",err:"",loaded:false};
 function ls(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
@@ -364,7 +364,7 @@ function preset(r){var n=new Date();S.range=r;
   if(r==="month"){S.from=iso(pdate(0));S.to=iso(n)}
   else if(r==="last"){S.from=iso(pdate(-1));S.to=iso(pend(-1))}
   else if(r==="all"){S.from="";S.to=""}}
-function isCount(t){return t.category!==TRF&&t.category!==IGN&&t.category!==CCB&&t.category!==LOUT&&t.category!==LIN}
+function isCount(t){return t.category!==TRF&&t.category!==IGN&&t.category!==CCB&&t.category!==LOUT&&t.category!==LIN&&t.category!==PASS}
 function personOK(t){return !S.pf||S.pf==="__both"||t.person===S.pf}
 function inRange(t){var d=t.txn_date||"";return personOK(t)&&(!S.from||d>=S.from)&&(!S.to||d<=S.to)}
 function sum(l,ty){return l.filter(function(t){return t.type===ty}).reduce(function(a,t){return a+Number(t.amount)},0)}
@@ -574,7 +574,7 @@ function periodDates(){
   if(!to)to=iso(new Date());
   return {from:from,to:to}}
 var CATI={"Groceries – Offline":"🛒","Groceries – Online":"🥬","Shopping – Offline":"🛍️","Shopping – Online":"📦","Food – Dining out":"🍽️","Food – Online delivery":"🛵","Transport":"🚌","Fuel":"⛽","Bills & Utilities":"💡","Rent / EMI":"🏠","Health":"💊","Beauty / Salon":"💇","Entertainment":"🎬","Travel":"✈️","Education":"🎓","Home loan EMI":"🏦","Kid education":"📚","Kid day care":"🧸","Kid expense":"👶","Maid":"🧹","Cook":"🍳","Car cleaning":"🚗","Electricity bill":"⚡","Gas bill":"🔥","Family donation":"🙏","Unplanned expense":"⚠️","Family & Friends":"👪","Salary / Income":"💼","Rental income":"🏘️","Other":"📌","Lend out":"🤝","Lend in":"🤝","Mandatory":"📌"};
-CATI[TRF]="🔁";CATI[CCB]="💳";CATI[IGN]="🚫";CATI[UNC]="❔";
+CATI[TRF]="🔁";CATI[PASS]="🔀";CATI["GPay wallet"]="👛";CATI["Trips"]="🧳";CATI[CCB]="💳";CATI[IGN]="🚫";CATI[UNC]="❔";
 function ci(c){return CATI[c]||(c?"•":"❔")}
 function arrow(cur,prev){
   if(!(prev>0))return cur>0?'<span class="chip">new</span>':'';
@@ -963,8 +963,15 @@ function lendWho(t,cat,kind,label,note,pp){
     h+='<div class="mute" style="margin-bottom:6px">'+(cat===LOUT?'Who paid you back?':'Whom did you pay back?')+' It is subtracted from their balance automatically.</div>';
     if(open.length)open.forEach(function(r,i){var rem=cat===LOUT?r.get:r.owe;h+='<button class="btn ghost" style="margin-bottom:6px;text-align:left" data-w="'+i+'">'+esc(r.k)+' · still '+(cat===LOUT?'to get ':'to pay ')+money(rem)+(a>rem?' (this is more)':a===rem?' (clears it)':' (leaves '+money(rem-a)+')')+'</button>'});
     else h+='<div class="note">Nothing is open to settle. Type a name below to start a record.</div>';
-    sh.innerHTML=h+'<input id="wn" list="pl" placeholder="Someone else (name)"><datalist id="pl">'+lendNames()+'</datalist><button class="btn" id="wok">Save with this name</button><button class="btn ghost" style="margin-top:8px" id="wx">Cancel</button></div></div>';
+    var cut=new Date(t.txn_date||iso(new Date()));cut.setDate(cut.getDate()-150);var cs=iso(cut);
+    var earlier=S.txns.filter(function(x){return x.id!==t.id&&x.type===(cat===LOUT?"out":"in")&&x.txn_date&&x.txn_date<=t.txn_date&&x.txn_date>=cs&&isCount(x)&&x.category!==PASS}).sort(function(p,q){return (Number(q.amount)===a)-(Number(p.amount)===a)||(q.txn_date<p.txn_date?-1:1)}).slice(0,8);
+    var eh='';if(earlier.length){eh='<div class="mute" style="margin:10px 0 6px">Or pick the earlier payment you are settling. It is recorded as the '+(cat===LOUT?'lend':'borrowing')+' too.</div>';
+      earlier.forEach(function(x,i){eh+='<button class="btn ghost" style="margin-bottom:6px;text-align:left" data-e="'+i+'">'+esc(x.txn_date)+' · '+esc(x.merchant||"Unknown")+' · '+money(x.amount)+'</button>'})}
+    sh.innerHTML=h+eh+'<input id="wn" list="pl" placeholder="Someone else (name)"><datalist id="pl">'+lendNames()+'</datalist><button class="btn" id="wok">Save with this name</button><button class="btn ghost" style="margin-top:8px" id="wx">Cancel</button></div></div>';
     sh.querySelectorAll("[data-w]").forEach(function(b){b.onclick=function(){apply(open[+b.dataset.w].k)}});
+    sh.querySelectorAll("[data-e]").forEach(function(b){b.onclick=async function(){var x=earlier[+b.dataset.e],nm=x.merchant||"Unknown";
+      try{await api("transactions?id=eq."+x.id,{method:"PATCH",headers:{Prefer:"return=minimal"},body:JSON.stringify({category:cat===LOUT?LOUT:LIN})})}catch(e){alert("Could not save: "+e.message);return}
+      apply(nm)}});
   }else{
     sh.innerHTML=h+'<input id="wn" list="pl" placeholder="Person name" value="'+esc(pp||t.merchant||"")+'"><datalist id="pl">'+lendNames()+'</datalist><button class="btn" id="wok">Save</button><button class="btn ghost" style="margin-top:8px" id="wx">Cancel</button></div></div>';
   }
