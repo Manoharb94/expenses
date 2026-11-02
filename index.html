@@ -231,7 +231,7 @@ function trfBlock(L){
 }
 function lendBlock(){
   var by={},any=false;
-  S.txns.filter(function(t){return personOK(t)&&(t.category===LOUT||t.category===LIN)}).forEach(function(t){
+  S.txns.filter(function(t){return t.category===LOUT||t.category===LIN}).forEach(function(t){
     any=true;var k=t.merchant||"Unknown",o=by[k]=by[k]||{lent:0,back:0,took:0,paid:0,e:[]},a=Number(t.amount);
     if(t.category===LOUT){if(t.type==="out"){o.lent+=a;o.e.push([t.txn_date,"lent",a,t.note])}else{o.back+=a;o.e.push([t.txn_date,"got back",a,t.note])}}
     else{if(t.type==="in"){o.took+=a;o.e.push([t.txn_date,"borrowed",a,t.note])}else{o.paid+=a;o.e.push([t.txn_date,"paid back",a,t.note])}}});
@@ -240,11 +240,13 @@ function lendBlock(){
   rows.sort(function(a,b){return (a.open===0)-(b.open===0)||b.open-a.open});
   var get=0,owe=0;rows.forEach(function(r){if(r.net>0)get+=r.net;else if(r.net<0)owe-=r.net});
   S.lrows={};
-  var h='<h2>Lending</h2><div class="card"><button class="btn ghost s" style="margin-bottom:10px" data-lnew="1">+ Add new lender / borrower</button><div class="grid" style="margin-bottom:8px"><div><div class="mute">You will get</div><b class="in">'+money(get)+'</b></div><div><div class="mute">You have to pay</div><b class="out">'+money(owe)+'</b></div></div>';
+  var h='<h2>Lending</h2><div class="card"><button class="btn ghost s" style="margin-bottom:10px" data-lnew="1">+ Add new lender</button><div class="grid" style="margin-bottom:8px"><div><div class="mute">You will get</div><b class="in">'+money(get)+'</b></div><div><div class="mute">You have to pay</div><b class="out">'+money(owe)+'</b></div></div>';
   function line(label,total,done,rem,who){
     var pct=total>0?Math.min(100,Math.round(done/total*100)):0;
-    return '<div style="margin:6px 0"><div class="row"><span class="mute">'+label+' '+money(total)+'</span><span>'+(rem===0?'<span class="mute">settled ✓</span>':who+' <b class="'+(rem>0&&who==="still to get"?"in":"out")+'">'+money(Math.abs(rem))+'</b>')+'</span></div><div class="bar"><i style="width:'+pct+'%"></i></div><div class="note">'+(who==="still to get"?'Got back ':'Paid back ')+money(done)+' of '+money(total)+' ('+pct+'%)</div></div>'}
+    return '<div style="margin:6px 0"><div class="row"><span class="mute">'+label+' '+money(total)+'</span><span>'+(rem===0?'<span class="in"><b>'+(who==="still to get"?'Got back in full':'Paid in full')+' ✓</b></span>':who+' <b class="'+(rem>0&&who==="still to get"?"in":"out")+'">'+money(Math.abs(rem))+'</b>')+'</span></div><div class="bar"><i style="width:'+pct+'%"></i></div><div class="note">'+(who==="still to get"?'Got back ':'Paid back ')+money(done)+' of '+money(total)+' ('+pct+'%)</div></div>'}
+  var cutoff=iso(pdate(0)),hidden=0;
   rows.forEach(function(r){var o=r.o;
+    if(r.open===0){var last=o.e.reduce(function(m,x){return x[0]>m?x[0]:m},"");if(last<cutoff){hidden++;return}}
     h+='<div style="margin:12px 0;padding-top:10px;border-top:1px solid var(--line)"><b>'+esc(r.k)+'</b>';
     if(o.lent||o.back)h+=line("You lent",o.lent,o.back,r.r1,"still to get");
     if(o.took||o.paid)h+=line("You borrowed",o.took,o.paid,r.r2,"still to pay");
@@ -254,6 +256,7 @@ function lendBlock(){
       h+='<div class="row" style="margin:6px 0;align-items:center"><span style="font-size:14px"><span class="mute">'+esc(x[0]||"")+'</span> '+x[1]+' <b>'+money(x[2])+'</b>'+(x[3]?'<span class="mute"> · '+esc(x[3])+'</span>':'')+'</span><button class="btn ghost" style="width:auto;flex:none;padding:4px 11px;font-size:12px" data-lt="'+encodeURIComponent(r.k)+'" data-ldef="'+def+'">Tally</button></div>'});
     if(o.e.length>10)h+='<div class="note">'+(o.e.length-10)+' older entries not shown.</div>';
     h+='</div>'});
+  if(hidden)h+='<div class="note">'+hidden+' fully settled earlier are hidden.</div>';
   return h+'<div class="note">Lent or borrowed money is not counted as spending or income. Part payments are fine. Tap Tally beside any entry to subtract or add an amount with a comment. To link a repayment to the same person, tap it, choose Lend out or Lend in, and type the same name. This covers all dates.</div></div>';
 }
 function unplannedBlock(Lc){
@@ -345,7 +348,7 @@ function listFilter(){
 function vList(emb){
   var r=listFilter(),L=r.L,F=r.F,hf=r.hf;
   var n={all:L.length,out:L.filter(function(t){return t.type==="out"&&isCount(t)}).length,in:L.filter(function(t){return t.type==="in"&&isCount(t)}).length,none:L.filter(function(t){return !t.category}).length,trf:L.filter(function(t){return t.category===TRF}).length,card:L.filter(isCard).length,lend:L.filter(function(t){return t.category===LOUT||t.category===LIN}).length,unpl:L.filter(function(t){return t.category===UNPL}).length};
-  var h=(emb?'<h2 id="hist">History</h2>':'<h1>History</h1>'+rangeUI())+'<div class="row" style="margin-bottom:10px"><button class="btn ghost s" id="addx">+ Add cash / other</button><button class="btn ghost s" data-lnew="1">+ Lend / borrow</button><button class="btn ghost s" id="csvb">Export CSV</button></div><div class="tabs">';
+  var h=(emb?'<h2 id="hist">History</h2>':'<h1>History</h1>'+rangeUI())+'<div class="row" style="margin-bottom:10px"><button class="btn ghost s" id="addx">+ Add cash / other</button><button class="btn ghost s" id="csvb">Export CSV</button></div><div class="tabs">';
   [["all","All"],["out","Spent"],["in","Received"],["trf","Transfers"],["card","Credit card"],["lend","Lending"],["unpl","Unplanned"],["none","No category"]].forEach(function(x){h+='<button class="tab'+(hf===x[0]?" on":"")+'" data-hf="'+x[0]+'">'+x[1]+' ('+n[x[0]]+')</button>'});
   var cs=cardSums(F),line=hf==="card"?'Card spends '+money(cs.spent)+' · Bill payments '+money(cs.paid):hf==="trf"?'Sent '+money(sum(F,"out"))+' · Received '+money(sum(F,"in")):'Spent '+money(sum(F.filter(isCount),"out"))+' · Received '+money(sum(F.filter(isCount),"in"));
   h+='</div><div class="mute" style="margin:0 0 8px">'+line+'. Tap a payment to choose its category.</div><div class="card">';
@@ -416,8 +419,14 @@ function goalCalc(g){
   var tg=Number(g.target)||0,sv=Number(g.saved)||0,rem=Math.max(0,tg-sv),ml=0,pm=0;
   if(g.due){var n=new Date(),d=new Date(g.due+"T00:00:00");ml=Math.max(1,Math.ceil((d-n)/(30.44*864e5)));if(d<n)ml=0}
   if(rem>0)pm=ml>0?rem/ml:rem;
-  var plan=goalPlan(g);if(plan.mt>0&&rem>0&&ml>0)pm=plan.mt;
-  return {tg:tg,sv:sv,rem:rem,ml:ml,pm:pm,mt:plan.mt,N:plan.N,initial:plan.initial,pct:tg>0?Math.min(100,Math.round(sv/tg*100)):0}}
+  var plan=goalPlan(g);
+  if(g.due&&plan.N){var dd=new Date(g.due+"T00:00:00"),nn=new Date(),after=(dd.getFullYear()-nn.getFullYear())*12+dd.getMonth()-nn.getMonth(),ck=ym(nn),cur=0;
+    (S.gents||[]).forEach(function(e){if(e.goal_id===g.id&&String(e.created_at||"").slice(0,7)===ck)cur+=Number(e.amount)});
+    ml=cur>0?Math.max(0,after):Math.max(0,after)+1;if(dd<nn)ml=0;
+    var elapsed=Math.max(0,plan.N-Math.max(0,after)),behind=plan.mt*elapsed-(sv-plan.initial);
+    plan.cur=cur;plan.behind=behind}
+  if(plan.mt>0&&rem>0&&ml>0)pm=plan.mt;
+  return {tg:tg,sv:sv,rem:rem,ml:ml,pm:pm,mt:plan.mt,N:plan.N,initial:plan.initial,behind:plan.behind||0,cur:plan.cur||0,pct:tg>0?Math.min(100,Math.round(sv/tg*100)):0}}
 function goalPlan(g){
   var tg=Number(g.target)||0,sv=Number(g.saved)||0;
   if(!g.due||!Array.isArray(S.gents))return {mt:0,N:0,initial:0};
@@ -451,7 +460,7 @@ function vGoals(){
     h+='<div class="card"><div class="row"><b>'+esc(g.name)+'</b><button class="x" data-gd="'+g.id+'" aria-label="Delete">×</button></div><div class="bar" style="height:12px"><i style="width:'+c.pct+'%"></i></div><div class="row" style="margin-top:6px"><span>'+money(c.sv)+' of '+money(c.tg)+'</span><b>'+c.pct+'%</b></div>';
     h+='<div class="note">'+(done?'Goal reached 🎉':(g.due?'Target '+esc(g.due)+' · '+(c.ml>0?c.ml+' month'+(c.ml>1?'s':'')+' left · save <b>'+money(c.pm)+'</b> a month (fixed)':'date has passed · '+money(c.rem)+' still to go'):money(c.rem)+' still to go'))+'</div>';
     var cur=0,ck=ym(new Date());(S.gents||[]).forEach(function(e){if(e.goal_id===g.id&&String(e.created_at||"").slice(0,7)===ck)cur+=Number(e.amount)});
-    if(c.mt>0&&!done)h+='<div class="note">This month: saved '+money(cur)+' of '+money(c.mt)+(cur>=c.mt?' ✓':' · <b>'+money(c.mt-cur)+'</b> to go')+'</div>';
+    if(c.mt>0&&!done)h+='<div class="note">This month: saved '+money(cur)+' of '+money(c.mt)+(cur>=c.mt?' ✓':' · <b>'+money(c.mt-cur)+'</b> to go')+'</div><div class="note">'+(c.behind>1?'Behind plan by <b class="out">'+money(c.behind)+'</b> so far':(c.behind<-1?'Ahead of plan by <b class="in">'+money(-c.behind)+'</b>':'On plan'))+' · the monthly amount stays '+money(c.mt)+'</div>';
     h+=goalMonthly(g)+'<button class="btn ghost s" style="margin-top:8px" data-gm="'+g.id+'">+ Add money</button></div>'});
   h+='<h2>New goal</h2><div class="card"><input id="gn" placeholder="Goal name (e.g. Car, Goa trip)"><input id="gt" type="number" inputmode="decimal" placeholder="Target amount"><input id="gs" type="number" inputmode="decimal" placeholder="Already saved (optional)"><div class="mute">Target date (optional)</div><input id="gdt" type="date"><button class="btn" id="gadd">Add goal</button><div class="note">Goals are shared. You both see them and can add money. Add money when you set savings aside; the app does not move any real money.</div></div>';
   return h;
@@ -535,9 +544,9 @@ function csv(F){
   var a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["﻿"+txt],{type:"text/csv"}));a.download="expenses.csv";document.body.appendChild(a);a.click();a.remove();
 }
 function lendSheet(name,pref){
-  var sh=document.getElementById("sheet"),lr=S.lrows[name]||{r1:0,r2:0},def=pref||(lr.r2>0&&lr.r1<=0?"i|out":"o|in"),rem=lr.r1>0?lr.r1:(lr.r2>0?lr.r2:0);
-  var opt=[["o|in","They paid me back (subtracts from what they owe)"],["o|out","I lent more (adds to what they owe)"],["i|out","I paid them back (subtracts from what I owe)"],["i|in","I borrowed more (adds to what I owe)"]];
-  var h='<div class="sheet"><div><b>'+(name?'Tally with '+esc(name):'New lend / borrow entry')+'</b><div class="mute" style="margin:4px 0 10px">Record a part payment, cash, or an extra amount. It will not count as spending or income.</div>'+(name?'':'<input id="lp" list="pl" placeholder="Person name"><datalist id="pl">'+lendNames()+'</datalist>')+'<select id="lw">';
+  var sh=document.getElementById("sheet"),lr=S.lrows[name]||{r1:0,r2:0},def=pref||(name?(lr.r2>0&&lr.r1<=0?"i|out":"o|in"):"o|out"),rem=lr.r1>0?lr.r1:(lr.r2>0?lr.r2:0);
+  var opt=[["o|out","I gave money (lent) - adds to what they owe me"],["o|in","They paid me back - subtracts"],["i|in","I took money (borrowed) - adds to what I owe"],["i|out","I paid them back - subtracts"]];
+  var h='<div class="sheet"><div><b>'+(name?'Tally with '+esc(name):'Add new lender')+'</b><div class="mute" style="margin:4px 0 10px">Record a part payment, cash, or an extra amount. It will not count as spending or income.</div>'+(name?'':'<input id="lp" list="pl" placeholder="Person name"><datalist id="pl">'+lendNames()+'</datalist>')+'<select id="lw">';
   opt.forEach(function(o){h+='<option value="'+o[0]+'"'+(o[0]===def?" selected":"")+'>'+o[1]+'</option>'});
   h+='</select><input id="la" type="number" inputmode="decimal" placeholder="Amount">'+(rem>0?'<button class="btn ghost s" id="lr" style="margin-bottom:8px">Use full remaining '+money(rem)+'</button>':'')+'<input id="lc" placeholder="Comment (optional)"><input id="ld" type="date" value="'+iso(new Date())+'"><button class="btn" id="ls">Save</button><button class="btn ghost" style="margin-top:8px" id="lx">Cancel</button></div></div>';
   sh.innerHTML=h;
@@ -575,7 +584,7 @@ function pick(t){
 }
 function addSheet(){
   var sh=document.getElementById("sheet");
-  var h='<div class="sheet"><div><b>Add cash or other expense</b><div class="mute" style="margin:4px 0 10px">For money that did not come as an HDFC alert.</div><select id="xt"><option value="out">Money spent</option><option value="in">Money received</option></select><input id="xa" type="number" inputmode="decimal" placeholder="Amount"><input id="xm" placeholder="Payee or description (e.g. Cash – vegetables)"><input id="xd" type="date" value="'+iso(new Date())+'"><select id="xc"><option value="">No category yet</option>';
+  var h='<div class="sheet"><div><b>Add cash or other expense</b><div class="mute" style="margin:4px 0 10px">For money that did not come as an HDFC alert.</div><div class="mute">For</div><select id="xp">'+persons().map(function(n){return '<option value="'+esc(n)+'"'+(n===((S.pf&&S.pf!=="__both")?S.pf:S.name)?" selected":"")+'>'+esc(n)+'</option>'}).join("")+'</select><select id="xt"><option value="out">Money spent</option><option value="in">Money received</option></select><input id="xa" type="number" inputmode="decimal" placeholder="Amount"><input id="xm" placeholder="Payee or description (e.g. Cash – vegetables)"><input id="xd" type="date" value="'+iso(new Date())+'"><select id="xc"><option value="">No category yet</option>';
   CATS.forEach(function(c){h+='<option>'+esc(c)+'</option>'});
   h+='</select><button class="btn" id="xs">Save</button><button class="btn ghost" style="margin-top:8px" id="xx">Cancel</button></div></div>';
   sh.innerHTML=h;
@@ -584,7 +593,7 @@ function addSheet(){
     var a=parseFloat(g("xa")),m=g("xm").trim();if(!(a>0)||!m){alert("Enter an amount and a description");return}
     var key=mk(m),cat=g("xc"),known=S.txns.filter(function(x){return x.merchant_key===key&&x.category})[0];
     if(!cat&&known)cat=known.category;
-    try{await saveTxn({amount:a,type:g("xt"),merchant:m,merchant_key:key,category:cat||null,txn_date:g("xd")||iso(new Date()),person:S.name});sh.innerHTML="";toast("Saved "+money(a)+" · "+m);load()}
+    try{await saveTxn({amount:a,type:g("xt"),merchant:m,merchant_key:key,category:cat||null,txn_date:g("xd")||iso(new Date()),person:g("xp")||S.name});sh.innerHTML="";toast("Saved "+money(a)+" · "+m+" for "+(g("xp")||S.name));load()}
     catch(e){alert("Could not save: "+e.message)}
   };
 }
