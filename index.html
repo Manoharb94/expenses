@@ -41,15 +41,15 @@ nav button{flex:1;border:0;background:none;color:var(--mute);padding:10px 2px;fo
 </head>
 <body>
 <main id="app"></main>
-<nav id="nav" class="hide"><button data-t="home" class="on">Summary</button><button data-t="list">History</button><button data-t="rep">Reports</button><button data-t="plan">Plan</button><button data-t="me">Settings</button></nav>
+<nav id="nav" class="hide"><button data-t="home" class="on">Summary</button><button data-t="rep">Reports</button><button data-t="plan">Plan</button><button data-t="goals">Goals</button><button data-t="me">Settings</button></nav>
 <div id="sheet"></div>
 <script>
 var URLB="https://fwxhclagrwlzxvsmaekt.supabase.co/rest/v1/",KEY="sb_publishable_PiCUzSknFyCfGfEVzTiQbg_qEkBYwL_";
-var TRF="Transfer between us",IGN="Ignore (don't count)",UNC="Others (no category yet)",CCB="Credit card bill (paid)",LOUT="Lend out",LIN="Lend in";
-var CATS=["Groceries – Offline","Groceries – Online","Shopping – Offline","Shopping – Online","Food – Dining out","Food – Online delivery","Transport","Fuel","Bills & Utilities","Rent / EMI","Health","Entertainment","Travel","Education","Home loan EMI","Kid education","Kid day care","Maid","Cook","Car cleaning","Electricity bill","Gas bill","Family donation","Family & Friends","Salary / Income","Other",LOUT,LIN,TRF,CCB,IGN];
-var NOBUD={"Salary / Income":1};NOBUD[TRF]=1;NOBUD[IGN]=1;NOBUD[CCB]=1;NOBUD[LOUT]=1;NOBUD[LIN]=1;
+var TRF="Transfer between us",IGN="Ignore (don't count)",UNC="Others (no category yet)",CCB="Credit card bill (paid)",LOUT="Lend out",LIN="Lend in",UNPL="Unplanned expense",RENT="Rental income";
+var CATS=["Groceries – Offline","Groceries – Online","Shopping – Offline","Shopping – Online","Food – Dining out","Food – Online delivery","Transport","Fuel","Bills & Utilities","Rent / EMI","Health","Entertainment","Travel","Education","Home loan EMI","Kid education","Kid day care","Maid","Cook","Car cleaning","Electricity bill","Gas bill","Family donation",UNPL,"Family & Friends","Salary / Income",RENT,"Other",LOUT,LIN,TRF,CCB,IGN];
+var NOBUD={"Salary / Income":1};NOBUD[TRF]=1;NOBUD[IGN]=1;NOBUD[CCB]=1;NOBUD[LOUT]=1;NOBUD[LIN]=1;NOBUD[UNPL]=1;NOBUD[RENT]=1;
 var NOBUDGET={};for(var k in NOBUD)NOBUDGET[k]=1;["Rent / EMI","Education","Home loan EMI","Kid education","Kid day care","Maid","Cook","Car cleaning","Electricity bill","Gas bill","Family donation","Family & Friends"].forEach(function(c){NOBUDGET[c]=1});
-var S={tab:"home",range:"month",from:"",to:"",rp:"this",hf:"all",pf:"",txns:[],budgets:[],fixed:[],planErr:"",cur:"₹",code:"",name:"",err:"",loaded:false};
+var S={tab:"home",range:"month",from:"",to:"",rp:"this",hf:"all",pf:"",txns:[],budgets:[],fixed:[],planErr:"",goals:[],goalErr:"",cur:"₹",code:"",name:"",err:"",loaded:false};
 function ls(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
 function money(n){return S.cur+Number(n).toLocaleString("en-IN",{maximumFractionDigits:2})}
@@ -66,6 +66,8 @@ async function api(path,opt){
 async function loadPlan(){
   try{S.budgets=await api("budgets?select=*")||[];S.fixed=await api("fixed_items?select=*&order=created_at.asc")||[];S.planErr=""}
   catch(e){S.planErr="Plan tables are not set up yet ("+e.message.slice(0,80)+")"}
+  try{S.goals=await api("goals?select=*&order=created_at.asc")||[];S.goalErr=""}
+  catch(e){S.goals=[];S.goalErr="Goals are not set up yet"}
 }
 async function load(){
   try{S.txns=await api("transactions?select=*&order=txn_date.desc,created_at.desc&limit=3000")||[];S.err="";S.loaded=true}
@@ -229,17 +231,44 @@ function trfBlock(L){
 function lendBlock(){
   var by={},any=false;
   S.txns.filter(function(t){return personOK(t)&&(t.category===LOUT||t.category===LIN)}).forEach(function(t){
-    any=true;var k=t.merchant||"Unknown",o=by[k]=by[k]||{lent:0,back:0,took:0,paid:0},a=Number(t.amount);
-    if(t.category===LOUT){if(t.type==="out")o.lent+=a;else o.back+=a}else{if(t.type==="in")o.took+=a;else o.paid+=a}});
+    any=true;var k=t.merchant||"Unknown",o=by[k]=by[k]||{lent:0,back:0,took:0,paid:0,e:[]},a=Number(t.amount);
+    if(t.category===LOUT){if(t.type==="out"){o.lent+=a;o.e.push([t.txn_date,"lent",a])}else{o.back+=a;o.e.push([t.txn_date,"got back",a])}}
+    else{if(t.type==="in"){o.took+=a;o.e.push([t.txn_date,"borrowed",a])}else{o.paid+=a;o.e.push([t.txn_date,"paid back",a])}}});
   if(!any)return '';
-  var rows=Object.keys(by).map(function(k){var o=by[k],net=Math.round((o.lent-o.back-(o.took-o.paid))*100)/100;return {k:k,o:o,net:net}});
-  rows.sort(function(a,b){return (a.net===0)-(b.net===0)||Math.abs(b.net)-Math.abs(a.net)});
+  var rows=Object.keys(by).map(function(k){var o=by[k],r1=Math.round((o.lent-o.back)*100)/100,r2=Math.round((o.took-o.paid)*100)/100;return {k:k,o:o,r1:r1,r2:r2,net:Math.round((r1-r2)*100)/100,open:Math.abs(r1)+Math.abs(r2)}});
+  rows.sort(function(a,b){return (a.open===0)-(b.open===0)||b.open-a.open});
   var get=0,owe=0;rows.forEach(function(r){if(r.net>0)get+=r.net;else if(r.net<0)owe-=r.net});
   var h='<h2>Lending</h2><div class="card"><div class="grid" style="margin-bottom:8px"><div><div class="mute">You will get</div><b class="in">'+money(get)+'</b></div><div><div class="mute">You have to pay</div><b class="out">'+money(owe)+'</b></div></div>';
-  rows.forEach(function(r){var o=r.o,st=r.net>0?'owes you <b class="in">'+money(r.net)+'</b>':r.net<0?'you owe <b class="out">'+money(-r.net)+'</b>':'<span class="mute">settled ✓</span>';
-    var d=[];if(o.lent)d.push("lent "+money(o.lent));if(o.back)d.push("got back "+money(o.back));if(o.took)d.push("borrowed "+money(o.took));if(o.paid)d.push("paid back "+money(o.paid));
-    h+='<div style="margin:8px 0"><div class="row"><span>'+esc(r.k)+'</span><span>'+st+'</span></div><div class="note">'+d.join(" · ")+'</div></div>'});
-  return h+'<div class="note">Money you lend or borrow is not counted as spending or income. When the same amount comes back, the person shows as settled. This covers all dates.</div></div>';
+  function line(label,total,done,rem,who){
+    var pct=total>0?Math.min(100,Math.round(done/total*100)):0;
+    return '<div style="margin:6px 0"><div class="row"><span class="mute">'+label+' '+money(total)+'</span><span>'+(rem===0?'<span class="mute">settled ✓</span>':who+' <b class="'+(rem>0&&who==="still to get"?"in":"out")+'">'+money(Math.abs(rem))+'</b>')+'</span></div><div class="bar"><i style="width:'+pct+'%"></i></div><div class="note">'+(who==="still to get"?'Got back ':'Paid back ')+money(done)+' of '+money(total)+' ('+pct+'%)</div></div>'}
+  rows.forEach(function(r){var o=r.o;
+    h+='<div style="margin:12px 0;padding-top:10px;border-top:1px solid var(--line)"><b>'+esc(r.k)+'</b>';
+    if(o.lent||o.back)h+=line("You lent",o.lent,o.back,r.r1,"still to get");
+    if(o.took||o.paid)h+=line("You borrowed",o.took,o.paid,r.r2,"still to pay");
+    o.e.sort(function(a,b){return a[0]<b[0]?1:-1});
+    h+='<div class="note">'+o.e.slice(0,4).map(function(x){return esc(x[0]||"")+' '+x[1]+' '+money(x[2])}).join(' · ')+'</div></div>'});
+  return h+'<div class="note">Lent or borrowed money is not counted as spending or income. Part payments are fine: each row shows how much is still open. To link a repayment to the same person, tap it, choose Lend out or Lend in, and type the same name. This covers all dates.</div></div>';
+}
+function unplannedBlock(Lc){
+  var l=Lc.filter(function(t){return t.type==="out"&&t.category===UNPL});if(!l.length)return '';
+  l.sort(function(a,b){return b.amount-a.amount});
+  var h='<h2>Unplanned expenses</h2><div class="card"><div class="row"><span>'+l.length+' payment'+(l.length>1?'s':'')+'</span><b class="out">'+money(sum(l,"out"))+'</b></div>';
+  l.slice(0,5).forEach(function(t){h+='<div class="row mute" style="margin:4px 0"><span>'+esc(t.merchant||"Unknown")+' · '+esc(t.txn_date||"")+'</span><span>'+money(t.amount)+'</span></div>'});
+  return h+'<div class="note">Already included in Total expenses.</div></div>';
+}
+function incomeBlock(Lc){
+  var ins=Lc.filter(function(t){return t.type==="in"}),both=S.pf==="__both",who=both?persons():[S.pf||S.name];
+  var h='<h2>Income</h2><div class="card">',grand=0;
+  who.forEach(function(p){
+    var l=ins.filter(function(t){return t.person===p}),by={},tot=0;
+    l.forEach(function(t){var c=t.category||"Other income (no category yet)";by[c]=(by[c]||0)+Number(t.amount);tot+=Number(t.amount)});grand+=tot;
+    h+='<div style="margin:8px 0"><div class="row"><b>'+esc(p)+(p===S.name?" (you)":"")+'</b><b class="in">'+money(tot)+'</b></div>';
+    Object.keys(by).sort(function(a,b){return by[b]-by[a]}).forEach(function(c){h+='<div class="row mute" style="margin:3px 0"><span>'+esc(c)+'</span><span>'+money(by[c])+'</span></div>'});
+    if(!l.length)h+='<div class="note">No income in this period.</div>';
+    h+='</div>'});
+  if(both&&who.length>1)h+='<div class="row" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line)"><b>Together</b><b class="in">'+money(grand)+'</b></div>';
+  return h+'<div class="note">Tap an income payment in History once and choose Salary / Income or Rental income. Later payments from the same payer file themselves.</div></div>';
 }
 function dueIn(f,from,to){
   var a=new Date(from+"T00:00:00"),b=new Date(to+"T00:00:00"),n=0,y=a.getFullYear(),m=a.getMonth();
@@ -277,7 +306,9 @@ function vHome(){
   var nOut=Lc.filter(function(t){return t.type==="out"}).length,nIn=Lc.length-nOut,pdt=periodDates(),X=expenseSplit(Lc,pdt.from,pdt.to);
   var who=S.pf==="__both"?"by both of us":(S.pf===S.name?"by you":"by "+S.pf);
   h+='<div class="grid"><div class="card"><div class="mute">Total expenses '+esc(who)+'</div><div style="font-size:24px;font-weight:700" class="out">'+money(X.total)+'</div><div class="mute">'+nOut+' payments, every category'+(X.useM?' · everyday '+money(X.ev)+' + mandatory '+money(X.mand):'')+(cardSums(L).n?' · bank '+money(sum(Lc.filter(function(t){return t.kind!=="card"}),"out"))+' · card '+money(cardSums(L).spent):'')+'</div></div><div class="card"><div class="mute">Money received</div><div style="font-size:24px;font-weight:700" class="in">'+money(sum(Lc,"in"))+'</div><div class="mute">'+nIn+' credits</div></div></div>';
+  h+=incomeBlock(Lc);
   h+=mandBlock(X);
+  h+=unplannedBlock(Lc);
   h+=cardBlock(L);
   h+=trfBlock(L);
   h+=lendBlock();
@@ -296,20 +327,20 @@ function vHome(){
   h+='<h2>Spending by category</h2><div class="card">';
   if(!ks.length)h+='<span class="mute">Nothing in this period.</span>';
   ks.forEach(function(k){h+='<div style="margin-bottom:10px"><div class="row"><span>'+esc(k)+'</span><b>'+money(by[k])+'</b></div><div class="bar"><i style="width:'+Math.round(by[k]/mx*100)+'%"></i></div></div>'});
-  return h+'</div>';
+  return h+'</div>'+vList(true);
 }
 function listFilter(){
   var L=S.txns.filter(inRange),hf=S.hf||"all";
   var F=L.filter(function(t){
     if(hf==="out")return t.type==="out"&&isCount(t);if(hf==="in")return t.type==="in"&&isCount(t);
-    if(hf==="none")return !t.category;if(hf==="trf")return t.category===TRF;if(hf==="card")return isCard(t);if(hf==="lend")return t.category===LOUT||t.category===LIN;return true});
+    if(hf==="none")return !t.category;if(hf==="trf")return t.category===TRF;if(hf==="card")return isCard(t);if(hf==="lend")return t.category===LOUT||t.category===LIN;if(hf==="unpl")return t.category===UNPL;return true});
   return {L:L,F:F,hf:hf};
 }
-function vList(){
+function vList(emb){
   var r=listFilter(),L=r.L,F=r.F,hf=r.hf;
-  var n={all:L.length,out:L.filter(function(t){return t.type==="out"&&isCount(t)}).length,in:L.filter(function(t){return t.type==="in"&&isCount(t)}).length,none:L.filter(function(t){return !t.category}).length,trf:L.filter(function(t){return t.category===TRF}).length,card:L.filter(isCard).length,lend:L.filter(function(t){return t.category===LOUT||t.category===LIN}).length};
-  var h='<h1>History</h1>'+rangeUI()+'<div class="row" style="margin-bottom:10px"><button class="btn ghost s" id="addx">+ Add cash / other</button><button class="btn ghost s" id="csvb">Export CSV</button></div><div class="tabs">';
-  [["all","All"],["out","Spent"],["in","Received"],["trf","Transfers"],["card","Credit card"],["lend","Lending"],["none","No category"]].forEach(function(x){h+='<button class="tab'+(hf===x[0]?" on":"")+'" data-hf="'+x[0]+'">'+x[1]+' ('+n[x[0]]+')</button>'});
+  var n={all:L.length,out:L.filter(function(t){return t.type==="out"&&isCount(t)}).length,in:L.filter(function(t){return t.type==="in"&&isCount(t)}).length,none:L.filter(function(t){return !t.category}).length,trf:L.filter(function(t){return t.category===TRF}).length,card:L.filter(isCard).length,lend:L.filter(function(t){return t.category===LOUT||t.category===LIN}).length,unpl:L.filter(function(t){return t.category===UNPL}).length};
+  var h=(emb?'<h2 id="hist">History</h2>':'<h1>History</h1>'+rangeUI())+'<div class="row" style="margin-bottom:10px"><button class="btn ghost s" id="addx">+ Add cash / other</button><button class="btn ghost s" id="csvb">Export CSV</button></div><div class="tabs">';
+  [["all","All"],["out","Spent"],["in","Received"],["trf","Transfers"],["card","Credit card"],["lend","Lending"],["unpl","Unplanned"],["none","No category"]].forEach(function(x){h+='<button class="tab'+(hf===x[0]?" on":"")+'" data-hf="'+x[0]+'">'+x[1]+' ('+n[x[0]]+')</button>'});
   var cs=cardSums(F),line=hf==="card"?'Card spends '+money(cs.spent)+' · Bill payments '+money(cs.paid):hf==="trf"?'Sent '+money(sum(F,"out"))+' · Received '+money(sum(F,"in")):'Spent '+money(sum(F.filter(isCount),"out"))+' · Received '+money(sum(F.filter(isCount),"in"));
   h+='</div><div class="mute" style="margin:0 0 8px">'+line+'. Tap a payment to choose its category.</div><div class="card">';
   if(!F.length)h+='<span class="mute">Nothing here for these dates.</span>';
@@ -372,6 +403,40 @@ function salaryDay(){
 function vMe(){
   return '<h1>Settings</h1><div class="card"><div class="mute">Your name (must match PERSON in your Gmail script)</div><input id="nm" value="'+esc(S.name)+'"><div class="mute">Household code</div><input id="cd" type="password" value="'+esc(S.code)+'"><div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><div class="mute">Your month starts on day (1 = normal calendar month)</div><input id="ms" type="number" inputmode="numeric" min="1" max="31" value="'+(S.ms||1)+'"><button class="btn ghost s" id="msal" style="margin-bottom:10px">Use my salary credit day</button><div class="note" id="msn">This is saved on this phone only. Set the same day on the other phone. Reports, budgets and forecasts all follow it.</div><button class="btn" id="sv">Save</button></div>';
 }
+function leftOver(){
+  var pf=S.pf;S.pf="__both";var key=monthKey(0),Lc=S.txns.filter(function(t){return pkey(t.txn_date)===key&&isCount(t)});
+  var X=expenseSplit(Lc,iso(pdate(0)),iso(pend(0))),r=sum(Lc,"in");S.pf=pf;return {rec:r,spent:X.total,left:r-X.total}}
+function goalCalc(g){
+  var tg=Number(g.target)||0,sv=Number(g.saved)||0,rem=Math.max(0,tg-sv),ml=0,pm=0;
+  if(g.due){var n=new Date(),d=new Date(g.due+"T00:00:00");ml=Math.max(1,Math.ceil((d-n)/(30.44*864e5)));if(d<n)ml=0}
+  if(rem>0)pm=ml>0?rem/ml:rem;
+  return {tg:tg,sv:sv,rem:rem,ml:ml,pm:pm,pct:tg>0?Math.min(100,Math.round(sv/tg*100)):0}}
+function vGoals(){
+  var h='<h1>Goals</h1>';
+  if(S.goalErr)h+='<div class="card out">'+esc(S.goalErr)+'<div class="note">Run the Goals SQL in Supabase, then reload this page.</div></div>';
+  var need=0;S.goals.forEach(function(g){need+=goalCalc(g).pm});
+  var lo=leftOver();
+  if(S.goals.length)h+='<div class="grid"><div class="card"><div class="mute">Needed each month</div><div style="font-size:20px;font-weight:700">'+money(need)+'</div></div><div class="card"><div class="mute">Left over this month</div><div style="font-size:20px;font-weight:700" class="'+(lo.left>=0?"in":"out")+'">'+money(lo.left)+'</div></div></div><div class="note" style="margin:-4px 0 10px">Left over = both our income minus Total expenses, this month so far.</div>';
+  if(!S.goals.length&&!S.goalErr)h+='<div class="card mute">No goals yet. Add one below, for example a car, a holiday or an emergency fund.</div>';
+  S.goals.forEach(function(g){var c=goalCalc(g),done=c.rem===0;
+    h+='<div class="card"><div class="row"><b>'+esc(g.name)+'</b><button class="x" data-gd="'+g.id+'" aria-label="Delete">×</button></div><div class="bar" style="height:12px"><i style="width:'+c.pct+'%"></i></div><div class="row" style="margin-top:6px"><span>'+money(c.sv)+' of '+money(c.tg)+'</span><b>'+c.pct+'%</b></div>';
+    h+='<div class="note">'+(done?'Goal reached 🎉':(g.due?'Target '+esc(g.due)+' · '+(c.ml>0?c.ml+' month'+(c.ml>1?'s':'')+' left · save about <b>'+money(c.pm)+'</b> a month':'date has passed · '+money(c.rem)+' still to go'):money(c.rem)+' still to go'))+'</div>';
+    h+='<button class="btn ghost s" style="margin-top:8px" data-gm="'+g.id+'">+ Add money</button></div>'});
+  h+='<h2>New goal</h2><div class="card"><input id="gn" placeholder="Goal name (e.g. Car, Goa trip)"><input id="gt" type="number" inputmode="decimal" placeholder="Target amount"><input id="gs" type="number" inputmode="decimal" placeholder="Already saved (optional)"><div class="mute">Target date (optional)</div><input id="gdt" type="date"><button class="btn" id="gadd">Add goal</button><div class="note">Goals are shared. You both see them and can add money. Add money when you set savings aside; the app does not move any real money.</div></div>';
+  return h;
+}
+async function addGoal(){
+  var n=g("gn").trim(),t=parseFloat(g("gt")),sv=parseFloat(g("gs"))||0,d=g("gdt");
+  if(!n||!(t>0)){alert("Enter a name and a target amount");return}
+  try{await api("goals",{method:"POST",headers:{Prefer:"return=minimal"},body:JSON.stringify({name:n,target:t,saved:sv,due:d||null})});await loadPlan();render()}
+  catch(e){alert("Could not save: "+e.message)}
+}
+async function goalMoney(id){
+  var gl=S.goals.filter(function(x){return x.id===id})[0];if(!gl)return;
+  var v=parseFloat(prompt("How much to add to "+gl.name+"? (use a minus to take money out)"));if(!v)return;
+  try{await api("goals?id=eq."+id,{method:"PATCH",headers:{Prefer:"return=minimal"},body:JSON.stringify({saved:Math.max(0,Number(gl.saved||0)+v)})});await loadPlan();render()}
+  catch(e){alert("Could not save: "+e.message)}
+}
 function vSetup(){
   return '<h1>Welcome</h1><div class="card"><div class="mute">Your name (same as PERSON in your Gmail script)</div><input id="nm"><div class="mute">Household code</div><input id="cd" type="password"><button class="btn" id="go">Start</button></div>';
 }
@@ -383,14 +448,14 @@ function render(){
   if(S.pf&&S.pf!=="__both"&&persons().indexOf(S.pf)<0)S.pf=S.name;
   nav.classList.remove("hide");
   nav.querySelectorAll("button").forEach(function(b){b.classList.toggle("on",b.dataset.t===S.tab)});
-  el.innerHTML=S.tab==="home"?vHome():S.tab==="list"?vList():S.tab==="rep"?vReports():S.tab==="plan"?vPlan():vMe();
+  el.innerHTML=(S.tab==="home"||S.tab==="list")?vHome():S.tab==="rep"?vReports():S.tab==="plan"?vPlan():S.tab==="goals"?vGoals():vMe();
   var q=function(i){return document.getElementById(i)};
   var pfe=q("pf");if(pfe)pfe.onchange=function(){S.pf=pfe.value;ls("pf",S.pf);render()};
   var rg=q("rg");if(rg)rg.onchange=function(){if(rg.value==="custom")S.range="custom";else preset(rg.value);render()};
   var df=q("df");if(df)df.onchange=function(){S.from=df.value;S.range="custom";render()};
   var dt=q("dt");if(dt)dt.onchange=function(){S.to=dt.value;S.range="custom";render()};
   var rp=q("rp");if(rp)rp.onchange=function(){S.rp=rp.value;render()};
-  var f=q("fix");if(f)f.onclick=function(){S.tab="list";S.hf="none";render()};
+  var f=q("fix");if(f)f.onclick=function(){S.tab="home";S.hf="none";render();var e=q("hist");if(e)e.scrollIntoView()};
   el.querySelectorAll("[data-hf]").forEach(function(b){b.onclick=function(){S.hf=b.dataset.hf;render()}});
   el.querySelectorAll("[data-cat]").forEach(function(b){b.onclick=function(){var t=S.txns.filter(function(x){return x.id===b.dataset.cat})[0];if(t)pick(t)}});
   el.querySelectorAll("[data-del]").forEach(function(b){b.onclick=async function(e){e.stopPropagation();if(confirm("Delete this transaction?")){try{await api("transactions?id=eq."+b.dataset.del,{method:"DELETE"})}catch(x){alert(x.message)}load()}}});
@@ -402,6 +467,9 @@ function render(){
   var sv=q("sv");if(sv)sv.onclick=function(){S.ms=Math.min(31,Math.max(1,parseInt(g("ms"),10)||1));ls("ms",S.ms);if(S.range==="month"||S.range==="last")preset(S.range);S.name=g("nm").trim()||S.name;S.code=g("cd").trim()||S.code;S.cur=g("cu")||"₹";ls("name",S.name);ls("code",S.code);ls("cur",S.cur);S.tab="home";load()};
   var svb=q("svb");if(svb)svb.onclick=saveBudgets;
   var fa=q("fadd");if(fa)fa.onclick=addFixed;
+  var ga=q("gadd");if(ga)ga.onclick=addGoal;
+  el.querySelectorAll("[data-gm]").forEach(function(b){b.onclick=function(){goalMoney(b.dataset.gm)}});
+  el.querySelectorAll("[data-gd]").forEach(function(b){b.onclick=async function(){if(confirm("Delete this goal?")){try{await api("goals?id=eq."+b.dataset.gd,{method:"DELETE"})}catch(x){alert(x.message)}await loadPlan();render()}}});
   var ff=q("ff");if(ff)ff.onchange=function(){q("fmw").style.display=ff.value==="monthly"?"none":"block"};
   el.querySelectorAll("[data-fdel]").forEach(function(b){b.onclick=async function(){if(confirm("Remove this fixed expense?")){try{await api("fixed_items?id=eq."+b.dataset.fdel,{method:"DELETE"})}catch(x){alert(x.message)}load()}}});
 }
@@ -427,17 +495,18 @@ function csv(F){
   var txt=rows.map(function(r){return r.map(function(c){return '"'+String(c==null?"":c).replace(/"/g,'""')+'"'}).join(",")}).join("\r\n");
   var a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["﻿"+txt],{type:"text/csv"}));a.download="expenses.csv";document.body.appendChild(a);a.click();a.remove();
 }
+function lendNames(){var seen={};S.txns.forEach(function(t){if(t.category===LOUT||t.category===LIN)seen[t.merchant||""]=1});return Object.keys(seen).filter(Boolean).map(function(n){return '<option value="'+esc(n)+'">'}).join("")}
 function pick(t){
   var sh=document.getElementById("sheet");
-  var h='<div class="sheet"><div><b>Choose a category</b><div class="mute" style="margin:4px 0 10px">'+esc(t.merchant||"Unknown")+' · '+money(t.amount)+' · '+esc(t.txn_date||"")+'</div><input id="pn" placeholder="Note (optional)" value="'+esc(t.note||"")+'"><label class="mute" style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><input type="checkbox" id="po" style="width:auto;margin:0">Only this payment</label><div class="note" style="margin:0">Otherwise the payee is remembered, and its future payments are filed automatically.</div><div class="cats">';
+  var h='<div class="sheet"><div><b>Choose a category</b><div class="mute" style="margin:4px 0 10px">'+esc(t.merchant||"Unknown")+' · '+money(t.amount)+' · '+esc(t.txn_date||"")+'</div><input id="pn" placeholder="Note (optional)" value="'+esc(t.note||"")+'"><input id="pp" list="pl" placeholder="Person name (only for Lend out / Lend in)" value="'+esc(t.merchant||"")+'"><datalist id="pl">'+lendNames()+'</datalist><label class="mute" style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><input type="checkbox" id="po" style="width:auto;margin:0">Only this payment</label><div class="note" style="margin:0">Otherwise the payee is remembered, and its future payments are filed automatically.</div><div class="cats">';
   CATS.forEach(function(c,i){h+='<button data-c="'+i+'">'+esc(c)+'</button>'});
   h+='</div><button class="btn ghost" style="margin-top:12px" id="later">Cancel</button></div></div>';
   sh.innerHTML=h;
   document.getElementById("later").onclick=function(){sh.innerHTML=""};
   sh.querySelectorAll("[data-c]").forEach(function(b){b.onclick=async function(){
-    var cat=CATS[+b.dataset.c],only=document.getElementById("po").checked||!t.merchant_key||t.merchant_key==="unknown",note=g("pn").trim();sh.innerHTML="";
+    var cat=CATS[+b.dataset.c],lend=(cat===LOUT||cat===LIN),only=document.getElementById("po").checked||lend||!t.merchant_key||t.merchant_key==="unknown",note=g("pn").trim(),pp=g("pp").trim();sh.innerHTML="";
     try{
-      if(only){var body={category:cat};if(note||t.note)body.note=note||null;
+      if(only){var body={category:cat};if(lend)body.merchant=pp||t.merchant;if(note||t.note)body.note=note||null;
         await api("transactions?id=eq."+t.id,{method:"PATCH",headers:{Prefer:"return=minimal"},body:JSON.stringify(body)})}
       else{
         await api("merchants?on_conflict=merchant_key",{method:"POST",headers:{Prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify({merchant_key:t.merchant_key,name:t.merchant,category:cat})});
@@ -463,8 +532,8 @@ function addSheet(){
     catch(e){alert("Could not save: "+e.message)}
   };
 }
-document.getElementById("nav").onclick=function(e){var t=e.target.dataset&&e.target.dataset.t;if(t){S.tab=t;render();if(t==="plan")loadPlan().then(render)}};
-function idle(){return !document.hidden&&S.code&&S.tab!=="plan"&&S.tab!=="me"&&!document.getElementById("sheet").innerHTML}
+document.getElementById("nav").onclick=function(e){var t=e.target.dataset&&e.target.dataset.t;if(t){S.tab=t;render();if(t==="plan"||t==="goals")loadPlan().then(render)}};
+function idle(){return !document.hidden&&S.code&&S.tab!=="plan"&&S.tab!=="goals"&&S.tab!=="me"&&!document.getElementById("sheet").innerHTML}
 document.addEventListener("visibilitychange",function(){if(idle())load()});
 setInterval(function(){if(idle())load()},30000);
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
