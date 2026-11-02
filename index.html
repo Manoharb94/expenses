@@ -240,7 +240,7 @@ function lendBlock(){
   rows.sort(function(a,b){return (a.open===0)-(b.open===0)||b.open-a.open});
   var get=0,owe=0;rows.forEach(function(r){if(r.net>0)get+=r.net;else if(r.net<0)owe-=r.net});
   S.lrows={};
-  var h='<h2>Lending</h2><div class="card"><button class="btn ghost s" style="margin-bottom:10px" data-lnew="1">+ New lend / borrow entry</button><div class="grid" style="margin-bottom:8px"><div><div class="mute">You will get</div><b class="in">'+money(get)+'</b></div><div><div class="mute">You have to pay</div><b class="out">'+money(owe)+'</b></div></div>';
+  var h='<h2>Lending</h2><div class="card"><button class="btn ghost s" style="margin-bottom:10px" data-lnew="1">+ Add new lender / borrower</button><div class="grid" style="margin-bottom:8px"><div><div class="mute">You will get</div><b class="in">'+money(get)+'</b></div><div><div class="mute">You have to pay</div><b class="out">'+money(owe)+'</b></div></div>';
   function line(label,total,done,rem,who){
     var pct=total>0?Math.min(100,Math.round(done/total*100)):0;
     return '<div style="margin:6px 0"><div class="row"><span class="mute">'+label+' '+money(total)+'</span><span>'+(rem===0?'<span class="mute">settled ✓</span>':who+' <b class="'+(rem>0&&who==="still to get"?"in":"out")+'">'+money(Math.abs(rem))+'</b>')+'</span></div><div class="bar"><i style="width:'+pct+'%"></i></div><div class="note">'+(who==="still to get"?'Got back ':'Paid back ')+money(done)+' of '+money(total)+' ('+pct+'%)</div></div>'}
@@ -250,8 +250,11 @@ function lendBlock(){
     if(o.took||o.paid)h+=line("You borrowed",o.took,o.paid,r.r2,"still to pay");
     o.e.sort(function(a,b){return a[0]<b[0]?1:-1});
     S.lrows[r.k]={r1:r.r1,r2:r.r2};
-    h+='<div class="note">'+o.e.slice(0,5).map(function(x){return esc(x[0]||"")+' '+x[1]+' '+money(x[2])+(x[3]?' ("'+esc(x[3])+'")':'')}).join(' · ')+'</div><button class="btn ghost s" style="margin-top:6px" data-lt="'+encodeURIComponent(r.k)+'">Tally / add or subtract</button></div>'});
-  return h+'<div class="note">Lent or borrowed money is not counted as spending or income. Part payments are fine: each row shows how much is still open. To link a repayment to the same person, tap it, choose Lend out or Lend in, and type the same name. This covers all dates.</div></div>';
+    o.e.slice(0,10).forEach(function(x){var def=(x[1]==="lent"||x[1]==="got back")?"o|in":"i|out";
+      h+='<div class="row" style="margin:6px 0;align-items:center"><span style="font-size:14px"><span class="mute">'+esc(x[0]||"")+'</span> '+x[1]+' <b>'+money(x[2])+'</b>'+(x[3]?'<span class="mute"> · '+esc(x[3])+'</span>':'')+'</span><button class="btn ghost" style="width:auto;flex:none;padding:4px 11px;font-size:12px" data-lt="'+encodeURIComponent(r.k)+'" data-ldef="'+def+'">Tally</button></div>'});
+    if(o.e.length>10)h+='<div class="note">'+(o.e.length-10)+' older entries not shown.</div>';
+    h+='</div>'});
+  return h+'<div class="note">Lent or borrowed money is not counted as spending or income. Part payments are fine. Tap Tally beside any entry to subtract or add an amount with a comment. To link a repayment to the same person, tap it, choose Lend out or Lend in, and type the same name. This covers all dates.</div></div>';
 }
 function unplannedBlock(Lc){
   var l=Lc.filter(function(t){return t.type==="out"&&t.category===UNPL});if(!l.length)return '';
@@ -481,7 +484,6 @@ function render(){
   el.querySelectorAll("[data-hf]").forEach(function(b){b.onclick=function(){S.hf=b.dataset.hf;render()}});
   el.querySelectorAll("[data-cat]").forEach(function(b){b.onclick=function(){var t=S.txns.filter(function(x){return x.id===b.dataset.cat})[0];if(t)pick(t)}});
   el.querySelectorAll("[data-del]").forEach(function(b){b.onclick=async function(e){e.stopPropagation();if(confirm("Delete this transaction?")){try{await api("transactions?id=eq."+b.dataset.del,{method:"DELETE"})}catch(x){alert(x.message)}load()}}});
-  var ax=q("addx");if(ax)ax.onclick=addSheet;
   var cb=q("csvb");if(cb)cb.onclick=function(){csv(listFilter().F)};
   var ma=q("msal");if(ma)ma.onclick=function(){var r=salaryDay(),n=q("msn");
     if(!r){n.textContent="No salary credit found yet. Mark your salary payee as Salary / Income in History first.";return}
@@ -490,8 +492,7 @@ function render(){
   var svb=q("svb");if(svb)svb.onclick=saveBudgets;
   var fa=q("fadd");if(fa)fa.onclick=addFixed;
   var ga=q("gadd");if(ga)ga.onclick=addGoal;
-  el.querySelectorAll("[data-lt]").forEach(function(b){b.onclick=function(){lendSheet(decodeURIComponent(b.dataset.lt))}});
-  el.querySelectorAll("[data-lnew]").forEach(function(b){b.onclick=function(){lendSheet("")}});
+
   el.querySelectorAll("[data-gm]").forEach(function(b){b.onclick=function(){goalMoney(b.dataset.gm)}});
   el.querySelectorAll("[data-gd]").forEach(function(b){b.onclick=async function(){if(confirm("Delete this goal?")){try{await api("goals?id=eq."+b.dataset.gd,{method:"DELETE"})}catch(x){alert(x.message)}await loadPlan();render()}}});
   var ff=q("ff");if(ff)ff.onchange=function(){q("fmw").style.display=ff.value==="monthly"?"none":"block"};
@@ -519,8 +520,8 @@ function csv(F){
   var txt=rows.map(function(r){return r.map(function(c){return '"'+String(c==null?"":c).replace(/"/g,'""')+'"'}).join(",")}).join("\r\n");
   var a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["﻿"+txt],{type:"text/csv"}));a.download="expenses.csv";document.body.appendChild(a);a.click();a.remove();
 }
-function lendSheet(name){
-  var sh=document.getElementById("sheet"),lr=S.lrows[name]||{r1:0,r2:0},def=lr.r2>0&&lr.r1<=0?"i|out":"o|in",rem=lr.r1>0?lr.r1:(lr.r2>0?lr.r2:0);
+function lendSheet(name,pref){
+  var sh=document.getElementById("sheet"),lr=S.lrows[name]||{r1:0,r2:0},def=pref||(lr.r2>0&&lr.r1<=0?"i|out":"o|in"),rem=lr.r1>0?lr.r1:(lr.r2>0?lr.r2:0);
   var opt=[["o|in","They paid me back (subtracts from what they owe)"],["o|out","I lent more (adds to what they owe)"],["i|out","I paid them back (subtracts from what I owe)"],["i|in","I borrowed more (adds to what I owe)"]];
   var h='<div class="sheet"><div><b>'+(name?'Tally with '+esc(name):'New lend / borrow entry')+'</b><div class="mute" style="margin:4px 0 10px">Record a part payment, cash, or an extra amount. It will not count as spending or income.</div>'+(name?'':'<input id="lp" list="pl" placeholder="Person name"><datalist id="pl">'+lendNames()+'</datalist>')+'<select id="lw">';
   opt.forEach(function(o){h+='<option value="'+o[0]+'"'+(o[0]===def?" selected":"")+'>'+o[1]+'</option>'});
@@ -573,6 +574,14 @@ function addSheet(){
     catch(e){alert("Could not save: "+e.message)}
   };
 }
+document.addEventListener("click",function(e){
+  var t=e.target&&e.target.closest?e.target.closest("#addx,[data-lnew],[data-lt]"):null;if(!t)return;
+  try{if(t.id==="addx")addSheet();else if(t.hasAttribute("data-lnew"))lendSheet("");else lendSheet(decodeURIComponent(t.getAttribute("data-lt")),t.getAttribute("data-ldef")||undefined)}
+  catch(x){showErr(x.message)}
+});
+function showErr(m){var b=document.getElementById("errbar");if(!b){b=document.createElement("div");b.id="errbar";b.style.cssText="position:fixed;top:0;left:0;right:0;background:#b4432f;color:#fff;padding:8px 12px;font-size:13px;z-index:99";b.onclick=function(){b.remove()};document.body.appendChild(b)}b.textContent="Problem: "+m+" (tap to close, and send me this message)"}
+window.addEventListener("error",function(e){showErr(e.message)});
+window.addEventListener("unhandledrejection",function(e){showErr(String(e.reason&&e.reason.message||e.reason))});
 document.getElementById("nav").onclick=function(e){var t=e.target.dataset&&e.target.dataset.t;if(t){S.tab=t;render();if(t==="plan"||t==="goals")loadPlan().then(render)}};
 function idle(){return !document.hidden&&S.code&&S.tab!=="plan"&&S.tab!=="goals"&&S.tab!=="me"&&!document.getElementById("sheet").innerHTML}
 document.addEventListener("visibilitychange",function(){if(idle())load()});
