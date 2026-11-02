@@ -188,6 +188,29 @@ async function authAction(a){
 function bindAuth(el){
   el.querySelectorAll("[data-a]").forEach(function(b){b.onclick=function(){authAction(b.dataset.a)}});
   el.querySelectorAll("input").forEach(function(i){i.onkeydown=function(e){if(e.key==="Enter"){var pb=el.querySelector(".btn:not(.ghost):not(.s)[data-a]");if(pb)pb.click()}}})}
+
+/* ---------- connect bank alerts (email forwarding) ---------- */
+var FWD_USER="servicespawpal",FWD_DOM="gmail.com";
+S.fwd=null;S.fwdSender=ls("fwdsender")||"hdfcbank";
+function fwdAddr(){return S.fwd&&S.fwd.tag?FWD_USER+"+"+S.fwd.tag+"@"+FWD_DOM:""}
+function ago(ts){if(!ts)return "";var m=Math.round((Date.now()-new Date(ts).getTime())/60000);if(m<1)return "just now";if(m<60)return m+" min ago";var h=Math.round(m/60);if(h<24)return h+" hour"+(h>1?"s":"")+" ago";var d=Math.round(h/24);return d+" day"+(d>1?"s":"")+" ago"}
+function fwdInner(){
+  var f=S.fwd;if(!f)return '<span class="mute">Loading…</span>';if(f.err)return '<span class="out">'+esc(f.err)+'</span><div class="note">If this mentions step2.sql, run it in Supabase first.</div>';
+  var ok=f.alert_count>0,a=fwdAddr();
+  var h='<div class="row" style="margin-bottom:8px"><b>'+(ok?'✓ Connected':'Not connected yet')+'</b><span class="mute">'+(ok?f.alert_count+' alert'+(f.alert_count>1?'s':'')+' · last '+ago(f.last_alert):'')+'</span></div>';
+  h+='<details'+(ok?'':' open')+'><summary class="mute" style="cursor:pointer;margin-bottom:8px">'+(ok?'Show setup steps again':'Setup steps (about 2 minutes, only once)')+'</summary>';
+  h+='<div class="note" style="margin:0 0 8px"><b>1.</b> Your private forwarding address</div><div class="code" style="font-size:15px;letter-spacing:0;word-break:break-all">'+esc(a)+'</div><button class="btn ghost s" id="fcopy" style="margin-bottom:12px">Copy address</button>';
+  h+='<div class="note" style="margin:0 0 8px"><b>2.</b> In Gmail, add it as a forwarding address. Click <i>Add a forwarding address</i>, paste it, then Next, Proceed, OK.</div><a class="btn ghost s" style="display:inline-block;text-decoration:none;margin-bottom:6px" target="_blank" rel="noopener" href="https://mail.google.com/mail/u/0/#settings/fwdandpop">Open Gmail forwarding settings</a><div class="note" style="margin:0 0 12px">Gmail\'s phone app does not have this page. Use a computer, or open gmail.com in your phone browser and choose “Desktop site”.</div>';
+  h+='<div class="note" style="margin:0 0 8px"><b>3.</b> Gmail will ask for a confirmation code. It appears here within a minute:</div><div class="code" style="'+(f.confirm_code?'':'font-size:14px;letter-spacing:0;font-weight:500')+'">'+(f.confirm_code?esc(f.confirm_code):'Waiting for Gmail’s code…')+'</div><div class="note" style="margin:0 0 12px">Type it into the Gmail box and click Verify.</div>';
+  h+='<div class="note" style="margin:0 0 8px"><b>4.</b> Choose which bank’s alerts to forward</div><input id="fsend" value="'+esc(S.fwdSender)+'" placeholder="hdfcbank" autocapitalize="off"><div class="note" style="margin:-4px 0 8px">Sender name or word, for example hdfcbank or idfcfirst. You can repeat step 4 for another bank.</div><a class="btn ghost s" id="ffilter" style="display:inline-block;text-decoration:none;margin-bottom:6px" target="_blank" rel="noopener" href="'+fwdFilterUrl()+'">Open Gmail filter</a><div class="note" style="margin:0 0 12px">In the box that opens: click <i>Create filter</i>, tick <i>Forward it to</i>, choose the address above, then <i>Create filter</i>.</div>';
+  h+='</details><div class="note"><b>5.</b> Done. New alerts appear here automatically. This status turns to ✓ Connected when the first one arrives.</div>';
+  h+='<div class="note" style="margin-top:10px">Privacy: the emails you forward go to this app’s alert inbox, are turned into payments, then moved to Trash. Delete the Gmail filter any time to stop.</div>';
+  return h}
+function fwdFilterUrl(){return "https://mail.google.com/mail/u/0/#create-filter/from="+encodeURIComponent(S.fwdSender||"hdfcbank")}
+async function loadFwd(){try{S.fwd=await api("rpc/my_forward_status",{method:"POST",body:"{}"})}catch(e){S.fwd=S.fwd||{tag:"",alert_count:0,err:errText(e)}}}
+async function refreshFwd(){var c=document.getElementById("fwdcard");if(!c||S.view)return;var ae=document.activeElement;if(ae&&ae.id==="fsend")return;await loadFwd();c=document.getElementById("fwdcard");if(c){c.innerHTML=fwdInner();bindFwd()}}
+function bindFwd(){var c=document.getElementById("fcopy");if(c)c.onclick=async function(){try{await navigator.clipboard.writeText(fwdAddr());toast("Address copied")}catch(e){toast("Press and hold the address to copy")}};
+  var fs=document.getElementById("fsend");if(fs)fs.oninput=function(){S.fwdSender=fs.value.trim();ls("fwdsender",S.fwdSender);var a=document.getElementById("ffilter");if(a)a.href=fwdFilterUrl()}}
 async function loadPlan(){
   try{S.budgets=await api("budgets?select=*")||[];S.fixed=await api("fixed_items?select=*&order=created_at.asc")||[];S.planErr=""}
   catch(e){S.planErr="Plan tables are not set up yet ("+e.message.slice(0,80)+")"}
@@ -629,7 +652,7 @@ function vMe(){
   else S.members.forEach(function(m){h+='<div class="row" style="margin:6px 0"><span>'+esc(m.display_name)+(m.user_id===p.user_id?" (you)":"")+' <span class="mute">· '+(m.role==="owner"?"owner":"member")+'</span></span>'+(own&&m.user_id!==p.user_id?'<button class="btn ghost s" data-rm="'+esc(m.user_id)+'">Remove</button>':'')+'</div>'});
   if(own)h+='<div class="mute" style="margin-top:12px">Invite code</div><div class="code">'+esc(p.invite_code||"")+'</div><div class="row" style="gap:8px"><button class="btn ghost s" id="cpy">Copy</button><button class="btn ghost s" id="ncode">New code</button></div><div class="note">To add someone: they open the app, tap Create account, then Join with a code, and enter this. Share it only with family (up to 6 people). New code stops the old one working.</div>';
   else h+='<div class="note" style="margin-top:8px">To add another person, ask the family owner for the invite code.</div>';
-  h+='</div><h2>This phone</h2><div class="card"><div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><div class="mute">Your month starts on day (1 = normal calendar month)</div><input id="ms" type="number" inputmode="numeric" min="1" max="31" value="'+(S.ms||1)+'"><button class="btn ghost s" id="msal" style="margin-bottom:10px">Use my salary credit day</button><div class="note" id="msn">This is saved on this phone only. Set the same day on the other phone. Reports, budgets and forecasts all follow it.</div><button class="btn" id="sv">Save</button></div>';
+  h+='</div><h2>Connect bank alerts</h2><div class="card" id="fwdcard">'+fwdInner()+'</div><h2>This phone</h2><div class="card"><div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><div class="mute">Your month starts on day (1 = normal calendar month)</div><input id="ms" type="number" inputmode="numeric" min="1" max="31" value="'+(S.ms||1)+'"><button class="btn ghost s" id="msal" style="margin-bottom:10px">Use my salary credit day</button><div class="note" id="msn">This is saved on this phone only. Set the same day on the other phone. Reports, budgets and forecasts all follow it.</div><button class="btn" id="sv">Save</button></div>';
   return h;
 }
 function leftOver(){
@@ -728,6 +751,7 @@ function render(){
     if(!r){n.textContent="No salary credit found yet. Mark your salary payee as Salary / Income in History first.";return}
     q("ms").value=r.day;n.textContent="Found "+money(r.amount)+" credited on "+r.date+". Day "+r.day+" filled in. Press Save."};
   var sv=q("sv");if(sv)sv.onclick=function(){S.ms=Math.min(31,Math.max(1,parseInt(g("ms"),10)||1));ls("ms",S.ms);if(S.range==="month"||S.range==="last")preset(S.range);S.cur=g("cu")||"₹";ls("cur",S.cur);S.tab="home";load()};
+  bindFwd();
   var lo=q("lo");if(lo)lo.onclick=function(){authAction("out")};
   var cpy=q("cpy");if(cpy)cpy.onclick=async function(){try{await navigator.clipboard.writeText(S.profile.invite_code);toast("Code copied")}catch(e){toast("Press and hold the code to copy")}};
   var nc=q("ncode");if(nc)nc.onclick=async function(){if(!confirm("Make a new code? The old one will stop working."))return;try{S.profile.invite_code=await api("rpc/regenerate_invite",{method:"POST",body:"{}"});toast("New code ready");render()}catch(e){showErr(errText(e))}};
@@ -746,7 +770,7 @@ async function saveBudgets(){
   var rows=[],del=[],bm={};S.budgets.forEach(function(b){bm[b.category]=1});
   document.querySelectorAll("[data-bud]").forEach(function(i){var c=i.dataset.bud,v=parseFloat(i.value);if(v>0)rows.push({category:c,amount:v});else if(bm[c])del.push(c)});
   try{
-    if(rows.length)await api("budgets?on_conflict=category",{method:"POST",headers:{Prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify(rows)});
+    if(rows.length)await api("budgets?on_conflict=household_id,category",{method:"POST",headers:{Prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify(rows)});
     for(var i=0;i<del.length;i++)await api("budgets?category=eq."+encodeURIComponent(del[i]),{method:"DELETE"});
     await load();alert("Budgets saved")
   }catch(e){alert("Could not save: "+e.message)}
@@ -794,7 +818,7 @@ function pick(t){
       if(only){var body={category:cat};if(lend)body.merchant=pp||t.merchant;if(note||t.note)body.note=note||null;
         await api("transactions?id=eq."+t.id,{method:"PATCH",headers:{Prefer:"return=minimal"},body:JSON.stringify(body)})}
       else{
-        await api("merchants?on_conflict=merchant_key",{method:"POST",headers:{Prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify({merchant_key:t.merchant_key,name:t.merchant,category:cat})});
+        await api("merchants?on_conflict=household_id,merchant_key",{method:"POST",headers:{Prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify({merchant_key:t.merchant_key,name:t.merchant,category:cat})});
         await api("transactions?merchant_key=eq."+encodeURIComponent(t.merchant_key),{method:"PATCH",headers:{Prefer:"return=minimal"},body:JSON.stringify({category:cat})});
         if(note!==(t.note||""))await api("transactions?id=eq."+t.id,{method:"PATCH",headers:{Prefer:"return=minimal"},body:JSON.stringify({note:note||null})});
       }
@@ -830,13 +854,14 @@ document.addEventListener("click",function(e){
 function showErr(m){var b=document.getElementById("errbar");if(!b){b=document.createElement("div");b.id="errbar";b.style.cssText="position:fixed;top:0;left:0;right:0;background:#b4432f;color:#fff;padding:8px 12px;font-size:13px;z-index:99";b.onclick=function(){b.remove()};document.body.appendChild(b)}b.textContent="Problem: "+m+" (tap to close, and send me this message)"}
 window.addEventListener("error",function(e){showErr(e.message)});
 window.addEventListener("unhandledrejection",function(e){showErr(String(e.reason&&e.reason.message||e.reason))});
-document.getElementById("nav").onclick=function(e){var bt=e.target.closest&&e.target.closest("button[data-t]");var t=bt&&bt.dataset.t;if(t){S.tab=t;render();if(t==="plan"||t==="goals")loadPlan().then(render);if(t==="me")loadMembers().then(render)}};
+document.getElementById("nav").onclick=function(e){var bt=e.target.closest&&e.target.closest("button[data-t]");var t=bt&&bt.dataset.t;if(t){S.tab=t;render();if(t==="plan"||t==="goals")loadPlan().then(render);if(t==="me")Promise.all([loadMembers(),loadFwd()]).then(render)}};
 function idle(){return !document.hidden&&S.code&&S.tab!=="plan"&&S.tab!=="goals"&&S.tab!=="me"&&!document.getElementById("sheet").innerHTML}
 document.addEventListener("visibilitychange",function(){if(idle())load()});
 setInterval(function(){if(idle())load()},30000);
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
 S.pf=ls("pf")||"";S.cur=ls("cur")||"₹";S.ms=parseInt(ls("ms"),10)||1;
 try{S.auth=JSON.parse(ls("sb")||"null")}catch(e){S.auth=null}
+setInterval(function(){if(S.tab==="me"&&!document.hidden&&S.code)refreshFwd()},6000);
 window.addEventListener("hashchange",function(){if(/access_token|error_description/.test(location.hash))boot()});
 preset("month");boot();
 </script>
