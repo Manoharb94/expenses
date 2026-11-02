@@ -416,12 +416,18 @@ function goalCalc(g){
   var tg=Number(g.target)||0,sv=Number(g.saved)||0,rem=Math.max(0,tg-sv),ml=0,pm=0;
   if(g.due){var n=new Date(),d=new Date(g.due+"T00:00:00");ml=Math.max(1,Math.ceil((d-n)/(30.44*864e5)));if(d<n)ml=0}
   if(rem>0)pm=ml>0?rem/ml:rem;
-  return {tg:tg,sv:sv,rem:rem,ml:ml,pm:pm,pct:tg>0?Math.min(100,Math.round(sv/tg*100)):0}}
+  var plan=goalPlan(g);if(plan.mt>0&&rem>0&&ml>0)pm=plan.mt;
+  return {tg:tg,sv:sv,rem:rem,ml:ml,pm:pm,mt:plan.mt,N:plan.N,initial:plan.initial,pct:tg>0?Math.min(100,Math.round(sv/tg*100)):0}}
+function goalPlan(g){
+  var tg=Number(g.target)||0,sv=Number(g.saved)||0;
+  if(!g.due||!Array.isArray(S.gents))return {mt:0,N:0,initial:0};
+  var sumE=0;S.gents.forEach(function(e){if(e.goal_id===g.id)sumE+=Number(e.amount)});
+  var initial=Math.max(0,sv-sumE),start=new Date(g.created_at||Date.now()),N=Math.max(1,Math.ceil((new Date(g.due+"T00:00:00")-start)/(30.44*864e5)));
+  return {mt:Math.max(0,(tg-initial)/N),N:N,initial:initial}}
 function goalMonthly(g){
   if(S.gents===null)return '<div class="note">Run the updated goals.sql in Supabase to track savings month by month.</div>';
   var ents=S.gents.filter(function(e){return e.goal_id===g.id}),c=goalCalc(g),sumE=0;ents.forEach(function(e){sumE+=Number(e.amount)});
-  var start=new Date(g.created_at||Date.now()),now=new Date(),initial=Math.max(0,c.sv-sumE),N=0,mt=0;
-  if(g.due){N=Math.max(1,Math.ceil((new Date(g.due+"T00:00:00")-start)/(30.44*864e5)));mt=Math.max(0,(c.tg-initial)/N)}
+  var start=new Date(g.created_at||Date.now()),now=new Date(),mt=c.mt||0;
   var months=[],y=start.getFullYear(),m=start.getMonth();
   while(y<now.getFullYear()||(y===now.getFullYear()&&m<=now.getMonth())){months.push([y,m]);m++;if(m>11){m=0;y++}}
   months=months.slice(-6);
@@ -443,11 +449,19 @@ function vGoals(){
   if(!S.goals.length&&!S.goalErr)h+='<div class="card mute">No goals yet. Add one below, for example a car, a holiday or an emergency fund.</div>';
   S.goals.forEach(function(g){var c=goalCalc(g),done=c.rem===0;
     h+='<div class="card"><div class="row"><b>'+esc(g.name)+'</b><button class="x" data-gd="'+g.id+'" aria-label="Delete">×</button></div><div class="bar" style="height:12px"><i style="width:'+c.pct+'%"></i></div><div class="row" style="margin-top:6px"><span>'+money(c.sv)+' of '+money(c.tg)+'</span><b>'+c.pct+'%</b></div>';
-    h+='<div class="note">'+(done?'Goal reached 🎉':(g.due?'Target '+esc(g.due)+' · '+(c.ml>0?c.ml+' month'+(c.ml>1?'s':'')+' left · save about <b>'+money(c.pm)+'</b> a month':'date has passed · '+money(c.rem)+' still to go'):money(c.rem)+' still to go'))+'</div>';
+    h+='<div class="note">'+(done?'Goal reached 🎉':(g.due?'Target '+esc(g.due)+' · '+(c.ml>0?c.ml+' month'+(c.ml>1?'s':'')+' left · save <b>'+money(c.pm)+'</b> a month (fixed)':'date has passed · '+money(c.rem)+' still to go'):money(c.rem)+' still to go'))+'</div>';
+    var cur=0,ck=ym(new Date());(S.gents||[]).forEach(function(e){if(e.goal_id===g.id&&String(e.created_at||"").slice(0,7)===ck)cur+=Number(e.amount)});
+    if(c.mt>0&&!done)h+='<div class="note">This month: saved '+money(cur)+' of '+money(c.mt)+(cur>=c.mt?' ✓':' · <b>'+money(c.mt-cur)+'</b> to go')+'</div>';
     h+=goalMonthly(g)+'<button class="btn ghost s" style="margin-top:8px" data-gm="'+g.id+'">+ Add money</button></div>'});
   h+='<h2>New goal</h2><div class="card"><input id="gn" placeholder="Goal name (e.g. Car, Goa trip)"><input id="gt" type="number" inputmode="decimal" placeholder="Target amount"><input id="gs" type="number" inputmode="decimal" placeholder="Already saved (optional)"><div class="mute">Target date (optional)</div><input id="gdt" type="date"><button class="btn" id="gadd">Add goal</button><div class="note">Goals are shared. You both see them and can add money. Add money when you set savings aside; the app does not move any real money.</div></div>';
   return h;
 }
+function toast(m){var b=document.getElementById("toast");if(!b){b=document.createElement("div");b.id="toast";b.style.cssText="position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#1c1c1a;color:#fff;padding:10px 16px;border-radius:20px;font-size:14px;z-index:99;max-width:90%";document.body.appendChild(b)}
+  b.textContent=m;b.style.display="block";clearTimeout(toast.t);toast.t=setTimeout(function(){b.style.display="none"},3500)}
+async function saveTxn(body){
+  var r=await api("transactions",{method:"POST",headers:{Prefer:"return=representation"},body:JSON.stringify(body)});
+  if(!r||!r.length)throw new Error("The database did not keep this entry. A database rule may be rejecting it.");
+  return r[0]}
 async function addGoal(){
   var n=g("gn").trim(),t=parseFloat(g("gt")),sv=parseFloat(g("gs"))||0,d=g("gdt");
   if(!n||!(t>0)){alert("Enter a name and a target amount");return}
@@ -533,7 +547,7 @@ function lendSheet(name,pref){
     var nm=(name||g("lp")).trim(),a=parseFloat(g("la")),w=g("lw").split("|");
     if(!nm||!(a>0)){alert("Enter the person's name and an amount");return}
     var body={amount:a,type:w[1],merchant:nm,merchant_key:mk(nm),category:w[0]==="o"?LOUT:LIN,note:g("lc").trim()||null,txn_date:g("ld")||iso(new Date()),person:S.name};
-    try{await api("transactions",{method:"POST",headers:{Prefer:"return=minimal"},body:JSON.stringify(body)});sh.innerHTML="";load()}
+    try{await saveTxn(body);sh.innerHTML="";toast("Saved: "+w[1]+" "+money(a)+" · "+nm);load()}
     catch(e){alert("Could not save: "+e.message)}
   };
 }
@@ -570,7 +584,7 @@ function addSheet(){
     var a=parseFloat(g("xa")),m=g("xm").trim();if(!(a>0)||!m){alert("Enter an amount and a description");return}
     var key=mk(m),cat=g("xc"),known=S.txns.filter(function(x){return x.merchant_key===key&&x.category})[0];
     if(!cat&&known)cat=known.category;
-    try{await api("transactions",{method:"POST",headers:{Prefer:"return=minimal"},body:JSON.stringify({amount:a,type:g("xt"),merchant:m,merchant_key:key,category:cat||null,txn_date:g("xd")||iso(new Date()),person:S.name})});sh.innerHTML="";load()}
+    try{await saveTxn({amount:a,type:g("xt"),merchant:m,merchant_key:key,category:cat||null,txn_date:g("xd")||iso(new Date()),person:S.name});sh.innerHTML="";toast("Saved "+money(a)+" · "+m);load()}
     catch(e){alert("Could not save: "+e.message)}
   };
 }
