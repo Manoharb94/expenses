@@ -710,7 +710,7 @@ function listFilter(){
 function vList(emb){
   var r=listFilter(),L=r.L,F=r.F,hf=r.hf;
   var n={all:L.length,out:L.filter(function(t){return t.type==="out"&&isCount(t)}).length,in:L.filter(function(t){return t.type==="in"&&isCount(t)}).length,none:L.filter(function(t){return !t.category}).length,trf:L.filter(function(t){return t.category===TRF}).length,card:L.filter(isCard).length,lend:L.filter(function(t){return t.category===LOUT||t.category===LIN}).length,unpl:L.filter(function(t){return t.category===UNPL}).length};
-  var h=(emb?'<h2 id="hist">History</h2>':'<h1>History</h1>'+rangeUI())+'<div class="row" style="margin-bottom:10px"><button class="btn ghost s" id="addx">+ Add cash / other</button><button class="btn ghost s" id="csvb">Export CSV</button></div><div class="tabs">';
+  var h=(emb?'<h2 id="hist">History</h2>':'<h1>History</h1>'+rangeUI())+'<div class="row" style="margin-bottom:10px;flex-wrap:wrap;gap:8px"><button class="btn ghost s" id="addx">+ Add cash / other</button><button class="btn ghost s" id="stbtn">Import bank statement</button><button class="btn ghost s" id="csvb">Export CSV</button></div><div class="tabs">';
   [["all","All"],["out","Spent"],["in","Received"],["trf","Transfers"],["card","Credit card"],["lend","Lending"],["unpl","Unplanned"],["none","No category"]].forEach(function(x){h+='<button class="tab'+(hf===x[0]?" on":"")+'" data-hf="'+x[0]+'">'+x[1]+' ('+n[x[0]]+')</button>'});
   var cs=cardSums(F),line=hf==="card"?'Card spends '+money(cs.spent)+' · Bill payments '+money(cs.paid):hf==="trf"?'Sent '+money(sum(F,"out"))+' · Received '+money(sum(F,"in")):'Spent '+money(sum(F.filter(isCount),"out"))+' · Received '+money(sum(F.filter(isCount),"in"));
   h+='</div><div class="mute" style="margin:0 0 8px">'+line+'. Tap a payment to choose its category.</div><div class="card">';
@@ -725,6 +725,7 @@ function vReports(){
   var h='<h1>Reports</h1>'+personUI()+'<div class="mute">Report</div><select id="rp">';
   opts.forEach(function(o){h+='<option value="'+o[0]+'"'+(S.rp===o[0]?" selected":"")+'>'+o[1]+'</option>'});
   h+='</select>';
+  if(S.rp!=="stmt")h+='<div style="margin-top:10px"><button class="btn ghost s" id="stbtn2">Upload bank statement</button></div>';
   if(S.rp==="stmt")return h+vStmt();
   if(S.rp==="next")return h+forecastView(1);
   if(S.rp==="year")return h+forecastView(12);
@@ -881,6 +882,8 @@ function render(){
   el.querySelectorAll("[data-hf]").forEach(function(b){b.onclick=function(){S.hf=b.dataset.hf;render()}});
   el.querySelectorAll("[data-cat]").forEach(function(b){b.onclick=function(){var t=S.txns.filter(function(x){return x.id===b.dataset.cat})[0];if(t)pick(t)}});
   el.querySelectorAll("[data-del]").forEach(function(b){b.onclick=async function(e){e.stopPropagation();if(confirm("Delete this transaction?")){try{await api("transactions?id=eq."+b.dataset.del,{method:"DELETE"})}catch(x){alert(x.message)}load()}}});
+  var sb2=q("stbtn2");if(sb2)sb2.onclick=function(){S.rp="stmt";if(S.imports===null)loadImports().then(render);render()};
+  var sb=q("stbtn");if(sb)sb.onclick=function(){S.tab="rep";S.rp="stmt";window.scrollTo(0,0);if(S.imports===null)loadImports().then(render);render()};
   var cb=q("csvb");if(cb)cb.onclick=function(){csv(listFilter().F)};
   var ma=q("msal");if(ma)ma.onclick=function(){var r=salaryDay(),n=q("msn");
     if(!r){n.textContent="No salary credit found yet. Mark your salary payee as Salary / Income in History first.";return}
