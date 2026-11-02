@@ -943,12 +943,43 @@ function lendSheet(name,pref){
   };
 }
 function lendNames(){var seen={};S.txns.forEach(function(t){if(t.category===LOUT||t.category===LIN)seen[t.merchant||""]=1});return Object.keys(seen).filter(Boolean).map(function(n){return '<option value="'+esc(n)+'">'}).join("")}
+function lendBal(){
+  var by={};S.txns.filter(function(t){return t.category===LOUT||t.category===LIN}).forEach(function(t){
+    var k=t.merchant||"";if(!k)return;var o=by[k]=by[k]||{lent:0,back:0,took:0,paid:0},a=Number(t.amount);
+    if(t.category===LOUT){if(t.type==="out")o.lent+=a;else o.back+=a}else{if(t.type==="in")o.took+=a;else o.paid+=a}});
+  return Object.keys(by).map(function(k){var o=by[k];return {k:k,get:Math.round((o.lent-o.back)*100)/100,owe:Math.round((o.took-o.paid)*100)/100}});
+}
+function lendWho(t,cat,kind,label,note,pp){
+  var sh=document.getElementById("sheet"),a=Number(t.amount);
+  async function apply(name){
+    sh.innerHTML="";
+    try{await api("transactions?id=eq."+t.id,{method:"PATCH",headers:{Prefer:"return=minimal"},body:JSON.stringify({category:cat,merchant:name,note:note||t.note||null})});toast(label+" · "+name+" · "+money(a))}
+    catch(e){alert("Could not save: "+e.message)}
+    load();
+  }
+  var h='<div class="sheet"><div><b>'+esc(label)+'</b><div class="mute" style="margin:4px 0 10px">'+esc(t.merchant||"Unknown")+' · '+money(a)+' · '+esc(t.txn_date||"")+'</div>';
+  if(kind==="settle"){
+    var open=lendBal().filter(function(r){return cat===LOUT?r.get>0:r.owe>0});
+    h+='<div class="mute" style="margin-bottom:6px">'+(cat===LOUT?'Who paid you back?':'Whom did you pay back?')+' It is subtracted from their balance automatically.</div>';
+    if(open.length)open.forEach(function(r,i){var rem=cat===LOUT?r.get:r.owe;h+='<button class="btn ghost" style="margin-bottom:6px;text-align:left" data-w="'+i+'">'+esc(r.k)+' · still '+(cat===LOUT?'to get ':'to pay ')+money(rem)+(a>rem?' (this is more)':a===rem?' (clears it)':' (leaves '+money(rem-a)+')')+'</button>'});
+    else h+='<div class="note">Nothing is open to settle. Type a name below to start a record.</div>';
+    sh.innerHTML=h+'<input id="wn" list="pl" placeholder="Someone else (name)"><datalist id="pl">'+lendNames()+'</datalist><button class="btn" id="wok">Save with this name</button><button class="btn ghost" style="margin-top:8px" id="wx">Cancel</button></div></div>';
+    sh.querySelectorAll("[data-w]").forEach(function(b){b.onclick=function(){apply(open[+b.dataset.w].k)}});
+  }else{
+    sh.innerHTML=h+'<input id="wn" list="pl" placeholder="Person name" value="'+esc(pp||t.merchant||"")+'"><datalist id="pl">'+lendNames()+'</datalist><button class="btn" id="wok">Save</button><button class="btn ghost" style="margin-top:8px" id="wx">Cancel</button></div></div>';
+  }
+  document.getElementById("wx").onclick=function(){sh.innerHTML=""};
+  document.getElementById("wok").onclick=function(){var n=g("wn").trim();if(!n){alert("Enter the person's name");return}apply(n)};
+}
 function pick(t){
   var sh=document.getElementById("sheet");
   var h='<div class="sheet"><div><b>Choose a category</b><div class="mute" style="margin:4px 0 10px">'+esc(t.merchant||"Unknown")+' · '+money(t.amount)+' · '+esc(t.txn_date||"")+'</div><input id="pn" placeholder="Note (optional)" value="'+esc(t.note||"")+'"><input id="pp" list="pl" placeholder="Person name (only for Lend out / Lend in)" value="'+esc(t.merchant||"")+'"><datalist id="pl">'+lendNames()+'</datalist><label class="mute" style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><input type="checkbox" id="po" style="width:auto;margin:0">Only this payment</label><div class="note" style="margin:0">Otherwise the payee is remembered, and its future payments are filed automatically.</div><div class="cats">';
-  CATS.forEach(function(c,i){h+='<button data-c="'+i+'">'+esc(c)+'</button>'});
+  CATS.forEach(function(c,i){if(c===LOUT||c===LIN)return;h+='<button data-c="'+i+'">'+esc(c)+'</button>'});
+  var LB=t.type==="in"?[["Borrowed (they gave me)",LIN,"new"],["Got back (they repaid me)",LOUT,"settle"]]:[["Lend out (I gave)",LOUT,"new"],["Paid back (I repaid)",LIN,"settle"]];
+  LB.forEach(function(x,i){h+='<button data-l="'+i+'" style="border-color:var(--accent,#5fb59a)">'+x[0]+'</button>'});
   h+='</div><button class="btn ghost" style="margin-top:12px" id="later">Cancel</button></div></div>';
   sh.innerHTML=h;
+  sh.querySelectorAll("[data-l]").forEach(function(b){b.onclick=function(){var x=LB[+b.dataset.l];lendWho(t,x[1],x[2],x[0],g("pn").trim(),g("pp").trim())}});
   document.getElementById("later").onclick=function(){sh.innerHTML=""};
   sh.querySelectorAll("[data-c]").forEach(function(b){b.onclick=async function(){
     var cat=CATS[+b.dataset.c],lend=(cat===LOUT||cat===LIN),only=document.getElementById("po").checked||lend||!t.merchant_key||t.merchant_key==="unknown",note=g("pn").trim(),pp=g("pp").trim();sh.innerHTML="";
