@@ -71,7 +71,7 @@ nav button i{font-style:normal;font-size:19px;line-height:1}nav button.on{backgr
 <script>
 var URLB="https://fwxhclagrwlzxvsmaekt.supabase.co/rest/v1/",KEY="sb_publishable_PiCUzSknFyCfGfEVzTiQbg_qEkBYwL_";
 var TRF="Transfer between us",IGN="Ignore (don't count)",UNC="Others (no category yet)",CCB="Credit card bill (paid)",LOUT="Lend out",LIN="Lend in",UNPL="Unplanned expense",RENT="Rental income",PASS="Pass-through (received & sent on)";
-var CATS=["Groceries – Offline","Groceries – Online","Shopping – Offline","Shopping – Online","Food – Dining out","Food – Online delivery","Transport","Fuel","Bills & Utilities","Rent / EMI","Health","Beauty / Salon","Entertainment","Travel","Education","Home loan EMI","Kid education","Kid day care","Kid expense","Maid","Cook","Car cleaning","Electricity bill","Gas bill","Family donation",UNPL,"Family & Friends","GPay wallet","Trips","Salary / Income",RENT,"Other",LOUT,LIN,TRF,PASS,CCB,IGN];
+var CATS=["Groceries – Offline","Groceries – Online","Shopping – Offline","Shopping – Online","Food – Dining out","Food – Online delivery","Transport","Fuel","Bills & Utilities","Rent / EMI","Health","Beauty / Salon","Entertainment","Travel","Education","Home loan EMI","Kid education","Kid day care","Kid expense","Maid","Cook","Car cleaning","Electricity bill","Gas bill","Family donation",UNPL,"Family & Friends","Pet expenses","GPay wallet","Trips","Salary / Income",RENT,"Other",LOUT,LIN,TRF,PASS,CCB,IGN];
 var NOBUD={"Salary / Income":1};NOBUD[TRF]=1;NOBUD[IGN]=1;NOBUD[CCB]=1;NOBUD[LOUT]=1;NOBUD[LIN]=1;NOBUD[UNPL]=1;NOBUD[RENT]=1;NOBUD[PASS]=1;
 var NOBUDGET={};for(var k in NOBUD)NOBUDGET[k]=1;["Rent / EMI","Education","Home loan EMI","Kid education","Kid day care","Maid","Cook","Car cleaning","Electricity bill","Gas bill","Family donation","Family & Friends"].forEach(function(c){NOBUDGET[c]=1});
 var S={tab:"home",range:"month",from:"",to:"",rp:"this",hf:"all",pf:"",txns:[],budgets:[],fixed:[],planErr:"",goals:[],gents:[],lrows:{},goalErr:"",cur:"₹",code:"",name:"",err:"",loaded:false};
@@ -512,14 +512,15 @@ function lendBlock(){
     if(t.category===LOUT){if(t.type==="out"){o.lent+=a;o.e.push([t.txn_date,"lent",a,t.note])}else{o.back+=a;o.e.push([t.txn_date,"got back",a,t.note])}}
     else{if(t.type==="in"){o.took+=a;o.e.push([t.txn_date,"borrowed",a,t.note])}else{o.paid+=a;o.e.push([t.txn_date,"paid back",a,t.note])}}});
   if(!any)return '';
-  var rows=Object.keys(by).map(function(k){var o=by[k],r1=Math.round((o.lent-o.back)*100)/100,r2=Math.round((o.took-o.paid)*100)/100;return {k:k,o:o,r1:r1,r2:r2,net:Math.round((r1-r2)*100)/100,open:Math.abs(r1)+Math.abs(r2)}});
+  var rows=Object.keys(by).map(function(k){var o=by[k],r1=Math.max(0,Math.round((o.lent-o.back)*100)/100),r2=Math.max(0,Math.round((o.took-o.paid)*100)/100);return {k:k,o:o,r1:r1,r2:r2,net:Math.round((r1-r2)*100)/100,open:Math.abs(r1)+Math.abs(r2)}});
   rows.sort(function(a,b){return (a.open===0)-(b.open===0)||b.open-a.open});
   var get=0,owe=0;rows.forEach(function(r){if(r.net>0)get+=r.net;else if(r.net<0)owe-=r.net});
   S.lrows={};
   var h='<h2>Lending</h2><div class="card"><button class="btn ghost s" style="margin-bottom:10px" data-lnew="1">+ Add new lender</button><div class="grid" style="margin-bottom:8px"><div><div class="mute">You will get</div><b class="in">'+money(get)+'</b></div><div><div class="mute">You have to pay</div><b class="out">'+money(owe)+'</b></div></div>';
   function line(label,total,done,rem,who){
+    if(total===0&&done>0)return '<div style="margin:6px 0"><div class="row"><span class="mute">'+(who==="still to get"?'Got back ':'Paid back ')+money(done)+'</span><span class="in"><b>Settled ✓</b></span></div><div class="note">No earlier '+(who==="still to get"?'lend':'borrowing')+' was recorded, so nothing is pending.</div></div>';
     var pct=total>0?Math.min(100,Math.round(done/total*100)):0;
-    return '<div style="margin:6px 0"><div class="row"><span class="mute">'+label+' '+money(total)+'</span><span>'+(rem===0?'<span class="in"><b>'+(who==="still to get"?'Got back in full':'Paid in full')+' ✓</b></span>':who+' <b class="'+(rem>0&&who==="still to get"?"in":"out")+'">'+money(Math.abs(rem))+'</b>')+'</span></div><div class="bar"><i style="width:'+pct+'%"></i></div><div class="note">'+(who==="still to get"?'Got back ':'Paid back ')+money(done)+' of '+money(total)+' ('+pct+'%)</div></div>'}
+    return '<div style="margin:6px 0"><div class="row"><span class="mute">'+label+' '+money(total)+'</span><span>'+(rem===0?'<span class="in"><b>'+(who==="still to get"?'Got back in full':'Paid in full')+' ✓</b></span>':who+' <b class="'+(rem>0&&who==="still to get"?"in":"out")+'">'+money(Math.abs(rem))+'</b>')+'</span></div><div class="bar"><i style="width:'+pct+'%"></i></div><div class="note">'+(who==="still to get"?'Got back ':'Paid back ')+money(done)+' of '+money(total)+' ('+pct+'%)'+(done>total?' · '+money(done-total)+' more than recorded, counted as settled':'')+'</div></div>'}
   var cutoff=iso(pdate(0)),hidden=0;
   rows.forEach(function(r){var o=r.o;
     if(r.open===0){var last=o.e.reduce(function(m,x){return x[0]>m?x[0]:m},"");if(last<cutoff){hidden++;return}}
@@ -574,7 +575,7 @@ function periodDates(){
   if(!to)to=iso(new Date());
   return {from:from,to:to}}
 var CATI={"Groceries – Offline":"🛒","Groceries – Online":"🥬","Shopping – Offline":"🛍️","Shopping – Online":"📦","Food – Dining out":"🍽️","Food – Online delivery":"🛵","Transport":"🚌","Fuel":"⛽","Bills & Utilities":"💡","Rent / EMI":"🏠","Health":"💊","Beauty / Salon":"💇","Entertainment":"🎬","Travel":"✈️","Education":"🎓","Home loan EMI":"🏦","Kid education":"📚","Kid day care":"🧸","Kid expense":"👶","Maid":"🧹","Cook":"🍳","Car cleaning":"🚗","Electricity bill":"⚡","Gas bill":"🔥","Family donation":"🙏","Unplanned expense":"⚠️","Family & Friends":"👪","Salary / Income":"💼","Rental income":"🏘️","Other":"📌","Lend out":"🤝","Lend in":"🤝","Mandatory":"📌"};
-CATI[TRF]="🔁";CATI[PASS]="🔀";CATI["GPay wallet"]="👛";CATI["Trips"]="🧳";CATI[CCB]="💳";CATI[IGN]="🚫";CATI[UNC]="❔";
+CATI[TRF]="🔁";CATI[PASS]="🔀";CATI["GPay wallet"]="👛";CATI["Trips"]="🧳";CATI["Pet expenses"]="🐾";CATI[CCB]="💳";CATI[IGN]="🚫";CATI[UNC]="❔";
 function ci(c){return CATI[c]||(c?"•":"❔")}
 function arrow(cur,prev){
   if(!(prev>0))return cur>0?'<span class="chip">new</span>':'';
@@ -947,7 +948,7 @@ function lendBal(){
   var by={};S.txns.filter(function(t){return t.category===LOUT||t.category===LIN}).forEach(function(t){
     var k=t.merchant||"";if(!k)return;var o=by[k]=by[k]||{lent:0,back:0,took:0,paid:0},a=Number(t.amount);
     if(t.category===LOUT){if(t.type==="out")o.lent+=a;else o.back+=a}else{if(t.type==="in")o.took+=a;else o.paid+=a}});
-  return Object.keys(by).map(function(k){var o=by[k];return {k:k,get:Math.round((o.lent-o.back)*100)/100,owe:Math.round((o.took-o.paid)*100)/100}});
+  return Object.keys(by).map(function(k){var o=by[k];return {k:k,get:Math.max(0,Math.round((o.lent-o.back)*100)/100),owe:Math.max(0,Math.round((o.took-o.paid)*100)/100)}});
 }
 function lendWho(t,cat,kind,label,note,pp){
   var sh=document.getElementById("sheet"),a=Number(t.amount);
