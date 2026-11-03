@@ -348,7 +348,7 @@ async function load(){
   var q0="transactions?select=*&order=txn_date.desc,created_at.desc&limit=5000";
   try{S.txns=await api(q0+"&hidden=eq.false")||[];S.err="";S.loaded=true}
   catch(e){try{S.txns=await api(q0)||[];S.err="";S.loaded=true}catch(e2){S.err="Could not load: "+e2.message}}
-  if(S.loaded){await loadPlan();await loadMembers()}
+  if(S.loaded){await loadPlan();await loadMembers();await loadImports()}
   if(S.loaded&&!S.pf)S.pf=S.name;
   render();
 }
@@ -686,6 +686,7 @@ function vHome(){
   var who=S.pf==="__both"?"by "+allWord():(S.pf===S.name?"by you":"by "+S.pf);
   var P=prevInfo(),F=flowCalc(L,Lc,X);
   h+=heroBlock(X,F,P,who,nOut,L);
+  h+=balBlock();
   h+=timeChart(X,pdt.from,pdt.to);
   h+=incomeBlock(Lc,L);
   h+=mandBlock(X);
@@ -883,6 +884,7 @@ function render(){
   el.querySelectorAll("[data-hf]").forEach(function(b){b.onclick=function(){S.hf=b.dataset.hf;render()}});
   el.querySelectorAll("[data-cat]").forEach(function(b){b.onclick=function(){var t=S.txns.filter(function(x){return x.id===b.dataset.cat})[0];if(t)pick(t)}});
   el.querySelectorAll("[data-del]").forEach(function(b){b.onclick=async function(e){e.stopPropagation();if(confirm("Delete this transaction?")){try{await api("transactions?id=eq."+b.dataset.del,{method:"DELETE"})}catch(x){alert(x.message)}load()}}});
+  var sb3=q("stbtn3");if(sb3)sb3.onclick=function(){S.tab="rep";S.rp="stmt";window.scrollTo(0,0);render()};
   var sb2=q("stbtn2");if(sb2)sb2.onclick=function(){S.rp="stmt";if(S.imports===null)loadImports().then(render);render()};
   var sb=q("stbtn");if(sb)sb.onclick=function(){S.tab="rep";S.rp="stmt";window.scrollTo(0,0);if(S.imports===null)loadImports().then(render);render()};
   var cb=q("csvb");if(cb)cb.onclick=function(){csv(listFilter().F)};
@@ -944,6 +946,22 @@ function lendSheet(name,pref){
   };
 }
 function lendNames(){var seen={};S.txns.forEach(function(t){if(t.category===LOUT||t.category===LIN)seen[t.merchant||""]=1});return Object.keys(seen).filter(Boolean).map(function(n){return '<option value="'+esc(n)+'">'}).join("")}
+function isBankMove(t){return t.kind!=="card"&&!t.hidden&&(t.raw||t.source==="statement")}
+function acctBal(p){
+  var im=(S.imports||[]).filter(function(x){return x.person===p&&x.closing!=null&&x.closing!==""}).sort(function(a,b){return a.to_date<b.to_date?1:-1})[0];
+  if(!im)return null;var b=Number(im.closing),n=0;
+  S.txns.forEach(function(t){if(t.person===p&&t.txn_date>im.to_date&&isBankMove(t)){b+=t.type==="in"?Number(t.amount):-Number(t.amount);n++}});
+  return {p:p,bal:Math.round(b*100)/100,as:im.to_date,n:n};
+}
+function balBlock(){
+  if(!S.loaded||S.impErr||S.imports===null)return '';
+  var ps=S.pf==="__both"?persons():[S.pf],rows=ps.map(acctBal).filter(Boolean);
+  if(!rows.length)return '<div class="card row"><span class="mute">Upload a bank statement to see your account balance here.</span><button class="btn ghost s" id="stbtn3">Upload</button></div>';
+  var tot=0;rows.forEach(function(r){tot+=r.bal});
+  var h='<div class="card"><div class="mute">Account balance</div>';
+  rows.forEach(function(r){h+='<div class="row" style="margin:6px 0"><span>'+esc(r.p)+' <span class="mute" style="font-size:12px">· statement of '+esc(r.as)+(r.n?' + '+r.n+' since':'')+'</span></span><b class="'+(r.bal<0?"out":"in")+'">'+money(r.bal)+'</b></div>'});
+  if(rows.length>1)h+='<div class="row" style="border-top:1px solid var(--line);padding-top:6px"><span class="mute">Together</span><b>'+money(tot)+'</b></div>';
+  return h+'<div class="note">The last statement balance, plus money in and out since then from your alerts. Cash entries and credit card spends are not included. Upload a newer statement any time to reset it to the exact figure.</div></div>'}
 function lendBal(){
   var by={};S.txns.filter(function(t){return t.category===LOUT||t.category===LIN}).forEach(function(t){
     var k=t.merchant||"";if(!k)return;var o=by[k]=by[k]||{lent:0,back:0,took:0,paid:0},a=Number(t.amount);
