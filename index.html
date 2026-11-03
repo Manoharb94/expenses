@@ -80,6 +80,7 @@ nav button.on{background:color-mix(in srgb,var(--acc) 16%,transparent)}
 .ic{flex:none;min-width:136px;scroll-snap-align:start;background:var(--card);border-radius:16px;padding:12px 14px;box-shadow:var(--shadow)}
 .ic small{display:block;color:var(--mute);font-size:12px}.ic b{display:block;font-size:19px;margin-top:2px;letter-spacing:-.3px}.ic span{font-size:12px;color:var(--mute)}.ic .e{font-size:18px;display:block;margin-bottom:4px}
 .pace{height:6px;border-radius:3px;background:var(--chip);margin-top:8px;overflow:hidden}.pace i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,var(--hero2),var(--acc))}
+main.noanim>*{animation:none!important}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 /* ---- theme choices ---- */
 :root[data-theme=light]{color-scheme:light}
@@ -248,7 +249,7 @@ function bindAuth(el){
   el.querySelectorAll("input").forEach(function(i){i.onkeydown=function(e){if(e.key==="Enter"){var pb=el.querySelector(".btn:not(.ghost):not(.s)[data-a]");if(pb)pb.click()}}})}
 
 /* ---------- connect your Gmail (personal script) ---------- */
-var SC_TPL="/* Our Expenses: reads your own bank alert emails and sends the payments to the app.\n   Made for __NAME__. Keep this private: it contains your personal key.\n   1. Press Save (disk icon).  2. In the function box choose  setup  and press Run.\n   3. Allow access when Google asks (Advanced > Go to project). That is all. */\nvar API_ = \"https://fwxhclagrwlzxvsmaekt.supabase.co/rest/v1/rpc/\";\nvar ANON_ = \"sb_publishable_PiCUzSknFyCfGfEVzTiQbg_qEkBYwL_\";\nvar USER_KEY = \"__KEY__\";\n\nfunction call_(fn, payload) {\n  var r = UrlFetchApp.fetch(API_ + fn, { method: \"post\", contentType: \"application/json\",\n    headers: { apikey: ANON_ }, payload: JSON.stringify(payload), muteHttpExceptions: true });\n  if (r.getResponseCode() >= 300) throw new Error(fn + \" replied \" + r.getResponseCode() + \" \" + r.getContentText());\n  return JSON.parse(r.getContentText());\n}\nfunction sync_(days, stopAt, fresh) {\n  var cfg = call_(\"script_banks\", { p_key: USER_KEY });\n  if (!cfg.queries.length) { Logger.log(\"No banks are selected in the app.\"); return 0; }\n  var props = PropertiesService.getScriptProperties();\n  var last = fresh ? 0 : Number(props.getProperty(\"last\") || 0);\n  var cutoff = last ? last - 3 * 3600 * 1000 : 0;\n  var q = \"(\" + cfg.queries.join(\" OR \") + \") newer_than:\" + days + \"d\";\n  var saved = 0, newest = last, start = 0, done = false;\n  while (Date.now() < stopAt) {\n    var threads = GmailApp.search(q, start, 25);\n    if (!threads.length) { done = true; break; }\n    start += threads.length;\n    var raws = [];\n    threads.forEach(function (t) { t.getMessages().forEach(function (m) {\n      var ts = m.getDate().getTime();\n      if (ts > cutoff) { raws.push(m.getPlainBody().substring(0, 2000)); if (ts > newest) newest = ts; }\n    }); });\n    for (var i = 0; i < raws.length; i += 80) saved += call_(\"ingest_user\", { p_key: USER_KEY, p_raws: raws.slice(i, i + 80) }).saved;\n  }\n  if (done && newest > last) props.setProperty(\"last\", String(newest));\n  return saved;\n}\nfunction run() { sync_(2, Date.now() + 240000, false); }\nfunction setup() {\n  ScriptApp.getProjectTriggers().forEach(function (t) { ScriptApp.deleteTrigger(t); });\n  ScriptApp.newTrigger(\"run\").timeBased().everyMinutes(5).create();\n  var n = sync_(60, Date.now() + 270000, true);\n  Logger.log(\"Connected. Saved \" + n + \" payments so far. New alerts are checked every 5 minutes.\");\n}\n";
+var SC_TPL="/* Our Expenses: reads your own bank alert emails and sends the payments to the app.\n   Made for __NAME__. Keep this private: it contains your personal key.\n   1. Press Save (disk icon).  2. In the function box choose  setup  and press Run.\n   3. Allow access when Google asks (Advanced > Go to project). That is all. */\nvar API_ = \"https://fwxhclagrwlzxvsmaekt.supabase.co/rest/v1/rpc/\";\nvar ANON_ = \"sb_publishable_PiCUzSknFyCfGfEVzTiQbg_qEkBYwL_\";\nvar USER_KEY = \"__KEY__\";\n\nfunction call_(fn, payload) {\n  var r = UrlFetchApp.fetch(API_ + fn, { method: \"post\", contentType: \"application/json\",\n    headers: { apikey: ANON_ }, payload: JSON.stringify(payload), muteHttpExceptions: true });\n  if (r.getResponseCode() >= 300) throw new Error(fn + \" replied \" + r.getResponseCode() + \" \" + r.getContentText());\n  return JSON.parse(r.getContentText());\n}\nfunction clip_(b) {\n  b = b.replace(/https?:\\/\\/\\S+/g, \" \").replace(/\\s+/g, \" \");\n  var i = b.search(/(?:Rs\\.?|INR|\\u20B9)\\s?[0-9]/i);\n  if (i > 300) b = b.substring(i - 300);\n  return b.substring(0, 2000);\n}\nfunction sync_(days, stopAt, fresh) {\n  var cfg = call_(\"script_banks\", { p_key: USER_KEY });\n  if (!cfg.queries.length) { Logger.log(\"No banks are selected in the app.\"); return 0; }\n  var props = PropertiesService.getScriptProperties();\n  var last = fresh ? 0 : Number(props.getProperty(\"last\") || 0);\n  var cutoff = last ? last - 3 * 3600 * 1000 : 0;\n  var q = \"(\" + cfg.queries.join(\" OR \") + \") newer_than:\" + days + \"d\";\n  var saved = 0, skipped = 0, seen = 0, newest = last, start = 0, done = false;\n  while (Date.now() < stopAt) {\n    var threads = GmailApp.search(q, start, 25);\n    if (!threads.length) { done = true; break; }\n    start += threads.length;\n    var raws = [];\n    threads.forEach(function (t) { t.getMessages().forEach(function (m) {\n      var ts = m.getDate().getTime();\n      if (ts > cutoff) { raws.push(clip_(m.getPlainBody())); seen++; if (ts > newest) newest = ts; }\n    }); });\n    for (var i = 0; i < raws.length; i += 80) { var r = call_(\"ingest_user\", { p_key: USER_KEY, p_raws: raws.slice(i, i + 80) }); saved += r.saved; skipped += r.skipped; }\n  }\n  if (done && newest > last) props.setProperty(\"last\", String(newest));\n  Logger.log(\"Checked \" + seen + \" emails: \" + saved + \" new, \" + skipped + \" already there or not a payment.\");\n  return saved;\n}\nfunction run() { sync_(2, Date.now() + 240000, false); }\nfunction setup() {\n  ScriptApp.getProjectTriggers().forEach(function (t) { ScriptApp.deleteTrigger(t); });\n  ScriptApp.newTrigger(\"run\").timeBased().everyMinutes(5).create();\n  var n = sync_(60, Date.now() + 270000, true);\n  Logger.log(\"Connected. Saved \" + n + \" payments so far. New alerts are checked every 5 minutes.\");\n}\n";
 S.sc=null;S.banks=null;
 function scriptText(){return SC_TPL.split("__NAME__").join(S.sc.name||"").split("__KEY__").join(S.sc.key||"")}
 function ago(ts){if(!ts)return "";var m=Math.round((Date.now()-new Date(ts).getTime())/60000);if(m<1)return "just now";if(m<60)return m+" min ago";var h=Math.round(m/60);if(h<24)return h+" hour"+(h>1?"s":"")+" ago";var d=Math.round(h/24);return d+" day"+(d>1?"s":"")+" ago"}
@@ -397,13 +398,15 @@ async function loadPlan(){
   catch(e){S.goals=[];S.goalErr="Goals are not set up yet. Run goals.sql in Supabase."}
   try{S.gents=await api("goal_entries?select=*&order=created_at.asc")||[]}catch(e){S.gents=null}
 }
-async function load(){
+async function load(quiet){
   var q0="transactions?select=*&order=txn_date.desc,created_at.desc&limit=5000";
   try{S.txns=await api(q0+"&hidden=eq.false")||[];S.err="";S.loaded=true}
   catch(e){try{S.txns=await api(q0)||[];S.err="";S.loaded=true}catch(e2){S.err="Could not load: "+e2.message}}
   if(S.loaded){await loadPlan();await loadMembers();await loadImports()}
   if(S.loaded&&!S.pf)S.pf=S.name;
-  render();
+  var sig=0;try{var js=JSON.stringify([S.txns,S.budgets,S.fixed,S.imports,S.err]);for(var i=0;i<js.length;i++)sig=(sig*31+js.charCodeAt(i))|0;sig=js.length+":"+sig}catch(e){sig=Math.random()}
+  if(quiet&&sig===S._sig)return;
+  S._sig=sig;S._q=!!quiet;render();S._q=false;
 }
 function pdate(off){var n=new Date(),ms=S.ms||1,m=n.getMonth()+off;
   if(n.getDate()<Math.min(ms,new Date(n.getFullYear(),n.getMonth()+1,0).getDate()))m--;
@@ -956,10 +959,10 @@ function render(){
   var el=document.getElementById("app"),nav=document.getElementById("nav");
   if(S.view||!S.code||!S.name){nav.classList.add("hide");el.innerHTML=authView();bindAuth(el);return}
   if(S.pf&&S.pf!=="__both"&&persons().indexOf(S.pf)<0)S.pf=S.name;
-  nav.classList.remove("hide");
+  nav.classList.remove("hide");el.classList.toggle("noanim",!!S._q);
   nav.querySelectorAll("button").forEach(function(b){b.classList.toggle("on",b.dataset.t===S.tab)});
   el.innerHTML=(S.tab==="home"||S.tab==="list")?vHome():S.tab==="rep"?vReports():S.tab==="plan"?vPlan():S.tab==="goals"?vGoals():vMe();
-  var hb=el.querySelector(".hero .hb");if(hb){var to=parseFloat(hb.textContent.replace(/[^0-9.]/g,""))||0;if(S._hb!==to&&to>0&&!window.matchMedia("(prefers-reduced-motion: reduce)").matches){var t0=performance.now(),fr=S._hb>0&&Math.abs(S._hb-to)<to?S._hb:0;(function step(n){var k=Math.min(1,(n-t0)/650),e=1-Math.pow(1-k,3);if(hb.isConnected)hb.textContent=money(Math.round(fr+(to-fr)*e));if(k<1)requestAnimationFrame(step);else if(hb.isConnected)hb.textContent=money(to)})(t0)}S._hb=to}
+  var hb=el.querySelector(".hero .hb");if(hb){var to=parseFloat(hb.textContent.replace(/[^0-9.]/g,""))||0;if(!S._q&&S._hb!==to&&to>0&&!window.matchMedia("(prefers-reduced-motion: reduce)").matches){var t0=performance.now(),fr=S._hb>0&&Math.abs(S._hb-to)<to?S._hb:0;(function step(n){var k=Math.min(1,(n-t0)/650),e=1-Math.pow(1-k,3);if(hb.isConnected)hb.textContent=money(Math.round(fr+(to-fr)*e));if(k<1)requestAnimationFrame(step);else if(hb.isConnected)hb.textContent=money(to)})(t0)}S._hb=to}
   var q=function(i){return document.getElementById(i)};
   var pfe=q("pf");if(pfe)pfe.onchange=function(){S.pf=pfe.value;ls("pf",S.pf);render()};
   var rg=q("rg");if(rg)rg.onchange=function(){if(rg.value==="custom")S.range="custom";else preset(rg.value);render()};
@@ -1137,8 +1140,8 @@ window.addEventListener("error",function(e){showErr(e.message)});
 window.addEventListener("unhandledrejection",function(e){showErr(String(e.reason&&e.reason.message||e.reason))});
 document.getElementById("nav").onclick=function(e){var bt=e.target.closest&&e.target.closest("button[data-t]");var t=bt&&bt.dataset.t;if(t){S.tab=t;render();if(t==="plan"||t==="goals")loadPlan().then(render);if(t==="me")Promise.all([loadMembers(),loadSc()]).then(render);if(t==="rep"&&S.rp==="stmt")loadImports().then(render)}};
 function idle(){return !document.hidden&&S.code&&S.tab!=="plan"&&S.tab!=="goals"&&S.tab!=="me"&&!document.getElementById("sheet").innerHTML}
-document.addEventListener("visibilitychange",function(){if(idle())load()});
-setInterval(function(){if(idle())load()},30000);
+document.addEventListener("visibilitychange",function(){if(idle())load(true)});
+setInterval(function(){if(idle())load(true)},30000);
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
 S.pf=ls("pf")||"";S.cur=ls("cur")||"₹";S.ms=parseInt(ls("ms"),10)||1;
 try{S.auth=JSON.parse(ls("sb")||"null")}catch(e){S.auth=null}
