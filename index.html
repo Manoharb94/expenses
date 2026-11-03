@@ -176,14 +176,14 @@ function refreshSess(){
     saveSess(await r.json())}finally{S.refreshing=null}})();
   return S.refreshing}
 async function ensureToken(){if(S.auth&&S.auth.exp-60<Date.now()/1000)await refreshSess()}
-function logoutLocal(msg){S.auth=null;ls("sb","");S.profile=null;S.code="";S.name="";S.txns=[];S.budgets=[];S.fixed=[];S.goals=[];S.gents=[];S.members=null;S.loaded=false;S.tab="home";S.view="login";S.amsg=msg||"";S.aok=false;if(typeof render==="function")render()}
+function logoutLocal(msg){S.auth=null;ls("sb","");ls("xc","");S.profile=null;S.code="";S.name="";S.txns=[];S.budgets=[];S.fixed=[];S.goals=[];S.gents=[];S.members=null;S.loaded=false;S.tab="home";S.view="login";S.amsg=msg||"";S.aok=false;if(typeof render==="function")render()}
 async function loadMembers(){try{S.members=await api("members?select=user_id,display_name,role&order=created_at.asc")||[]}catch(e){S.members=[]}}
 async function enter(){
   S.view="";
   try{S.profile=await api("rpc/my_profile",{method:"POST",body:"{}"})}
   catch(e){if(!S.auth)return;S.view="err";S.amsg=errText(e);render();return}
   if(!S.profile){S.view="family";S.amsg="";render();return}
-  S.code=S.profile.household_id;S.name=S.profile.display_name;ls("name","");ls("code","");S.view="";S.pf=ls("pf")||S.name;load()}
+  S.code=S.profile.household_id;S.name=S.profile.display_name;ls("name","");ls("code","");S.view="";S.pf=ls("pf")||S.name;var qq=!!(S._cached&&S.loaded);S._cached=false;load(qq)}
 function parseHash(){var o={};try{new URLSearchParams(location.hash.replace(/^#/,"")).forEach(function(v,k){o[k]=v})}catch(e){}return o}
 async function boot(){
   var hp=parseHash();
@@ -194,7 +194,8 @@ async function boot(){
   }else if(hp.error_description){
     S.view="login";S.amsg=hp.error_description.replace(/\+/g," ");try{history.replaceState(null,"",location.pathname+location.search)}catch(e){}render();return}
   if(!S.auth){S.view="login";render();return}
-  render();await enter()}
+  var cc=readCache();if(cc){useCache(cc);render();S._cached=true}else render();
+  await enter()}
 async function copyText(t){
   try{if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(t);return true}}catch(e){}
   var a=document.createElement("textarea");a.value=t;a.setAttribute("readonly","");a.style.cssText="position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;font-size:16px;border:0;padding:0";
@@ -396,22 +397,37 @@ async function stImport(){
     var m2=document.getElementById("stmsg");if(m2){m2.className="note";m2.textContent="Imported "+res.inserted+" payments ("+res.replaced+" email-alert payments replaced, "+res.carried+" categories kept, "+res.needs_category+" need a category). "+(ok?"Totals match the file.":"Totals differ from the file by "+money(Math.abs(res.debits-fd)+Math.abs(res.credits-fc))+" (duplicates skipped).")}
   }catch(e){btn.disabled=false;btn.textContent="Import statement";if(msg){msg.className="note out";msg.textContent=errText(e)}}}
 async function loadPlan(){
-  try{S.budgets=await api("budgets?select=*")||[];S.fixed=await api("fixed_items?select=*&order=created_at.asc")||[];S.planErr=""}
-  catch(e){S.planErr="Plan tables are not set up yet ("+e.message.slice(0,80)+")"}
-  try{S.goals=await api("goals?select=*&order=created_at.asc")||[];S.goalErr=""}
-  catch(e){S.goals=[];S.goalErr="Goals are not set up yet. Run goals.sql in Supabase."}
-  try{S.gents=await api("goal_entries?select=*&order=created_at.asc")||[]}catch(e){S.gents=null}
+  await Promise.all([
+    (async function(){var bad="";
+      await Promise.all([
+        api("budgets?select=*").then(function(r){S.budgets=r||[]},function(e){bad=e.message}),
+        api("fixed_items?select=*&order=created_at.asc").then(function(r){S.fixed=r||[]},function(e){bad=bad||e.message})]);
+      S.planErr=bad?"Plan tables are not set up yet ("+bad.slice(0,80)+")":""})(),
+    (async function(){try{S.goals=await api("goals?select=*&order=created_at.asc")||[];S.goalErr=""}
+      catch(e){S.goals=[];S.goalErr="Goals are not set up yet. Run goals.sql in Supabase."}})(),
+    (async function(){try{S.gents=await api("goal_entries?select=*&order=created_at.asc")||[]}catch(e){S.gents=null}})()
+  ]);
 }
 async function load(quiet){
   var q0="transactions?select=*&order=txn_date.desc,created_at.desc&limit=5000";
+  var side=Promise.all([loadPlan(),loadMembers(),loadImports()]);
   try{S.txns=await api(q0+"&hidden=eq.false")||[];S.err="";S.loaded=true}
   catch(e){try{S.txns=await api(q0)||[];S.err="";S.loaded=true}catch(e2){S.err="Could not load: "+e2.message}}
-  if(S.loaded){await loadPlan();await loadMembers();await loadImports()}
+  await side;S._full=Date.now();
   if(S.loaded&&!S.pf)S.pf=S.name;
-  var sig=0;try{var js=JSON.stringify([S.txns,S.budgets,S.fixed,S.imports,S.err]);for(var i=0;i<js.length;i++)sig=(sig*31+js.charCodeAt(i))|0;sig=js.length+":"+sig}catch(e){sig=Math.random()}
+  var sig=dataSig();
   if(quiet&&sig===S._sig)return;
   S._sig=sig;S._q=!!quiet;render();S._q=false;
+  if(S.loaded)setTimeout(saveCache,50);
 }
+function dataSig(){var sig=0;try{var js=JSON.stringify([S.txns,S.budgets,S.fixed,S.imports,S.members,S.profile,S.goals,S.err]);for(var i=0;i<js.length;i++)sig=(sig*31+js.charCodeAt(i))|0;return js.length+":"+sig}catch(e){return String(Math.random())}}
+/* a saved copy of the last data, so the app opens instantly and refreshes quietly behind it */
+function saveCache(){try{
+  if(!S.auth||!S.profile||S.err)return;
+  var c={e:S.auth.email||"",p:S.profile,t:S.txns.map(function(t){var o={};for(var k in t)if(k!=="raw")o[k]=t[k];if(t.raw)o.raw=1;return o}),b:S.budgets,f:S.fixed,g:S.goals,ge:S.gents,m:S.members,i:S.imports},js=JSON.stringify(c);
+  if(js.length<3500000)ls("xc",js)}catch(e){}}
+function readCache(){try{var c=JSON.parse(ls("xc")||"null");if(c&&S.auth&&c.e&&c.e===S.auth.email&&c.p&&c.t)return c}catch(e){}return null}
+function useCache(c){S.profile=c.p;S.code=c.p.household_id;S.name=c.p.display_name;S.view="";S.pf=ls("pf")||S.name;S.txns=c.t;S.budgets=c.b||[];S.fixed=c.f||[];S.goals=c.g||[];S.gents=c.ge||null;S.members=c.m||null;S.imports=c.i||null;S.loaded=true;S.err="";S._sig=dataSig()}
 function pdate(off){var n=new Date(),ms=S.ms||1,m=n.getMonth()+off;
   if(n.getDate()<Math.min(ms,new Date(n.getFullYear(),n.getMonth()+1,0).getDate()))m--;
   return new Date(n.getFullYear(),m,Math.min(ms,new Date(n.getFullYear(),m+1,0).getDate()))}
@@ -1195,8 +1211,14 @@ function qsig(){try{return JSON.stringify([S.budgets,S.fixed,S.goals,S.gents,S.m
 function quiet(p){var a=qsig();return p.then(function(){if(qsig()!==a)render()})}
 document.getElementById("nav").onclick=function(e){var bt=e.target.closest&&e.target.closest("button[data-t]");var t=bt&&bt.dataset.t;if(t){S.tab=t;render();window.scrollTo(0,0);if(t==="plan"||t==="goals")quiet(loadPlan());if(t==="me")quiet(Promise.all([loadMembers(),loadSc()]));if(t==="rep"&&S.rp==="stmt")quiet(loadImports())}};
 function idle(){return !document.hidden&&S.code&&S.tab!=="plan"&&S.tab!=="goals"&&S.tab!=="me"&&!document.getElementById("sheet").innerHTML}
-document.addEventListener("visibilitychange",function(){if(idle())load(true)});
-setInterval(function(){if(idle())load(true)},30000);
+async function refreshSoon(){
+  if(!idle())return;
+  try{
+    var r=await api("transactions?select=id,created_at&order=created_at.desc&limit=1"),k=r&&r[0]?r[0].id+"|"+r[0].created_at:"none";
+    if(k!==S._probe||Date.now()-(S._full||0)>300000){S._probe=k;load(true)}
+  }catch(e){load(true)}}
+document.addEventListener("visibilitychange",function(){if(!document.hidden)refreshSoon()});
+setInterval(refreshSoon,30000);
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
 S.pf=ls("pf")||"";S.cur=ls("cur")||"₹";S.ms=parseInt(ls("ms"),10)||1;
 try{S.auth=JSON.parse(ls("sb")||"null")}catch(e){S.auth=null}
