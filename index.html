@@ -71,7 +71,7 @@ nav button i{font-style:normal;font-size:19px;line-height:1}nav button.on{backgr
 <script>
 var URLB="https://fwxhclagrwlzxvsmaekt.supabase.co/rest/v1/",KEY="sb_publishable_PiCUzSknFyCfGfEVzTiQbg_qEkBYwL_";
 var TRF="Transfer between us",IGN="Ignore (don't count)",UNC="Others (no category yet)",CCB="Credit card bill (paid)",LOUT="Lend out",LIN="Lend in",UNPL="Unplanned expense",RENT="Rental income",PASS="Pass-through (received & sent on)";
-var CATS=["Groceries – Offline","Groceries – Online","Shopping – Offline","Shopping – Online","Food – Dining out","Food – Online delivery","Transport","Fuel","Bills & Utilities","Rent / EMI","Health","Beauty / Salon","Entertainment","Travel","Education","Home loan EMI","Kid education","Kid day care","Kid expense","Maid","Cook","Car cleaning","Electricity bill","Gas bill","Family donation",UNPL,"Family & Friends","Pet expenses","GPay wallet","Trips","Salary / Income",RENT,"Other",LOUT,LIN,TRF,PASS,CCB,IGN];
+var CATS=["Groceries – Offline","Groceries – Online","Shopping – Offline","Shopping – Online","Food – Dining out","Food – Online delivery","Transport","Fuel","Bills & Utilities","Rent / EMI","Health","Beauty / Salon","Entertainment","Travel","Education","Home loan EMI","Kid education","Kid day care","Kid expense","Maid","Cook","Car cleaning","Electricity bill","Gas bill","Family donation",UNPL,"Family & Friends","Pet expenses","Car Expenses","Bike Expenses","Refunds","GPay wallet","Trips","Salary / Income",RENT,"Other",LOUT,LIN,TRF,PASS,CCB,IGN];
 var NOBUD={"Salary / Income":1};NOBUD[TRF]=1;NOBUD[IGN]=1;NOBUD[CCB]=1;NOBUD[LOUT]=1;NOBUD[LIN]=1;NOBUD[UNPL]=1;NOBUD[RENT]=1;NOBUD[PASS]=1;
 var NOBUDGET={};for(var k in NOBUD)NOBUDGET[k]=1;["Rent / EMI","Education","Home loan EMI","Kid education","Kid day care","Maid","Cook","Car cleaning","Electricity bill","Gas bill","Family donation","Family & Friends"].forEach(function(c){NOBUDGET[c]=1});
 var S={tab:"home",range:"month",from:"",to:"",rp:"this",hf:"all",pf:"",txns:[],budgets:[],fixed:[],planErr:"",goals:[],gents:[],lrows:{},goalErr:"",cur:"₹",code:"",name:"",err:"",loaded:false};
@@ -464,8 +464,16 @@ function forecastBase(){
   if(earliest>=cur){var day=Math.round((new Date(iso(now)+"T00:00:00")-pdate(0))/864e5)+1,dim=Math.round((pdate(1)-pdate(0))/864e5);
     return {n:0,out:monthVar(cur,"out")/day*dim,inn:monthVar(cur,"in")/day*dim,basis:"this month so far, projected to a full month"}}
   var ks=[];for(var i=1;i<=3;i++){var k=monthKey(-i);if(k<earliest)break;ks.push(k)}
-  var o=0,n=0;ks.forEach(function(k){o+=monthVar(k,"out");n+=monthVar(k,"in")});
-  return {n:ks.length,out:o/ks.length,inn:n/ks.length,basis:"the average of your last "+ks.length+" full month"+(ks.length>1?"s":"")}
+  var fc=fixedCats(),bm={};S.budgets.forEach(function(b){if(Number(b.amount)>0)bm[b.category]=Number(b.amount)});
+  var per={},ins=[];
+  ks.forEach(function(k){var mi=0;txIn(k).forEach(function(t){if(!isCount(t))return;var a=Number(t.amount);
+    if(t.type==="in"){mi+=a;return}
+    if(fc[t.category]||t.category===UNPL)return;var c=t.category||UNC;(per[c]=per[c]||{})[k]=((per[c]||{})[k]||0)+a});ins.push(mi)});
+  function med(a){var b=a.slice().sort(function(x,y){return x-y}),m=Math.floor(b.length/2);return b.length%2?b[m]:(b[m-1]+b[m])/2}
+  var cats=[],tot=0;Object.keys(per).forEach(function(c){var arr=ks.map(function(k){return per[c][k]||0}),est=bm[c]?bm[c]:med(arr);tot+=est;cats.push({c:c,est:est,budget:!!bm[c]})});
+  Object.keys(bm).forEach(function(c){if(!per[c]&&!fc[c]){tot+=bm[c];cats.push({c:c,est:bm[c],budget:true})}});
+  cats.sort(function(a,b){return b.est-a.est});
+  return {n:ks.length,out:tot,inn:med(ins),cats:cats,basis:"your budgets where you set one, otherwise a typical month from your last "+ks.length+" full month"+(ks.length>1?"s":"")+" (one-off big payments and Unplanned expenses are left out)"}
 }
 function forecastView(n){
   var b=forecastBase(),rows=[],tot=0,i;
@@ -477,7 +485,10 @@ function forecastView(n){
   var recv=b.inn*n;
   h+='<div class="grid"><div class="card"><div class="mute">Expected money received</div><div style="font-size:20px;font-weight:700" class="in">'+money(recv)+'</div></div><div class="card"><div class="mute">Expected left over</div><div style="font-size:20px;font-weight:700" class="'+(recv-tot>=0?"in":"out")+'">'+money(recv-tot)+'</div></div></div>';
   if(n===1){var fx=fixedIn(monthStart(1).getMonth()+1);
-    h+='<div class="card"><div class="row"><span>Everyday spending (average)</span><b>'+money(b.out)+'</b></div><div class="row" style="margin-top:6px"><span>Fixed items due</span><b>'+money(fx)+'</b></div></div>'}
+    h+='<div class="card"><div class="row"><span>Everyday spending</span><b>'+money(b.out)+'</b></div><div class="row" style="margin-top:6px"><span>Fixed items due</span><b>'+money(fx)+'</b></div></div>';
+    if(b.cats&&b.cats.length){h+='<h2>What makes up everyday spending</h2><div class="card">';
+      b.cats.slice(0,10).forEach(function(r){h+='<div class="row" style="margin:5px 0"><span>'+esc(r.c)+' <span class="mute" style="font-size:12px">· '+(r.budget?'your budget':'typical month')+'</span></span><b>'+money(r.est)+'</b></div>'});
+      h+='<div class="note">If a category here looks too big, a large transfer or payment is probably filed under it. Tag it as Transfer, Pass-through, Lend out or Ignore and the forecast corrects itself.</div></div>'}}
   else{var mx=Math.max.apply(null,rows.map(function(r){return r[1]}))||1;
     h+='<h2>Month by month</h2><div class="card">';
     rows.forEach(function(r){h+='<div style="margin-bottom:8px"><div class="row"><span>'+r[0].toLocaleString("en-IN",{month:"short",year:"2-digit"})+'</span><b>'+money(r[1])+'</b></div><div class="bar"><i style="width:'+Math.round(r[1]/mx*100)+'%"></i></div></div>'});
@@ -575,7 +586,7 @@ function periodDates(){
   if(!to)to=iso(new Date());
   return {from:from,to:to}}
 var CATI={"Groceries – Offline":"🛒","Groceries – Online":"🥬","Shopping – Offline":"🛍️","Shopping – Online":"📦","Food – Dining out":"🍽️","Food – Online delivery":"🛵","Transport":"🚌","Fuel":"⛽","Bills & Utilities":"💡","Rent / EMI":"🏠","Health":"💊","Beauty / Salon":"💇","Entertainment":"🎬","Travel":"✈️","Education":"🎓","Home loan EMI":"🏦","Kid education":"📚","Kid day care":"🧸","Kid expense":"👶","Maid":"🧹","Cook":"🍳","Car cleaning":"🚗","Electricity bill":"⚡","Gas bill":"🔥","Family donation":"🙏","Unplanned expense":"⚠️","Family & Friends":"👪","Salary / Income":"💼","Rental income":"🏘️","Other":"📌","Lend out":"🤝","Lend in":"🤝","Mandatory":"📌"};
-CATI[TRF]="🔁";CATI[PASS]="🔀";CATI["GPay wallet"]="👛";CATI["Trips"]="🧳";CATI["Pet expenses"]="🐾";CATI[CCB]="💳";CATI[IGN]="🚫";CATI[UNC]="❔";
+CATI[TRF]="🔁";CATI[PASS]="🔀";CATI["GPay wallet"]="👛";CATI["Trips"]="🧳";CATI["Pet expenses"]="🐾";CATI["Car Expenses"]="🚗";CATI["Bike Expenses"]="🏍️";CATI["Refunds"]="↩️";CATI[CCB]="💳";CATI[IGN]="🚫";CATI[UNC]="❔";
 function ci(c){return CATI[c]||(c?"•":"❔")}
 function arrow(cur,prev){
   if(!(prev>0))return cur>0?'<span class="chip">new</span>':'';
