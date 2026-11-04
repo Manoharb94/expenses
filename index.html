@@ -1188,23 +1188,37 @@ function wz(title,steps,cur,doneTo){
     (cur===steps.length-1?'<button class="btn" data-go="'+doneTo+'">Done</button>':'<button class="btn" data-step="1">Next</button>')+'</div></div>';
   return h}
 function kv(label,val){return '<div class="mute" style="margin-top:10px">'+label+'</div><div class="kv"><span>'+esc(val)+'</span><button class="btn ghost s" data-copy="'+esc(val)+'">Copy</button></div>'}
+/* Paste the iCloud link of the shared "Our Expenses SMS" shortcut here (see setup notes). Empty = step-by-step instructions instead. */
+var SMS_SHORTCUT_LINK="";
+var SMS_SHORTCUT_NAME="Our Expenses SMS";
+function phoneOS(){var u=navigator.userAgent||"";
+  if(/iPhone|iPad|iPod/i.test(u)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1))return "ios";
+  if(/Android/i.test(u))return "and";return "desk"}
 function vSms(){
-  var c=S.sc;
-  if(!c)return topbar("SMS tracking","track")+'<div class="card mute">Loading…</div>';
-  if(c.err)return topbar("SMS tracking","track")+'<div class="card out">'+esc(c.err)+'</div>';
-  if(!S.smsDev)return topbar("SMS tracking","track")+'<div class="dc"><h3 style="margin:0 0 6px">Which phone gets your bank SMS?</h3><div class="note" style="margin:0 0 14px">Set this up on the phone that receives the bank messages. Each person uses their own phone.</div><div class="grid"><button class="tile" data-dev="ios" style="justify-content:center;flex-direction:column;padding:22px"><span class="ti" style="font-size:30px">📱</span><b>iPhone</b></button><button class="tile" data-dev="and" style="justify-content:center;flex-direction:column;padding:22px"><span class="ti" style="font-size:30px">🤖</span><b>Android</b></button></div></div>';
+  var c=S.sc,os=phoneOS(),T=topbar("SMS tracking","track");
+  if(!c)return T+'<div class="card mute">Loading…</div>';
+  if(c.err)return T+'<div class="card out">'+esc(c.err)+'</div>';
   var key=c.key||"",j=URLB+"rpc/ingest_sms",tx=URLB+"rpc/ingest_sms_text",steps;
-  var keyStep=['Copy your personal key','This key tells the app the SMS is yours. Keep it private; anyone with it can add payments to your account.'+kv("Your key",key)+'<div class="note">If it is ever shared by mistake, make a new one in Email tracking → Make a new key, then update the shortcut.</div>'];
-  if(S.smsDev==="ios")steps=[keyStep,
-    ['Create the automation','<ol><li>Open the <b>Shortcuts</b> app and tap <b>Automation</b> at the bottom.</li><li>Tap <b>+</b> (New Automation) and choose <b>Message</b>.</li><li>Tap <b>Message Contains</b> and type <b>Rs</b>.</li><li>Choose <b>Run Immediately</b>, then tap <b>Next</b> and <b>New Blank Automation</b>.</li></ol><div class="note">If your bank writes INR instead of Rs (Axis) or no currency at all (SBI), make one more automation the same way with <b>INR</b> or <b>debited</b>. Duplicates are ignored.</div>'],
-    ['Add the “send” action','<ol><li>Tap <b>Add Action</b>, search for <b>Get Contents of URL</b> and add it.</li><li>Tap the URL and paste this:</li></ol>'+kv("URL",j)+'<ol start="3"><li>Tap <b>›</b> to show more. Set <b>Method</b> to <b>POST</b>.</li><li>Under <b>Headers</b>, tap Add new header: key <b>apikey</b>, value:</li></ol>'+kv("apikey value",KEY)+'<ol start="5"><li>Set <b>Request Body</b> to <b>JSON</b>. Add a <b>Text</b> field named <b>p_key</b> with your key from step 1.</li><li>Add another <b>Text</b> field named <b>p_text</b>. Tap its value, choose <b>Shortcut Input</b>, then tap it again and pick <b>Content</b>.</li><li>Tap <b>Done</b>.</li></ol>'],
-    ['Check it works','<p>That’s it. The next bank SMS you receive is sent to the app within seconds, and appears in <b>List</b>.</p><p class="note">iPhone may show a small banner when the automation runs. You can turn that off in the automation with <b>Notify When Run</b>.</p>'+trackStat()]];
-  else steps=[keyStep,
-    ['Install an SMS forwarder','<p>Android lets apps read SMS, but this app is a web page, so a small helper app forwards the messages. These steps use <b>MacroDroid</b> (free on the Play Store). Other “SMS to webhook” apps work the same way.</p><ol><li>Install <b>MacroDroid</b> from the Play Store and open it.</li><li>Allow SMS access when it asks.</li></ol>'],
-    ['Make the macro','<ol><li>Tap <b>Add Macro</b>.</li><li><b>Trigger</b>: SMS Received → any number → message <b>contains</b> <b>Rs</b>.</li><li><b>Action</b>: HTTP Request. Method <b>POST</b>, URL:</li></ol>'+kv("URL",tx)+'<ol start="4"><li>Body content type <b>text/plain</b>. Body: insert the <b>SMS message</b> text (the [sms_message] variable).</li><li>Add header <b>apikey</b>:</li></ol>'+kv("apikey value",KEY)+'<ol start="6"><li>Add header <b>x-key</b> with your key from step 1.</li><li>Save the macro and give it a name.</li></ol><div class="note">Menu names can differ a little between versions.</div>'],
-    ['Check it works','<p>The next bank SMS is forwarded to the app within seconds and appears in <b>List</b>.</p><p class="note">If nothing arrives, open MacroDroid’s log for the macro and check the HTTP request returned “saved”.</p>'+trackStat()]];
+  if(os==="desk")return T+'<div class="dc" style="text-align:center"><span style="font-size:44px">📱</span><h3 style="margin:8px 0">Open this on your phone</h3><p class="mute" style="margin:0 0 6px">SMS tracking is set up on the phone that receives your bank messages. Open the app on that phone and come back to <b>Menu → Automated tracking → SMS</b>.</p><p class="note">The app works out by itself whether it is an iPhone or an Android phone.</p></div>';
+  if(os==="ios"){
+    var run="shortcuts://run-shortcut?name="+encodeURIComponent(SMS_SHORTCUT_NAME)+"&input=text&text="+encodeURIComponent("OEKEY:"+key);
+    if(SMS_SHORTCUT_LINK)steps=[
+      ['Add the shortcut','<p>Tap the button, then tap <b>Add Shortcut</b> in the Shortcuts app and come back here.</p><a class="btn" style="display:block;text-align:center;text-decoration:none" href="'+esc(SMS_SHORTCUT_LINK)+'" target="_blank" rel="noopener">Add shortcut</a>'],
+      ['Link it to your account','<p>One tap. This hands your personal key to the shortcut, so the SMS it sends are saved as yours. You will see “Linked to Our Expenses”.</p><a class="btn" style="display:block;text-align:center;text-decoration:none" href="'+esc(run)+'">Link my account</a><p class="note">If iPhone asks to allow the shortcut to save a file, tap <b>Always Allow</b>.</p>'],
+      ['Turn it on for bank SMS','<p>Apple only lets you switch on message automations yourself. It takes about 30 seconds:</p><ol><li>Open <b>Shortcuts</b> → <b>Automation</b> → <b>+</b> → <b>Message</b>.</li><li><b>Message Contains</b>: type <b>Rs</b>.</li><li>Choose <b>Run Immediately</b> → <b>Next</b>.</li><li>Pick <b>'+esc(SMS_SHORTCUT_NAME)+'</b>.</li></ol><a class="btn ghost" style="display:block;text-align:center;text-decoration:none" href="shortcuts://">Open Shortcuts</a><div class="note">Bank writes INR (Axis) or no currency (SBI)? Repeat with <b>INR</b> or <b>debited</b>. Duplicates are ignored.</div>'],
+      ['All set','<p>The next bank SMS reaches the app within seconds and shows up in <b>List</b>.</p>'+trackStat()]];
+    else steps=[
+      ['Copy your personal key','This key tells the app the SMS is yours. Keep it private.'+kv("Your key",key)],
+      ['Create the automation','<ol><li>Open <b>Shortcuts</b> → <b>Automation</b> → <b>+</b> → <b>Message</b>.</li><li><b>Message Contains</b>: type <b>Rs</b>.</li><li><b>Run Immediately</b> → <b>Next</b> → <b>New Blank Automation</b>.</li></ol><a class="btn ghost" style="display:block;text-align:center;text-decoration:none" href="shortcuts://">Open Shortcuts</a>'],
+      ['Add the “send” action','<ol><li>Add <b>Get Contents of URL</b> with this URL:</li></ol>'+kv("URL",j)+'<ol start="2"><li>Method <b>POST</b>. Header <b>apikey</b>:</li></ol>'+kv("apikey value",KEY)+'<ol start="3"><li>Request Body <b>JSON</b>: Text field <b>p_key</b> = your key; Text field <b>p_text</b> = Shortcut Input → <b>Content</b>.</li></ol>'],
+      ['All set','<p>The next bank SMS reaches the app within seconds.</p>'+trackStat()]];
+  }else steps=[
+    ['Copy your personal key','This key tells the app the SMS is yours. Keep it private.'+kv("Your key",key)],
+    ['Install an SMS forwarder','<p>Until the app is on the Play Store, a free helper app forwards bank SMS. These steps use <b>MacroDroid</b>.</p><a class="btn" style="display:block;text-align:center;text-decoration:none" target="_blank" rel="noopener" href="https://play.google.com/store/apps/details?id=com.arlosoft.macrodroid">Get MacroDroid</a><p class="note">Allow SMS access when it asks.</p>'],
+    ['Make the macro','<ol><li><b>Add Macro</b>. Trigger: <b>SMS Received</b>, message contains <b>Rs</b>.</li><li>Action: <b>HTTP Request</b>, method <b>POST</b>, URL:</li></ol>'+kv("URL",tx)+'<ol start="3"><li>Body type <b>text/plain</b>, body = the <b>SMS message</b> variable.</li><li>Headers: <b>apikey</b>:</li></ol>'+kv("apikey value",KEY)+'<ol start="5"><li>and <b>x-key</b>: your key from step 1. Save.</li></ol>'],
+    ['All set','<p>The next bank SMS reaches the app within seconds.</p>'+trackStat()]];
   if(S.smsStep>=steps.length)S.smsStep=steps.length-1;
-  return wz("SMS tracking",steps,S.smsStep,"track").replace('<h3>','<div class="row" style="justify-content:center;margin:-6px 0 10px"><button class="tab" data-dev="">'+(S.smsDev==="ios"?'📱 iPhone':'🤖 Android')+' · change</button></div><h3>')}
+  return wz("SMS tracking · "+(os==="ios"?"iPhone":"Android"),steps,S.smsStep,"track")}
 function vMail(){
   var c=S.sc;
   if(!c)return topbar("Email tracking","track")+'<div class="card mute">Loading…</div>';
@@ -1250,7 +1264,6 @@ function deleteAccountSheet(){
     this.disabled=true;this.textContent="Deleting…";
     try{await api("rpc/delete_my_account",{method:"POST",body:"{}"});sh.innerHTML="";logoutLocal("Your account and data were deleted.")}
     catch(e){sh.innerHTML="";showErr("Could not delete: "+errText(e))}}}
-S.smsDev=ls("smsdev")||"";
 
 function render(){
   var el=document.getElementById("app"),nav=document.getElementById("nav");
