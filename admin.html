@@ -82,6 +82,7 @@ function dl(ds){return new Date(ds+"T00:00:00").toLocaleString("en-IN",{day:"num
 /* series: [{name,color,key}] ; type line|stack */
 function tsChart(id,rows,series,type,unit){
   var W=640,H=190,L=34,R=8,T=10,B=24,iw=W-L-R,ih=H-T-B,nn=rows.length;
+  if(!nn)return {html:'<div class="mute">No data yet.</div>',bind:function(){}};
   var tot=rows.map(function(r){return type==="stack"?series.reduce(function(a,s){return a+(r[s.key]||0)},0):Math.max.apply(null,series.map(function(s){return r[s.key]||0}))});
   var mx=niceMax(Math.max.apply(null,tot.concat([0]))),sx=iw/nn,y=function(v){return T+ih-v/mx*ih};
   var g='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(series.map(function(s){return s.name}).join(", "))+' per day">';
