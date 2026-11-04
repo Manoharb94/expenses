@@ -227,7 +227,9 @@ async function enter(){
   try{S.profile=await api("rpc/my_profile",{method:"POST",body:"{}"})}
   catch(e){if(!S.auth)return;S.view="err";S.amsg=errText(e);render();return}
   if(!S.profile){S.view="family";S.amsg="";render();return}
-  S.code=S.profile.household_id;S.name=S.profile.display_name;ls("name","");ls("code","");S.view="";S.pf=ls("pf")||S.name;var qq=!!(S._cached&&S.loaded);S._cached=false;load(qq,pre)}
+  S.code=S.profile.household_id;S.name=S.profile.display_name;ls("name","");ls("code","");S.view="";S.pf=ls("pf")||S.name;var qq=!!(S._cached&&S.loaded);S._cached=false;load(qq,pre);touch()}
+function touch(){if(!S.auth||Date.now()-(S._tt||0)<30*60000)return;S._tt=Date.now();api("rpc/touch",{method:"POST",body:"{}"}).catch(function(){})}
+document.addEventListener("visibilitychange",function(){if(!document.hidden&&S.code)touch()});
 function parseHash(){var o={};try{new URLSearchParams(location.hash.replace(/^#/,"")).forEach(function(v,k){o[k]=v})}catch(e){}return o}
 async function boot(){
   var hp=parseHash();
