@@ -230,9 +230,18 @@ async function enter(){
 function touch(first){if(!S.auth||Date.now()-(S._tt||0)<30*60000)return;S._tt=Date.now();var pwa=false;try{pwa=nativeApp()||window.matchMedia("(display-mode: standalone)").matches||navigator.standalone===true}catch(e){}
   api("rpc/touch",{method:"POST",body:JSON.stringify({p_os:phoneOS(),p_pwa:pwa,p_ms:first&&!S._ttm?Math.round(performance.now()):null})}).catch(function(){});S._ttm=1}
 document.addEventListener("visibilitychange",function(){if(!document.hidden&&S.code)touch()});
+var APP_URL="https://manoharb94.github.io/expenses/",PLAY_URL="";
+function joinLink(c){return APP_URL+"?join="+encodeURIComponent(c)}
+function joinMsg(c,nm){return (nm||"I")+" invited you to share family expenses on Nestwise.\n\n1) Open this link and install the app: "+joinLink(c)+"\n2) Create your account. Your invite code "+c+" is filled in for you."+(PLAY_URL?"\n\nAndroid app: "+PLAY_URL:"")}
+function shareBtns(pre){return '<div class="note" style="margin:10px 0 6px">Send the invite link. It opens the app and fills in the code.</div><div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn s" '+pre+'="wa">💬 WhatsApp</button><button class="btn ghost s" '+pre+'="mail">✉️ Email</button><button class="btn ghost s" '+pre+'="link">🔗 Copy link</button></div>'}
+async function shareCode(kind,c,nm){if(!c)return;var msg=joinMsg(c,nm);
+  if(kind==="wa"){window.open("https://wa.me/?text="+encodeURIComponent(msg),"_blank");return}
+  if(kind==="mail"){location.href="mailto:?subject="+encodeURIComponent("Join my family on Nestwise")+"&body="+encodeURIComponent(msg);return}
+  if(kind==="link"){toast(await copyText(joinLink(c))?"Link copied":"Press and hold to copy: "+joinLink(c))}}
+function captureJoin(){try{var u=new URLSearchParams(location.search),c=(u.get("join")||"").trim();if(c){ls("pendjoin",c.slice(0,40));u.delete("join");var q=u.toString();history.replaceState(null,"",location.pathname+(q?"?"+q:"")+location.hash)}}catch(e){}}
 function parseHash(){var o={};try{new URLSearchParams(location.hash.replace(/^#/,"")).forEach(function(v,k){o[k]=v})}catch(e){}return o}
 async function boot(){
-  var hp=parseHash();
+  captureJoin();var hp=parseHash();
   if(hp.access_token){
     saveSess({access_token:hp.access_token,refresh_token:hp.refresh_token,expires_in:parseInt(hp.expires_in,10)||3600});
     try{history.replaceState(null,"",location.pathname+location.search)}catch(e){}
@@ -253,16 +262,17 @@ function authView(){
   var btn=function(a,t){return '<button class="btn" data-a="'+a+'">'+t+'</button>'};
   var lnk=function(a,t){return '<div style="text-align:center"><button class="alink" data-a="'+a+'">'+t+'</button></div>'};
   var msg='<div id="amsg" class="amsg'+(S.aok?" ok":"")+'">'+esc(S.amsg)+'</div>';
-  if(v==="login"){h+='<h2 style="margin-top:0">Log in</h2>'+(legacy?'<div class="note" style="margin-bottom:10px">The app now uses accounts. Create an account, then join your family with the invite code. Your saved expenses stay as they are.</div>':'')+inp("a_em","Email","email","email",S.lastEmail)+inp("a_pw","Password","password","current-password")+msg+btn("login","Log in")+lnk("go-forgot","Forgot password?")+lnk("go-signup","New here? Create an account")}
-  else if(v==="signup"){h+='<h2 style="margin-top:0">Create account</h2>'+inp("a_em","Email","email","email",S.lastEmail)+inp("a_pw","Password (8+ characters)","password","new-password")+inp("a_pw2","Repeat password","password","new-password")+msg+btn("signup","Create account")+lnk("go-login","I already have an account")}
+  var pj=ls("pendjoin"),pjn=pj?'<div class="note" style="margin-bottom:10px;border:1px solid var(--line);border-radius:12px;padding:10px">🎉 You have been invited to a family. Create your account (or log in) and you will join it automatically.</div>':'';
+  if(v==="login"){h+='<h2 style="margin-top:0">Log in</h2>'+pjn+(legacy?'<div class="note" style="margin-bottom:10px">The app now uses accounts. Create an account, then join your family with the invite code. Your saved expenses stay as they are.</div>':'')+inp("a_em","Email","email","email",S.lastEmail)+inp("a_pw","Password","password","current-password")+msg+btn("login","Log in")+lnk("go-forgot","Forgot password?")+lnk("go-signup","New here? Create an account")}
+  else if(v==="signup"){h+='<h2 style="margin-top:0">Create account</h2>'+pjn+inp("a_em","Email","email","email",S.lastEmail)+inp("a_pw","Password (8+ characters)","password","new-password")+inp("a_pw2","Repeat password","password","new-password")+msg+btn("signup","Create account")+lnk("go-login","I already have an account")}
   else if(v==="forgot"){h+='<h2 style="margin-top:0">Reset password</h2><div class="note" style="margin-bottom:10px">Enter your email. We will send a link to choose a new password.</div>'+inp("a_em","Email","email","email",S.lastEmail)+msg+btn("forgot","Send reset link")+lnk("go-login","Back to log in")}
   else if(v==="newpw"){h+='<h2 style="margin-top:0">Choose a new password</h2>'+inp("a_pw","New password (8+ characters)","password","new-password")+inp("a_pw2","Repeat new password","password","new-password")+msg+btn("newpw","Save password")}
-  else if(v==="family"){var c=S.fmode==="create";
+  else if(v==="family"){var pj2=ls("pendjoin");if(pj2&&!S._fm)S.fmode="join";var c=S.fmode==="create";
     if((S.invites||[]).length){h+='<h2 style="margin-top:0">You’re invited</h2>'+inp("f_inm","Your name, e.g. Manjari","text","given-name")+(S.invites||[]).map(function(x){return '<div class="card" style="box-shadow:none;border:1px solid var(--line);margin:8px 0"><b>'+esc(x.by)+'</b> invited you to <b>'+esc(x.family)+'</b><div class="note" style="margin:2px 0 10px">'+x.members+' '+(x.members===1?'person':'people')+' · you can '+(x.can_edit?'view and edit':'view')+' the family’s payments</div><div class="row" style="gap:8px"><button class="btn s" data-a="iacc:'+x.id+'">Join</button><button class="btn ghost s" data-a="idec:'+x.id+'">Decline</button></div></div>'}).join('')+msg+'<div class="note" style="margin:14px 0 6px;text-align:center">or</div>';msg=''}
     h+='<h2 style="margin-top:0">Your family</h2><div class="seg"><button class="btn s '+(c?'':'ghost')+'" data-a="ftab-c">Start a family</button><button class="btn s '+(c?'ghost':'')+'" data-a="ftab-j">Join with a code</button></div>'+
       (c?'<div class="note" style="margin-bottom:10px">You will get an invite code to share with your family.</div>'+inp("f_fam","Family name (optional)","text","off")+inp("f_nm","Your name, e.g. Manohar","text","given-name")+'<div class="note" style="margin-bottom:10px">Use the same name as PERSON in your Gmail script.</div>'+msg+btn("fcreate","Create family")
-        :'<div class="note" style="margin-bottom:10px">Ask the family owner for the invite code (Settings, Family members).</div>'+inp("f_code","Invite code","text","off")+inp("f_nm","Your name, e.g. Manjari","text","given-name")+'<div class="note" style="margin-bottom:10px">Use the same name as PERSON in your Gmail script.</div>'+msg+btn("fjoin","Join family"))+lnk("out","Log out")}
-  else if(v==="invite"){h+='<h2 style="margin-top:0">Family created</h2><div class="note">Share this code with your family. They create an account, tap <b>Join with a code</b> and enter it.</div><div class="code">'+esc(S.newCode)+'</div><button class="btn ghost" data-a="copy" style="margin-bottom:10px">Copy code</button>'+btn("cont","Continue")}
+        :'<div class="note" style="margin-bottom:10px">Ask the family owner for the invite code (Settings, Family members).</div>'+inp("f_code","Invite code","text","off",pj2)+inp("f_nm","Your name, e.g. Manjari","text","given-name")+'<div class="note" style="margin-bottom:10px">Use the same name as PERSON in your Gmail script.</div>'+msg+btn("fjoin","Join family"))+lnk("out","Log out")}
+  else if(v==="invite"){h+='<h2 style="margin-top:0">Family created</h2><div class="note">Share this code with your family. They create an account, tap <b>Join with a code</b> and enter it.</div><div class="code">'+esc(S.newCode)+'</div><button class="btn ghost" data-a="copy" style="margin-bottom:10px">Copy code</button>'+shareBtns('data-a').replace(/data-a="(wa|mail|link)"/g,'data-a="sh-$1"')+'<div style="height:14px"></div>'+btn("cont","Continue")}
   else if(v==="err"){h+='<h2 style="margin-top:0">Something went wrong</h2>'+msg+btn("retry","Try again")+lnk("out","Log out")}
   else h+='<div class="mute">Loading…</div>';
   return h+'</div><div class="note" style="text-align:center;margin-top:14px"><a href="privacy.html" target="_blank" rel="noopener" style="color:var(--mute)">Privacy policy</a> · <a href="delete.html" target="_blank" rel="noopener" style="color:var(--mute)">Delete account</a></div>'}
@@ -271,7 +281,8 @@ async function authAction(a){
   var go=function(v,t,ok){S.view=v;S.amsg=t||"";S.aok=!!ok;render()};
   var em=function(){S.lastEmail=g("a_em").trim().toLowerCase();return S.lastEmail};
   if(a==="go-login"){em();return go("login")}if(a==="go-signup"){em();return go("signup")}if(a==="go-forgot"){em();return go("forgot")}
-  if(a==="ftab-c"){S.fmode="create";return go("family")}if(a==="ftab-j"){S.fmode="join";return go("family")}
+  if(a==="ftab-c"){S._fm=1;S.fmode="create";return go("family")}if(a==="ftab-j"){S._fm=1;S.fmode="join";return go("family")}
+  if(a.indexOf("sh-")===0){return shareCode(a.slice(3),S.newCode,S.name||"")}
   if(a==="out"){try{if(S.auth)await authFetch("logout","POST",null,S.auth.access)}catch(e){}return logoutLocal("")}
   if(a==="copy"){toast(await copyText(S.newCode)?"Code copied":"Press and hold the code to copy");return}
   if(a==="cont"||a==="retry"){S.view="";render();return enter()}
@@ -297,7 +308,7 @@ async function authAction(a){
       var r=await api("rpc/create_household",{method:"POST",body:JSON.stringify({p_name:g("f_fam").trim(),p_display:nm})});
       S.newCode=r.invite_code;return go("invite")}
     if(a==="fjoin"){var cd=g("f_code").trim(),nm2=g("f_nm").trim();if(!cd)return m("Enter the invite code.");if(nm2.length<2)return m("Enter your name.");busy(true);
-      await api("rpc/join_household",{method:"POST",body:JSON.stringify({p_code:cd,p_display:nm2})});S.view="";render();toast("Welcome!");await enter();return}
+      await api("rpc/join_household",{method:"POST",body:JSON.stringify({p_code:cd,p_display:nm2})});ls("pendjoin","");S.view="";render();toast("Welcome!");await enter();return}
   }catch(e){busy(false);m(errText(e))}}
 function bindAuth(el){
   el.querySelectorAll("[data-a]").forEach(function(b){b.onclick=function(){authAction(b.dataset.a)}});
@@ -1073,7 +1084,7 @@ function vFam(){
     h+='</div>';
     if(own)h+='<div class="note" style="margin:0 4px">Switch on to let someone edit everyone’s payments, budgets, bills and goals. Off = view only (they can still manage their own payments).</div>';
     if(own&&others.length)h+='<details style="margin-top:14px"><summary class="mute" style="cursor:pointer">Remove someone</summary><div class="card" style="margin-top:8px">'+others.filter(function(m){return m.role!=="owner"}).map(function(m){return '<div class="row" style="margin:6px 0"><span>'+esc(m.name)+'</span><button class="btn ghost s" data-rm="'+esc(m.user_id)+'">Remove</button></div>'}).join('')+'<div class="note">Their own payments go with them into their own family.</div></div></details>';
-    if(own)h+='<details style="margin-top:10px"><summary class="mute" style="cursor:pointer">Or share an invite code</summary><div class="card" style="margin-top:8px"><div class="code">'+esc(p.invite_code||"")+'</div><div class="row" style="gap:8px"><button class="btn ghost s" id="cpy">Copy</button><button class="btn ghost s" id="ncode">New code</button></div><div class="note">They tap Create account, then Join with a code. A new code stops the old one working.</div></div></details>';
+    if(own)h+='<details open style="margin-top:10px"><summary class="mute" style="cursor:pointer">Share by WhatsApp, email or invite code</summary><div class="card" style="margin-top:8px"><div class="code">'+esc(p.invite_code||"")+'</div>'+shareBtns('data-sh')+'<div class="row" style="gap:8px;margin-top:10px"><button class="btn ghost s" id="cpy">Copy code</button><button class="btn ghost s" id="ncode">New code</button></div><div class="note">They open the link, install the app and create an account; the code is filled in for them. A new code stops the old one working.</div></div></details>';
   }else{
     h+='<div class="sec" style="margin-top:4px">Shared with you</div><div class="note" style="margin:-4px 4px 10px">You can see these people’s payments'+(ce?' and edit them':' (view only)')+'.</div><div class="card" style="padding:4px 14px">';
     if(!others.length)h+='<div class="empty"><span class="ei">👁</span><b>Nothing shared with you yet</b><div class="note">When someone adds you, they appear here.</div></div>';
@@ -1097,6 +1108,7 @@ function bindFam(el){
   var inc=document.getElementById("incf");if(inc)inc.onchange=function(){ls("incfam",inc.checked?"1":"0");S.pf=inc.checked?"__both":S.name;ls("pf",S.pf);toast(inc.checked?"Family payments included":"Showing only your payments")};
   el.querySelectorAll("[data-ft]").forEach(function(b){b.onclick=function(){S.famTab=b.dataset.ft;render()}});
   var a=document.getElementById("fadd2");if(a)a.onclick=addPersonSheet;
+  el.querySelectorAll("[data-sh]").forEach(function(b){b.onclick=function(){shareCode(b.dataset.sh,S.profile.invite_code,S.name)}});
   el.querySelectorAll("[data-medit]").forEach(function(c){c.onchange=async function(){try{await api("rpc/set_member_edit",{method:"POST",body:JSON.stringify({p_user:c.dataset.medit,p_can_edit:c.checked})});toast(c.checked?"Can edit now":"View only now");await loadFam()}catch(e){c.checked=!c.checked;showErr(errText(e))}}});
   el.querySelectorAll("[data-icancel]").forEach(function(b){b.onclick=async function(){try{await api("rpc/cancel_invite",{method:"POST",body:JSON.stringify({p_id:b.dataset.icancel})});await loadFam();render()}catch(e){showErr(errText(e))}}});
   var lv=document.getElementById("fleave");if(lv)lv.onclick=function(){confirmSheet("Leave the family?","You’ll stop seeing the family’s payments and they’ll stop seeing yours. Your own payments come with you.","Leave",async function(){try{await api("rpc/leave_family",{method:"POST",body:"{}"});toast("You left the family");await enter()}catch(e){showErr(errText(e))}})}}
