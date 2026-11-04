@@ -29,7 +29,10 @@ main{max-width:720px;margin:0 auto;padding:28px 16px 60px}h1{font-size:28px;marg
 <h2>Bank emails and SMS</h2>
 <ul>
 <li><b>Email tracking</b> is optional. If you set it up, a small script runs inside <i>your own</i> Gmail account. It searches only for emails from the banks you choose and sends their text to the app. We never get access to the rest of your mailbox, and you can remove the script at any time at myaccount.google.com/permissions.</li>
-<li><b>SMS tracking</b> is optional. The Our Expenses app does not read your SMS. If you choose, you set up forwarding yourself (Apple Shortcuts on iPhone, or an SMS-forwarding app on Android), filtered to messages that contain amounts. The app keeps only messages that are recognised as bank payments. Anything else, including OTPs, is dropped immediately and its text is not stored.</li>
+<li><b>SMS tracking</b> is optional and only starts when you turn it on and allow SMS access.
+<ul><li><b>Android app:</b> with your permission, the app reads incoming SMS on your phone (and, if you ask it to, SMS from the last 30 days) to find bank payment alerts. Each message is checked <i>on your phone</i>; only bank payment alerts (debited, credited, spent) are sent to your account. OTPs, personal messages and offers never leave the phone. You can turn this off in the app or in Android Settings at any time.</li>
+<li><b>iPhone:</b> Apple does not let apps read SMS. If you choose, you set up forwarding yourself with Apple Shortcuts.</li></ul>
+The app keeps only messages recognised as bank payments; anything else that reaches it is dropped immediately and its text is not stored. SMS data is never sold, shared or used for advertising.</li>
 </ul>
 
 <h2>How we use your data</h2>

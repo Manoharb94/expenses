@@ -151,6 +151,9 @@ nav button{padding:8px 2px;gap:3px;border-radius:22px}nav button svg{width:22px;
 .wzn{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:22px}
 .cgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px 6px}.cgrid button{border:0;background:none;color:var(--ink);font:inherit;font-size:11.5px;line-height:1.25;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;text-align:center;min-width:0;word-break:break-word}.cgrid i{font-style:normal;width:54px;height:54px;border-radius:16px;background:var(--chip);display:flex;align-items:center;justify-content:center;font-size:23px}.cgrid i.ov{box-shadow:0 0 0 2px var(--out)}.cgrid small{color:var(--mute);font-size:11px}
 .warnc{display:flex;align-items:center;justify-content:space-between;background:color-mix(in srgb,#d1a52b 18%,var(--card));cursor:pointer;text-align:left}
+.evs{width:auto;margin:0;padding:6px 28px 6px 10px;font-size:13px;font-weight:600;border-radius:10px;border:1px solid var(--line);background:var(--chip);color:var(--ink);appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--mute) 50%),linear-gradient(135deg,var(--mute) 50%,transparent 50%);background-position:calc(100% - 14px) 50%,calc(100% - 9px) 50%;background-size:5px 5px;background-repeat:no-repeat}
+.trt{font-size:12px;opacity:.9;text-align:center;margin:-2px 0 8px;min-height:16px}
+.balr{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;padding:12px 14px;border-radius:14px;background:var(--chip);cursor:pointer}.balr small{display:block;font-size:12px;color:var(--mute);font-weight:400}.balr span{font-weight:600}.balr b{font-size:19px;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -228,7 +231,7 @@ async function enter(){
   catch(e){if(!S.auth)return;S.view="err";S.amsg=errText(e);render();return}
   if(!S.profile){S.view="family";S.amsg="";render();return}
   S.code=S.profile.household_id;S.name=S.profile.display_name;ls("name","");ls("code","");S.view="";S.pf=ls("pf")||S.name;var qq=!!(S._cached&&S.loaded);S._cached=false;Promise.resolve(load(qq,pre)).then(function(){touch(true)},function(){touch(true)})}
-function touch(first){if(!S.auth||Date.now()-(S._tt||0)<30*60000)return;S._tt=Date.now();var pwa=false;try{pwa=window.matchMedia("(display-mode: standalone)").matches||navigator.standalone===true}catch(e){}
+function touch(first){if(!S.auth||Date.now()-(S._tt||0)<30*60000)return;S._tt=Date.now();var pwa=false;try{pwa=nativeApp()||window.matchMedia("(display-mode: standalone)").matches||navigator.standalone===true}catch(e){}
   api("rpc/touch",{method:"POST",body:JSON.stringify({p_os:phoneOS(),p_pwa:pwa,p_ms:first&&!S._ttm?Math.round(performance.now()):null})}).catch(function(){});S._ttm=1}
 document.addEventListener("visibilitychange",function(){if(!document.hidden&&S.code)touch()});
 function parseHash(){var o={};try{new URLSearchParams(location.hash.replace(/^#/,"")).forEach(function(v,k){o[k]=v})}catch(e){}return o}
@@ -359,11 +362,11 @@ function parseHdfc(aoa){
   if(hi<0)throw new Error("This does not look like an HDFC account statement (no Date and Narration columns). Download it from NetBanking as Excel or CSV.");
   var hd=aoa[hi].map(function(x){return String(x||"").toLowerCase()}),
       ix=function(re){for(var k=0;k<hd.length;k++)if(re.test(hd[k]))return k;return -1},
-      cr=ix(/chq|ref/),cw=ix(/withdraw/),cp=ix(/deposit/),rows=[],sd=0,sc=0;
+      cr=ix(/chq|ref/),cw=ix(/withdraw/),cp=ix(/deposit/),cb=ix(/closing|balance/),lastBal=null,rows=[],sd=0,sc=0;
   if(cw<0||cp<0)throw new Error("Could not find the Withdrawal and Deposit columns.");
   for(i=hi+1;i<aoa.length;i++){r=aoa[i]||[];
     var m=String(r[0]).trim().match(/^(\d{2})\/(\d{2})\/(\d{2,4})$/);if(!m)continue;
-    var w=stNum(r[cw]),p=stNum(r[cp]);if(!(w>0||p>0))continue;
+    var w=stNum(r[cw]),p=stNum(r[cp]);if(!(w>0||p>0))continue;if(cb>=0&&r[cb]!==""&&r[cb]!=null&&!isNaN(stNum(r[cb])))lastBal=stNum(r[cb]);
     var d=(m[3].length===2?"20"+m[3]:m[3])+"-"+m[2]+"-"+m[1],inf=stInfo(r[1],r[cr]),out=w>0,amt=Math.round((out?w:p)*100)/100;
     var ref=inf.rrn||("S"+d+"-"+String(r[cr]||"").trim()+"-"+rows.length);
     rows.push({d:d,a:amt,t:out?"out":"in",m:inf.m,r:ref,c:inf.c,n:String(r[1]||"").replace(/\s+/g," ").trim()});
@@ -372,6 +375,7 @@ function parseHdfc(aoa){
   var sum={},k2,j;
   for(i=0;i<aoa.length;i++){r=aoa[i]||[];if(String(r[0]).trim().toLowerCase()==="opening balance"){var vr=aoa[i+1]||[];
     for(j=0;j<r.length;j++){var h=String(r[j]).trim().toLowerCase();if(h==="opening balance")sum.opening=stNum(vr[j]);else if(h==="debits")sum.debits=stNum(vr[j]);else if(h==="credits")sum.credits=stNum(vr[j]);else if(h.indexOf("closing")===0)sum.closing=stNum(vr[j])}break}}
+  if(sum.closing==null&&lastBal!=null)sum.closing=lastBal;
   var ds=rows.map(function(x){return x.d}).sort(),has=sum.opening!=null&&sum.closing!=null;
   var bal=has?Math.abs(sum.opening+sc-sd-sum.closing)<0.5:null,tie=sum.debits!=null?Math.abs(sum.debits-sd)<0.5&&Math.abs(sum.credits-sc)<0.5:null;
   return {rows:rows,from:ds[0],to:ds[ds.length-1],debits:Math.round(sd*100)/100,credits:Math.round(sc*100)/100,opening:sum.opening,closing:sum.closing,balance_ok:bal,summary_ok:tie}}
@@ -1047,7 +1051,7 @@ function personChips(){
   return h+'<button data-pf="__both" class="'+(cur==="__both"?'on':'')+'">'+(ns.length>2?'Everyone':'Together')+'</button></div>'}
 function go(t){
   if(t==="stmt"){S.rp="stmt";t="rep"}
-  S.tab=t;if(t==="sms")S.smsStep=0;if(t==="mail")S.mailStep=0;
+  S.tab=t;if(t==="sms"){S.smsStep=0;if(nativeSmsOK())S.nsms=null}if(t==="mail")S.mailStep=0;
   render();window.scrollTo(0,0);
   if(t==="plan"||t==="goals")quiet(loadPlan());
   if(t==="fam"||t==="set"||t==="menu")quiet(loadMembers());
@@ -1062,6 +1066,42 @@ function miniRow(t){
 function txRow(t){
   var rowH='<div class="tx tap" data-cat="'+t.id+'"><div class="row"><span style="display:flex;align-items:center;min-width:0"><span class="ico">'+ci(t.category)+'</span><b style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(t.merchant||"Unknown")+'</b></span><b class="'+t.type+'" style="white-space:nowrap">'+(t.type==="out"?"−":"+")+money(t.amount)+'</b></div><div class="row"><span class="mute">'+esc(t.person||"")+(t.source==="sms"?' · SMS':'')+'</span><span>'+(t.kind==="card"?'<span class="tag">💳 card</span> ':'')+'<span class="tag'+(t.category?'':' warn')+'">'+esc(t.category||"Choose category")+'</span></span></div>'+(t.note?'<div class="note">'+esc(t.note)+'</div>':'')+'</div>';
   return (t.person===S.name||!t.raw||t.category===LOUT||t.category===LIN)?'<div class="swp"><div class="swa" data-sw="txn|'+t.id+'|'+encodeURIComponent((t.merchant||'Payment')+' '+money(t.amount))+'">Delete</div><div class="swc">'+rowH+'</div></div>':rowH}
+
+S.ev=ls("ev")||"m0";
+function monthsWithData(){var o=[];for(var k=-1;k>=-5;k--){if(txIn(monthKey(k)).some(function(t){return t.type==="out"&&isCount(t)}))o.push(k)}return o}
+function balLine(){
+  var ps=(S.pf&&S.pf!=="__both")?[S.pf]:persons(),rows=ps.map(acctBal).filter(Boolean);if(!rows.length)return '';
+  var tot=0,as="",n=0;rows.forEach(function(r){tot+=r.bal;n+=r.n;if(!as||r.as<as)as=r.as});
+  return '<div class="balr" data-go="acct"><span>🏦 Bank balance'+(rows.length>1?' · '+rows.length+' accounts':'')+'<small>Statement closing on '+new Date(as+"T00:00:00").toLocaleString("en-IN",{day:"numeric",month:"short"})+(n?' + '+n+' payment'+(n>1?'s':'')+' since':'')+'</small></span><b class="'+(tot<0?'out':'')+'">'+S.cur+Number(tot).toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2})+'</b></div>'}
+function expCard(X,P,F){
+  var ms=monthsWithData(),sel=S.ev;if(sel!=="6m"&&sel!=="m0"&&ms.indexOf(Number(sel.slice(1)))<0)sel="m0";
+  var opt='<select class="evs" id="evs" aria-label="Choose period"><option value="m0">This month</option>'+ms.map(function(k){return '<option value="m'+k+'"'+(sel==="m"+k?' selected':'')+'>'+esc(pdate(k).toLocaleString("en-IN",{month:"long",year:"numeric"}))+'</option>'}).join('')+(ms.length?'<option value="6m"'+(sel==="6m"?' selected':'')+'>Last 6 months</option>':'')+'</select>';
+  if(sel==="m0")opt=opt.replace('<option value="m0">','<option value="m0" selected>');
+  var h='<div class="dc"><div class="dch"><b data-go="rep" style="cursor:pointer">Expenses</b>'+opt+'</div>';
+  if(sel==="6m"){var r=sixMonths(),tot=r.reduce(function(a,x){return a+x.v},0),nz=r.filter(function(x){return x.v>0});
+    h+='<div class="amt hb">'+money(Math.round(nz.length?tot/nz.length:0))+'</div><div class="mute">Average a month · '+money(Math.round(tot))+' over '+nz.length+' month'+(nz.length===1?'':'s')+'</div>'+monthBars(r)}
+  else{var k=Number(sel.slice(1)),Xk=k===0?X:expenseSplit(txIn(monthKey(k)).filter(isCount),iso(pdate(k)),iso(pend(k))),Pk=k===0?P:null,recK=k===0?F.rec:sum(txIn(monthKey(k)).filter(isCount),"in");
+    h+='<div class="amt hb">'+money(Xk.total)+'</div><div class="mute">'+esc(plabel(k))+(Pk?' &nbsp;'+arrow(Xk.total,Pk.X.total)+' vs '+esc(Pk.label):'')+'</div>'+
+      '<div class="row" style="margin-top:10px;font-size:13px"><span class="mute">Received <b class="in">'+money(recK)+'</b></span><span class="mute">'+(recK-Xk.total>=0?'Left over':'Short by')+' <b class="'+(recK-Xk.total>=0?'in':'out')+'">'+money(Math.abs(recK-Xk.total))+'</b></span></div>'+dayBars(k)}
+  return h+balLine()+'</div>'}
+function sixMonths(){var r=[];for(var o=-5;o<=0;o++){var Lc=txIn(monthKey(o)).filter(isCount),X=expenseSplit(Lc,iso(pdate(o)),iso(pend(o)));r.push({v:X.total,l:pdate(o).toLocaleString("en-IN",{month:"short"}),f:plabel(o)})}
+  while(r.length>1&&!(r[0].v>0))r.shift();return r}
+function svgBars(vals,labels,tips,hi,note){
+  var mx=Math.max.apply(null,vals.concat([1])),W=300,H=96,n=vals.length,bw=W/n,svg='<svg viewBox="0 0 '+W+' '+(H+18)+'" width="100%" role="img" aria-label="Spending bars">';
+  vals.forEach(function(v,i){var h=v>0?Math.max(3,Math.round(v/mx*H)):0,w=Math.max(2,bw*(n>12?.66:.56)),x=i*bw+(bw-w)/2;
+    svg+='<g class="bg" data-tip="'+esc(tips[i])+'"><rect x="'+(i*bw)+'" y="0" width="'+bw+'" height="'+(H+18)+'" fill="transparent"/>'+(h?'<rect x="'+x.toFixed(1)+'" y="'+(H-h)+'" width="'+w.toFixed(1)+'" height="'+h+'" rx="'+(n>12?2:5)+'" fill="#fff" opacity="'+(i===hi?1:.5)+'"/>':'')+'</g>';
+    if(labels[i])svg+='<text x="'+(i*bw+bw/2).toFixed(1)+'" y="'+(H+14)+'" text-anchor="middle" font-size="10.5" fill="#fff" opacity=".8">'+labels[i]+'</text>'});
+  return '<div class="trend"><div class="trt" id="trt">'+esc(note||"")+'</div>'+svg+'</svg></div>'}
+function dayBars(k){
+  var a=pdate(k),b=pend(k),today=iso(new Date()),by={},vals=[],labels=[],tips=[],hi=-1,i=0;
+  txIn(monthKey(k)).forEach(function(t){if(t.type==="out"&&isCount(t))by[t.txn_date]=(by[t.txn_date]||0)+Number(t.amount)});
+  for(var d=new Date(a);d<=b;d.setDate(d.getDate()+1),i++){var ds=iso(d),v=by[ds]||0,fut=k===0&&ds>today;vals.push(fut?0:v);
+    labels.push((d.getDate()===1||d.getDate()%5===0)&&!(d.getDate()===30&&i>27)?String(d.getDate()):"");
+    tips.push(d.toLocaleString("en-IN",{weekday:"short",day:"numeric",month:"short"})+": "+(fut?"—":money(Math.round(v))));if(ds===today)hi=i}
+  if(!vals.some(function(v){return v>0}))return '<div class="trend"><div class="tre">No spending yet in '+esc(plabel(k))+'</div></div>';
+  var nz=vals.filter(function(v){return v>0});
+  return svgBars(vals,labels,tips,k===0?hi:-1,"Spent each day · avg "+money(Math.round(nz.reduce(function(x,y){return x+y},0)/Math.max(1,(k===0?Math.round((new Date(today+"T00:00:00")-a)/864e5)+1:vals.length))))+" a day · tap a bar")}
+function monthBars(r){return svgBars(r.map(function(x){return x.v}),r.map(function(x){return x.l}),r.map(function(x){return x.f+": "+money(Math.round(x.v))}),r.length-1,"Total each month · tap a bar")}
 function trendPanel(){
   var r=[];for(var o=-5;o<=0;o++){var Lc=txIn(monthKey(o)).filter(isCount),X=expenseSplit(Lc,iso(pdate(o)),iso(pend(o)));r.push({v:X.total,l:pdate(o).toLocaleString("en-IN",{month:"short"})})}
   var mx=Math.max.apply(null,r.map(function(x){return x.v}))||1;
@@ -1085,8 +1125,7 @@ function vDash(){
   var h=topbar("Our Expenses")+personChips();
   if(S.err)h+='<div class="card out">'+esc(S.err)+'</div>';
   if(pendN)h+='<button class="dc warnc tap" data-go="list" data-ltab="none" style="width:100%;border:0;font:inherit;color:var(--ink)"><span>🏷️ <b>'+pendN+'</b> payment'+(pendN>1?'s need':' needs')+' a category</span><span class="arr">→</span></button>';
-  h+='<div class="dc"><div class="dch" data-go="rep"><b>Expenses</b><span class="arr">→</span></div><div class="amt hb">'+money(X.total)+'</div><div class="mute">'+esc(plabel(0))+(P?' &nbsp;'+arrow(X.total,P.X.total)+' vs '+esc(P.label):'')+'</div>'+
-    '<div class="row" style="margin-top:10px;font-size:13px"><span class="mute">Received <b class="in">'+money(F.rec)+'</b></span><span class="mute">'+(F.left>=0?'Left over':'Short by')+' <b class="'+(F.left>=0?'in':'out')+'">'+money(Math.abs(F.left))+'</b></span></div>'+trendPanel()+'</div>';
+  h+=expCard(X,P,F);
   h+=insightBlock(X,Lc,pdt);
   var rec=S.txns.filter(personOK).slice().sort(byNew).slice(0,5);
   h+='<div class="dc"><div class="dch" data-go="list"><b>Latest transactions</b><span class="arr">→</span></div>';
@@ -1172,7 +1211,8 @@ function trackStat(){var c=S.sc;if(!c||c.err)return '';
 function vTrack(){
   var c=S.sc,mail=c&&c.last_run?((Date.now()-new Date(c.last_run).getTime())<30*60000?'<span class="in">✓ Connected</span>':'<span class="out">⚠ Stopped</span>'):'Not set up';
   var h=topbar("Automated tracking","menu")+'<div class="sec">✨ Live tracking</div>';
-  h+='<div class="dc trk"><i>💬</i><div class="m"><b>SMS tracking</b><span>Capture spends from bank SMS, seconds after you pay</span></div><button class="sbtn" data-go="sms">Set up</button></div>';
+  var ns=nativeSmsOK();if(ns&&S.nsms===null)nsmsRefresh();
+  h+='<div class="dc trk"><i>💬</i><div class="m"><b>SMS tracking</b><span>Capture spends from bank SMS, seconds after you pay'+(ns&&S.nsms&&S.nsms.enabled?' · <span class="in">✓ On</span>':'')+'</span></div><button class="sbtn" data-go="sms">'+(ns&&S.nsms&&S.nsms.enabled?'Manage':ns?'Turn on':'Set up')+'</button></div>';
   h+='<div class="dc trk"><i>✉️</i><div class="m"><b>Email tracking</b><span>Capture spends from bank emails · '+mail+'</span></div><button class="sbtn" data-go="mail">'+(c&&c.last_run?'Manage':'Set up')+'</button></div>';
   h+=trackStat();
   h+='<div class="sec">🕘 Import past payments</div><div class="dc trk"><i>📥</i><div class="m"><b>Bank statement</b><span>Upload an HDFC statement file (.xls) to load months at once</span></div><button class="sbtn" data-go="stmt">Upload</button></div>';
@@ -1192,10 +1232,34 @@ function kv(label,val){return '<div class="mute" style="margin-top:10px">'+label
 /* Paste the iCloud link of the shared "Our Expenses SMS" shortcut here (see setup notes). Empty = step-by-step instructions instead. */
 var SMS_SHORTCUT_LINK="";
 var SMS_SHORTCUT_NAME="Our Expenses SMS";
-function phoneOS(){var u=navigator.userAgent||"";
+function phoneOS(){var u=navigator.userAgent||"";if(nativeApp()&&window.Capacitor.getPlatform)return Capacitor.getPlatform()==="ios"?"ios":"and";
   if(/iPhone|iPad|iPod/i.test(u)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1))return "ios";
   if(/Android/i.test(u))return "and";return "desk"}
+function nativeApp(){try{return !!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform())}catch(e){return false}}
+function smsPlugin(){try{return window.Capacitor&&(Capacitor.Plugins&&Capacitor.Plugins.SmsTracker||(Capacitor.registerPlugin&&Capacitor.registerPlugin("SmsTracker")))}catch(e){return null}}
+function nativeSmsOK(){return nativeApp()&&Capacitor.getPlatform&&Capacitor.getPlatform()==="android"&&!!smsPlugin()}
+S.nsms=null;
+async function nsmsRefresh(){try{S.nsms=await smsPlugin().status()}catch(e){S.nsms={enabled:false,err:e.message}}if(S.tab==="sms"||S.tab==="track")render()}
+function vSmsNative(){
+  var T=topbar("SMS tracking","track"),st=S.nsms,c=S.sc;
+  if(st===null){nsmsRefresh();return T+'<div class="card mute">Checking…</div>'}
+  if(st.enabled)return T+'<div class="dc" style="text-align:center"><span style="font-size:46px">✅</span><h3 style="margin:6px 0">SMS tracking is on</h3><p class="mute" style="margin:0">Bank payment SMS are added to the app the moment they arrive, even when the app is closed.</p><div class="note" style="margin-top:10px">'+(st.count?st.count+' sent from this phone'+(st.last?' · last '+ago(new Date(st.last).toISOString()):''):'Waiting for your next bank SMS')+'</div></div>'+
+    '<button class="btn" id="nimp">Add bank SMS from the last 30 days</button><div class="note" style="margin:6px 0 16px">Payments already in the app are skipped, so this is safe to run again.</div><button class="btn ghost" id="noff">Turn off SMS tracking</button>';
+  return T+'<div class="dc"><div style="text-align:center"><span style="font-size:46px">💬</span><h3 style="margin:6px 0 4px">Track spends from bank SMS</h3><p class="mute" style="margin:0 0 14px">One tap. No other app needed.</p></div>'+
+    '<div class="card" style="background:var(--chip);box-shadow:none;font-size:14px;line-height:1.55;margin:0"><b>What happens when you allow SMS access</b><ul style="margin:6px 0 0;padding-left:18px"><li>Our Expenses reads SMS on this phone to find <b>bank payment alerts</b> (debited, credited, spent).</li><li>Only those alerts are sent to your account. OTPs, personal messages and offers are checked on the phone and never leave it.</li><li>The alerts are used only to show your spending, and only you and your family can see them.</li><li>You can turn this off any time here, or in Android Settings.</li></ul></div>'+
+    (c&&c.key?'<button class="btn" id="non" style="margin-top:16px">Allow SMS access and turn on</button>':'<div class="note" style="margin-top:14px">Loading your account…</div>')+
+    (st.err?'<div class="note out" style="margin-top:8px">'+esc(st.err)+'</div>':'')+'<div class="note" style="text-align:center;margin-top:10px">You can also use <a href="#" data-go="mail" style="color:var(--acc)">email tracking</a> instead, or as well.</div></div>'}
+function bindNativeSms(){
+  var on=document.getElementById("non");if(on)on.onclick=async function(){this.disabled=true;this.textContent="Waiting for permission…";
+    try{S.nsms=await smsPlugin().enable({key:S.sc.key,url:URLB+"rpc/ingest_sms",apikey:KEY});render();if(S.nsms.enabled&&confirm("SMS tracking is on. Add your bank SMS from the last 30 days now?"))importNativeSms()}
+    catch(e){S.nsms={enabled:false,err:/denied|not given/i.test(e.message||"")?"SMS access was not allowed. Tap the button again, or allow SMS for Our Expenses in Android Settings → Apps → Permissions.":e.message};render()}};
+  var im=document.getElementById("nimp");if(im)im.onclick=importNativeSms;
+  var off=document.getElementById("noff");if(off)off.onclick=async function(){if(!confirm("Turn off SMS tracking on this phone?"))return;try{S.nsms=await smsPlugin().disable()}catch(e){}render()}}
+async function importNativeSms(){toast("Reading bank SMS from the last 30 days…");
+  try{var r=await smsPlugin().importRecent({days:30});toast(r.found?"Found "+r.found+" bank SMS · new ones are being added":"No bank SMS found in the last 30 days");setTimeout(function(){load(true)},4000);nsmsRefresh()}
+  catch(e){showErr("Could not read SMS: "+e.message)}}
 function vSms(){
+  if(nativeSmsOK())return vSmsNative();
   var c=S.sc,os=phoneOS(),T=topbar("SMS tracking","track");
   if(!c)return T+'<div class="card mute">Loading…</div>';
   if(c.err)return T+'<div class="card out">'+esc(c.err)+'</div>';
@@ -1255,6 +1319,9 @@ function bindV2(el){
     if(S.tab==="sms")S.smsStep=Math.max(0,S.smsStep+d);else S.mailStep=Math.max(0,S.mailStep+d);render();window.scrollTo(0,0)}});
   var cb=document.getElementById("csvb");if(cb)cb.onclick=function(){csv(S._lastF||[])};
   var da=document.getElementById("delacc");if(da)da.onclick=deleteAccountSheet;
+  if(S.tab==="sms"&&nativeSmsOK())bindNativeSms();
+  var evs=document.getElementById("evs");if(evs){evs.onclick=function(e){e.stopPropagation()};evs.onchange=function(){S.ev=evs.value;ls("ev",S.ev);render()}}
+  el.querySelectorAll(".trend .bg").forEach(function(g){var f=function(){var t=g.closest(".trend").querySelector(".trt");if(t)t.textContent=g.dataset.tip;g.closest("svg").querySelectorAll(".bg rect+rect").forEach(function(r){r.style.opacity=""});var r2=g.querySelector("rect+rect");if(r2)r2.style.opacity="1"};g.addEventListener("pointerenter",f);g.addEventListener("click",f)});
 }
 function deleteAccountSheet(){
   var sh=document.getElementById("sheet"),others=(S.members||[]).filter(function(m){return m.display_name!==S.name}).length;
