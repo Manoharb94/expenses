@@ -1003,7 +1003,7 @@ function vDash(){
   else h+='<div style="margin-top:6px">'+rec.map(miniRow).join('')+'</div>';
   h+='</div>';
   var ps=(S.pf&&S.pf!=="__both")?[S.pf]:persons(),bals=ps.map(acctBal).filter(Boolean),bt=0;bals.forEach(function(b){bt+=b.bal});
-  h+='<div class="tiles"><button class="tile" data-go="'+(bals.length?'acct':'stmt')+'"><span class="ti">🏦</span><span><small>Accounts</small><b>'+(bals.length?money(bt):'Add')+'</b></span></button><button class="tile" data-go="list" data-ltab="in"><span class="ti">💰</span><span><small>Received</small><b>'+money(F.rec)+'</b></span></button></div>';
+  h+='<div class="tiles"><button class="tile" data-go="'+(bals.length?'acct':'stmt')+'"><span class="ti">🏦</span><span><small>Accounts</small><b>'+(bals.length?money(bt):'Add statement')+'</b></span></button><button class="tile" data-go="list" data-ltab="in"><span class="ti">💰</span><span><small>Received</small><b>'+money(F.rec)+'</b></span></button></div>';
   var bd=billsDue(30);
   h+='<div class="dc"><div class="dch" data-go="plan"><b>Bills due</b><span class="arr">→</span></div>';
   if(!bd.length)h+='<div class="empty"><span class="ei">⏰</span>No bills in the next 30 days</div><button class="obtn" data-go="plan" data-bfocus="#fn">+ Add bill</button>';
@@ -1075,16 +1075,15 @@ function vFam(){
   var others=(F.members||[]).filter(function(m){return m.user_id!==p.user_id});
   if(tab==="share"){
     h+='<div class="sec" style="margin-top:4px">Sharing your data</div><div class="note" style="margin:-4px 4px 10px">People here can see your payments. '+(own?'You decide whether each can also edit.':'')+'</div>';
-    if(ce)h+='<button class="btn" id="fadd2">＋ Add someone</button>';
     h+='<div class="card" style="margin-top:12px;padding:4px 14px">';
-    if(!others.length&&!(F.invites||[]).length)h+='<div class="empty"><span class="ei">👥</span><b>No one yet</b><div class="note">Add your spouse or family to share expenses.</div></div>';
+    if(!others.length&&!(F.invites||[]).length)h+='<div class="empty"><span class="ei">👥</span><b>No one yet</b><div class="note">Send the invite below to your spouse or family.</div></div>';
     others.forEach(function(m){h+='<div class="lt" style="cursor:default"><span class="ico">'+esc((m.name||"?").charAt(0).toUpperCase())+'</span><div class="m"><b>'+esc(m.name)+(m.role==="owner"?' <span class="mute" style="font-weight:400">· owner</span>':'')+'</b><span>'+esc(m.email||"")+'</span></div>'+
       (own&&m.role!=="owner"?'<div style="text-align:center"><label class="tgl" title="Allow editing"><input type="checkbox" data-medit="'+m.user_id+'"'+(m.can_edit?' checked':'')+'><span></span></label><div class="note" style="margin:2px 0 0;font-size:11px">Can edit</div></div>':'<span class="pill2">'+(m.can_edit?'Can edit':'View only')+'</span>')+'</div>'});
     (F.invites||[]).forEach(function(x){h+='<div class="lt" style="cursor:default"><span class="ico">✉️</span><div class="m"><b>'+esc(x.email)+'</b><span>Invited · waiting · '+(x.can_edit?'can edit':'view only')+'</span></div>'+(ce?'<button class="btn ghost s" data-icancel="'+x.id+'">Cancel</button>':'')+'</div>'});
     h+='</div>';
     if(own)h+='<div class="note" style="margin:0 4px">Switch on to let someone edit everyone’s payments, budgets, bills and goals. Off = view only (they can still manage their own payments).</div>';
     if(own&&others.length)h+='<details style="margin-top:14px"><summary class="mute" style="cursor:pointer">Remove someone</summary><div class="card" style="margin-top:8px">'+others.filter(function(m){return m.role!=="owner"}).map(function(m){return '<div class="row" style="margin:6px 0"><span>'+esc(m.name)+'</span><button class="btn ghost s" data-rm="'+esc(m.user_id)+'">Remove</button></div>'}).join('')+'<div class="note">Their own payments go with them into their own family.</div></div></details>';
-    if(own)h+='<details open style="margin-top:10px"><summary class="mute" style="cursor:pointer">Share by WhatsApp, email or invite code</summary><div class="card" style="margin-top:8px"><div class="code">'+esc(p.invite_code||"")+'</div>'+shareBtns('data-sh')+'<div class="row" style="gap:8px;margin-top:10px"><button class="btn ghost s" id="cpy">Copy code</button><button class="btn ghost s" id="ncode">New code</button></div><div class="note">They open the link, install the app and create an account; the code is filled in for them. A new code stops the old one working.</div></div></details>';
+    if(own)h+='<div class="sec" style="margin-top:18px">Invite with a code</div><div class="card"><div class="code">'+esc(p.invite_code||"")+'</div><div class="note" style="margin:8px 0 12px">They open the link, install the app and create an account; the code is filled in for them. A new code stops the old one working.</div><div style="display:grid;gap:8px"><button class="btn" data-sh="wa">💬 Share on WhatsApp</button><button class="btn ghost" data-sh="mail">✉️ Share by Email</button><button class="btn ghost" data-sh="link">🔗 Copy invite link</button><button class="btn ghost" id="cpy">📋 Copy code</button><button class="btn ghost" id="ncode">🔄 New code</button></div></div>';
   }else{
     h+='<div class="sec" style="margin-top:4px">Shared with you</div><div class="note" style="margin:-4px 4px 10px">You can see these people’s payments'+(ce?' and edit them':' (view only)')+'.</div><div class="card" style="padding:4px 14px">';
     if(!others.length)h+='<div class="empty"><span class="ei">👁</span><b>Nothing shared with you yet</b><div class="note">When someone adds you, they appear here.</div></div>';
@@ -1093,21 +1092,10 @@ function vFam(){
     if(others.length)h+='<button class="btn ghost" id="fleave" style="margin-top:16px;color:var(--out)">Leave family</button><div class="note" style="margin:6px 4px">You get your own family again and your payments come with you.</div>';
   }
   return h}
-function addPersonSheet(){
-  var sh=document.getElementById("sheet");
-  sh.innerHTML='<div class="sheet"><div><div class="row"><b style="font-size:20px">Share data with</b><button class="x" id="apx">✕</button></div><input id="ape" type="email" inputmode="email" autocapitalize="off" placeholder="✉  Email address" style="margin-top:14px">'+
-    '<div class="dc trk" style="box-shadow:none;border:1px solid var(--line)"><div class="m"><b>Allow editing</b><span>They can view and change the family’s payments, budgets, bills and goals. Off = view only.</span></div><label class="tgl"><input type="checkbox" id="apc" checked><span></span></label></div>'+
-    '<div class="note" style="margin:-4px 0 14px">They see the invite when they log in with this email. If they don’t have an account yet, they sign up with it and the invite is waiting.</div><button class="btn" id="apgo">Add user</button></div></div>';
-  document.getElementById("apx").onclick=function(){sh.innerHTML=""};
-  document.getElementById("apgo").onclick=async function(){var em=document.getElementById("ape").value.trim();if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){toast("Enter a valid email");return}
-    this.disabled=true;try{var r=await api("rpc/invite_by_email",{method:"POST",body:JSON.stringify({p_email:em,p_can_edit:document.getElementById("apc").checked})});sh.innerHTML="";
-      toast(r==="invited_new"?"Invite saved. Ask them to sign up with "+em:"Invite sent. They’ll see it when they open the app");await loadFam();render()}
-    catch(e){this.disabled=false;toast(errText(e).replace(/^\d+\s*/,"").replace(/.*"message":"([^"]+)".*/,"$1"))}}}
 async function loadFam(){try{S.fam=await api("rpc/family_overview",{method:"POST",body:"{}"})||{}}catch(e){S.fam={members:(S.members||[]).map(function(m){return {user_id:m.user_id,name:m.display_name,role:m.role,can_edit:true}}),invites:[],err:errText(e)}}}
 function bindFam(el){
   var inc=document.getElementById("incf");if(inc)inc.onchange=function(){ls("incfam",inc.checked?"1":"0");S.pf=inc.checked?"__both":S.name;ls("pf",S.pf);toast(inc.checked?"Family payments included":"Showing only your payments")};
   el.querySelectorAll("[data-ft]").forEach(function(b){b.onclick=function(){S.famTab=b.dataset.ft;render()}});
-  var a=document.getElementById("fadd2");if(a)a.onclick=addPersonSheet;
   el.querySelectorAll("[data-sh]").forEach(function(b){b.onclick=function(){shareCode(b.dataset.sh,S.profile.invite_code,S.name)}});
   el.querySelectorAll("[data-medit]").forEach(function(c){c.onchange=async function(){try{await api("rpc/set_member_edit",{method:"POST",body:JSON.stringify({p_user:c.dataset.medit,p_can_edit:c.checked})});toast(c.checked?"Can edit now":"View only now");await loadFam()}catch(e){c.checked=!c.checked;showErr(errText(e))}}});
   el.querySelectorAll("[data-icancel]").forEach(function(b){b.onclick=async function(){try{await api("rpc/cancel_invite",{method:"POST",body:JSON.stringify({p_id:b.dataset.icancel})});await loadFam();render()}catch(e){showErr(errText(e))}}});
@@ -1261,7 +1249,6 @@ function render(){
   var q=function(i){return document.getElementById(i)};
   var rp=q("rp");if(rp)rp.onchange=function(){S.rp=rp.value;if(S.rp==="stmt"&&S.imports===null)loadImports().then(render);render()};
   el.querySelectorAll("[data-cat]").forEach(function(b){b.onclick=function(){var t=S.txns.filter(function(x){return x.id===b.dataset.cat})[0];if(t)pick(t)}});
-  var sb3=q("stbtn3");if(sb3)sb3.onclick=function(){S.tab="rep";S.rp="stmt";window.scrollTo(0,0);render()};
   var sb2=q("stbtn2");if(sb2)sb2.onclick=function(){S.rp="stmt";if(S.imports===null)loadImports().then(render);render()};
   var ma=q("msal");if(ma)ma.onclick=function(){var r=salaryDay(),n=q("msn");
     if(!r){n.textContent="No salary credit found yet. Mark your salary payee as Salary / Income in History first.";return}
@@ -1329,7 +1316,7 @@ function acctBal(p){
 function balBlock(){
   if(!S.loaded||S.impErr||S.imports===null)return '';
   var ps=S.pf==="__both"?persons():[S.pf],rows=ps.map(acctBal).filter(Boolean);
-  if(!rows.length)return '<div class="card row"><span class="mute">Upload a bank statement to see your account balance here.</span><button class="btn ghost s" id="stbtn3">Upload</button></div>';
+  if(!rows.length)return '';
   var tot=0;rows.forEach(function(r){tot+=r.bal});
   var h='<div class="card"><div class="mute">Account balance</div>';
   rows.forEach(function(r){h+='<div style="margin:8px 0"><div class="row"><b style="font-size:17px">'+esc(r.p)+'</b><b style="font-size:22px;letter-spacing:-.3px" class="'+(r.bal<0?"out":"in")+'">'+S.cur+Number(r.bal).toLocaleString("en-IN",{minimumFractionDigits:r.bal%1?2:0,maximumFractionDigits:2})+'</b></div><div class="mute" style="font-size:12px">As of statement '+esc(r.as)+(r.n?' · +'+r.n+' payment'+(r.n>1?'s':'')+' since':'')+'</div></div>'});
