@@ -262,7 +262,7 @@ function authView(){
   else if(v==="invite"){h+='<h2 style="margin-top:0">Family created</h2><div class="note">Share this code with your family. They create an account, tap <b>Join with a code</b> and enter it.</div><div class="code">'+esc(S.newCode)+'</div><button class="btn ghost" data-a="copy" style="margin-bottom:10px">Copy code</button>'+btn("cont","Continue")}
   else if(v==="err"){h+='<h2 style="margin-top:0">Something went wrong</h2>'+msg+btn("retry","Try again")+lnk("out","Log out")}
   else h+='<div class="mute">Loading…</div>';
-  return h+'</div>'}
+  return h+'</div><div class="note" style="text-align:center;margin-top:14px"><a href="privacy.html" target="_blank" rel="noopener" style="color:var(--mute)">Privacy policy</a> · <a href="delete.html" target="_blank" rel="noopener" style="color:var(--mute)">Delete account</a></div>'}
 async function authAction(a){
   var m=function(t,ok){var e=document.getElementById("amsg");if(e){e.textContent=t||"";e.className="amsg"+(ok?" ok":"")}};
   var go=function(v,t,ok){S.view=v;S.amsg=t||"";S.aok=!!ok;render()};
@@ -1047,7 +1047,7 @@ function go(t){
   S.tab=t;if(t==="sms")S.smsStep=0;if(t==="mail")S.mailStep=0;
   render();window.scrollTo(0,0);
   if(t==="plan"||t==="goals")quiet(loadPlan());
-  if(t==="fam"||t==="set")quiet(loadMembers());
+  if(t==="fam"||t==="set"||t==="menu")quiet(loadMembers());
   if(t==="track"||t==="sms"||t==="mail")quiet(loadSc());
   if(t==="rep"&&S.rp==="stmt")quiet(loadImports())}
 function byNew(a,b){return (a.txn_date||"")<(b.txn_date||"")?1:(a.txn_date||"")>(b.txn_date||"")?-1:(String(a.created_at||"")<String(b.created_at||"")?1:-1)}
@@ -1145,7 +1145,7 @@ function vMenu(){
   var row=function(t,i,a,b){return '<button class="mr" data-go="'+t+'"><i>'+i+'</i><span><b>'+a+'</b>'+(b?'<span>'+b+'</span>':'')+'</span><span class="go">›</span></button>'};
   return topbar("Menu","home")+'<div class="sec">App settings</div><div class="card" style="padding:0 12px">'+row("set","⚙️","Settings","Theme, colour, currency, month start")+row("cats","🗂️","Categories","What each category has this month")+'</div>'+
     '<div class="sec">Automation & sharing</div><div class="card" style="padding:0 12px">'+row("track","💬","Automated tracking","SMS & email")+row("fam","👥","Family","Share expenses with family")+row("goals","🎯","Goals","Save for things together")+row("stmt","📥","Bank statements","Upload a statement file")+'</div>'+
-    '<div class="sec">Account</div><div class="card" style="padding:0 12px"><button class="mr" id="lo"><i>⏻</i><span><b>Log out</b><span>'+esc(em)+'</span></span></button></div>'}
+    '<div class="sec">Account</div><div class="card" style="padding:0 12px"><a class="mr" href="privacy.html" target="_blank" rel="noopener" style="text-decoration:none"><i>🔒</i><span><b>Privacy policy</b><span>What the app stores and why</span></span><span class="go">›</span></a><button class="mr" id="lo"><i>⏻</i><span><b>Log out</b><span>'+esc(em)+'</span></span></button><button class="mr" id="delacc"><i>🗑️</i><span><b class="out">Delete my account</b><span>Removes your login and your payments</span></span></button></div>'}
 function vSet(){
   var h=topbar("Settings","menu")+lookCard();
   h+='<h2>This phone</h2><div class="card"><div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><div class="mute">Your month starts on day (1 = normal calendar month)</div><input id="ms" type="number" inputmode="numeric" min="1" max="31" value="'+(S.ms||1)+'"><button class="btn ghost s" id="msal" style="margin-bottom:10px">Use my salary credit day</button><div class="note" id="msn">Saved on this phone only. Set the same day on the other phone. Reports, budgets and forecasts all follow it.</div><button class="btn" id="sv">Save</button></div>';
@@ -1237,7 +1237,17 @@ function bindV2(el){
   el.querySelectorAll("[data-step]").forEach(function(b){b.onclick=function(){var d=Number(b.dataset.step);if(b.dataset.go&&d<0){go(b.dataset.go);return}
     if(S.tab==="sms")S.smsStep=Math.max(0,S.smsStep+d);else S.mailStep=Math.max(0,S.mailStep+d);render();window.scrollTo(0,0)}});
   var cb=document.getElementById("csvb");if(cb)cb.onclick=function(){csv(S._lastF||[])};
+  var da=document.getElementById("delacc");if(da)da.onclick=deleteAccountSheet;
 }
+function deleteAccountSheet(){
+  var sh=document.getElementById("sheet"),others=(S.members||[]).filter(function(m){return m.display_name!==S.name}).length;
+  sh.innerHTML='<div class="sheet"><div><b style="font-size:18px">Delete your account?</b><div style="margin:10px 0;line-height:1.5">This permanently removes:<ul style="margin:6px 0;padding-left:20px"><li>your login ('+esc((S.profile&&S.profile.email)||(S.auth&&S.auth.email)||"")+')</li><li>every payment saved under <b>'+esc(S.name)+'</b>, and your statement uploads</li>'+(others?'<li>you from the family. Budgets, bills and goals stay with the others'+((S.profile||{}).role==="owner"?', and another member becomes the owner':'')+'</li>':'<li>your whole family’s data: budgets, bills, goals and categories</li>')+'</ul>It cannot be undone. Also delete your Gmail script and SMS shortcut, or they will stop working anyway.</div><div class="mute">Type <b>DELETE</b> to confirm</div><input id="delc" autocomplete="off" autocapitalize="characters"><button class="btn" id="delok" style="background:var(--out)">Delete my account</button><button class="btn ghost" style="margin-top:8px" id="delno">Cancel</button></div></div>';
+  document.getElementById("delno").onclick=function(){sh.innerHTML=""};
+  document.getElementById("delok").onclick=async function(){
+    if(document.getElementById("delc").value.trim().toUpperCase()!=="DELETE"){toast("Type DELETE to confirm");return}
+    this.disabled=true;this.textContent="Deleting…";
+    try{await api("rpc/delete_my_account",{method:"POST",body:"{}"});sh.innerHTML="";logoutLocal("Your account and data were deleted.")}
+    catch(e){sh.innerHTML="";showErr("Could not delete: "+errText(e))}}}
 S.smsDev=ls("smsdev")||"";
 
 function render(){

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Delete Account · Our Expenses</title>
+<style>
+:root{--bg:#f6f5f1;--card:#fff;--ink:#1c1c1a;--mute:#6f6e68;--line:#e4e2da;--acc:#7c3aed;--out:#b4432f}
+@media (prefers-color-scheme:dark){:root{--bg:#151514;--card:#1f1f1d;--ink:#efeee8;--mute:#9b9a92;--line:#33332f;--acc:#a78bfa;--out:#e8836e}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 -apple-system,system-ui,"Segoe UI",Roboto,sans-serif}
+main{max-width:480px;margin:0 auto;padding:28px 16px 60px}h1{font-size:26px;margin:0 0 6px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:16px 0}
+input{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:inherit;margin:4px 0 12px}
+button{width:100%;padding:13px;border:0;border-radius:10px;background:var(--out);color:#fff;font:inherit;font-weight:700;cursor:pointer}button:disabled{opacity:.6}
+.mute{color:var(--mute);font-size:14px}.msg{min-height:22px;margin:4px 0 10px;color:var(--out)}.ok{color:#1f6f5c}a{color:var(--acc)}ul{padding-left:20px}
+</style></head><body><main>
+<h1>Delete your account</h1>
+<div class="mute">Our Expenses</div>
+<div class="card">
+<p style="margin-top:0">This permanently deletes:</p>
+<ul><li>your login (email and password)</li><li>every payment saved under your name, and your statement uploads</li><li>if you are the last person in your family group: the family’s budgets, bills, goals and categories</li></ul>
+<p>If others are still in your family, the shared budgets, bills and goals stay with them. Deletion happens immediately and cannot be undone.</p>
+<p class="mute" style="margin-bottom:0">You can also do this in the app: ☰ Menu → Delete my account. Or email <a href="mailto:er.manoharb@gmail.com">er.manoharb@gmail.com</a> from your account’s email address.</p>
+</div>
+<div class="card" id="f">
+<label class="mute">Email</label><input id="em" type="email" autocomplete="email" autocapitalize="off">
+<label class="mute">Password</label><input id="pw" type="password" autocomplete="current-password">
+<label class="mute">Type DELETE to confirm</label><input id="cf" autocomplete="off" autocapitalize="characters">
+<div class="msg" id="msg"></div>
+<button id="go">Delete my account</button>
+</div>
+<p class="mute"><a href="privacy.html">Privacy policy</a></p>
+</main>
+<script>
+var BASE="https://fwxhclagrwlzxvsmaekt.supabase.co",KEY="sb_publishable_PiCUzSknFyCfGfEVzTiQbg_qEkBYwL_";
+var $=function(i){return document.getElementById(i)};
+$("go").onclick=async function(){
+  var m=$("msg");m.className="msg";
+  var em=$("em").value.trim(),pw=$("pw").value;
+  if(!em||!pw){m.textContent="Enter your email and password.";return}
+  if($("cf").value.trim().toUpperCase()!=="DELETE"){m.textContent="Type DELETE to confirm.";return}
+  this.disabled=true;this.textContent="Deleting…";
+  try{
+    var r=await fetch(BASE+"/auth/v1/token?grant_type=password",{method:"POST",headers:{apikey:KEY,"Content-Type":"application/json"},body:JSON.stringify({email:em,password:pw})});
+    var o=await r.json().catch(function(){return {}});
+    if(!r.ok||!o.access_token)throw new Error(r.status===400?"Wrong email or password.":(o.msg||o.error_description||"Could not log in."));
+    var d=await fetch(BASE+"/rest/v1/rpc/delete_my_account",{method:"POST",headers:{apikey:KEY,Authorization:"Bearer "+o.access_token,"Content-Type":"application/json"},body:"{}"});
+    if(!d.ok)throw new Error("Could not delete ("+d.status+"). Please email us instead.");
+    try{localStorage.removeItem("sb");localStorage.removeItem("xc")}catch(e){}
+    $("f").innerHTML='<b class="ok">✓ Your account and data have been deleted.</b><p class="mute" style="margin-bottom:0">Remember to remove your Gmail script (myaccount.google.com/permissions) and any SMS shortcut or forwarding.</p>';
+  }catch(e){m.textContent=e.message;this.disabled=false;this.textContent="Delete my account"}
+};
+</script></body></html>
