@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Admin · Our Expenses</title>
+<style>
+:root{color-scheme:light;--bg:#f4f4f1;--surface:#fcfcfb;--card:#fff;--ink:#0b0b0b;--ink2:#52514e;--mute:#7a7974;--line:#e4e2da;--grid:#ecebe6;
+  --s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--good:#1f8a4c;--warn:#b26b00;--bad:#c2372f;--acc:#6250d6;--shadow:0 1px 2px rgba(20,20,10,.05),0 6px 18px rgba(20,20,10,.06)}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){color-scheme:dark;--bg:#121211;--surface:#1a1a19;--card:#1d1d1c;--ink:#f0efec;--ink2:#c3c2b7;--mute:#8f8e86;--line:#2f2f2c;--grid:#2a2a27;
+  --s1:#3987e5;--s2:#d95926;--s3:#199e70;--good:#4cc27e;--warn:#e0a03a;--bad:#ef6b62;--acc:#9085e9;--shadow:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.35)}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 -apple-system,system-ui,"Segoe UI",Roboto,sans-serif;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+main{max-width:1180px;margin:0 auto;padding:16px 16px 60px}
+header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:4px 0 18px}
+header h1{font-size:22px;margin:0;flex:1;letter-spacing:-.3px}header h1 span{color:var(--mute);font-weight:500}
+.btn{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:8px 14px;font:inherit;font-weight:600;cursor:pointer}
+.btn.p{background:var(--acc);border-color:var(--acc);color:#fff}
+.mute{color:var(--mute);font-size:13px}
+h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2);margin:26px 2px 10px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+.k{background:var(--card);border-radius:16px;padding:14px 16px;box-shadow:var(--shadow);min-width:0}
+.k small{display:block;color:var(--mute);font-size:12.5px}.k b{display:block;font-size:26px;letter-spacing:-.5px;margin-top:2px}.k span{font-size:12.5px;color:var(--ink2)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px}
+.card{background:var(--card);border-radius:18px;padding:16px;box-shadow:var(--shadow);min-width:0}
+.card h3{margin:0 0 2px;font-size:16px}.card .sub{color:var(--mute);font-size:12.5px;margin-bottom:10px}
+.chart{position:relative}.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.lg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--ink2);margin-top:6px}.lg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.tt{position:absolute;pointer-events:none;background:var(--ink);color:var(--surface);border-radius:10px;padding:8px 10px;font-size:12.5px;line-height:1.5;white-space:nowrap;display:none;z-index:5;box-shadow:0 6px 18px rgba(0,0,0,.25)}
+.tt i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px}
+.hb{display:grid;grid-template-columns:minmax(120px,1.2fr) 3fr auto;align-items:center;gap:10px;margin:8px 0;font-size:13.5px}
+.hb .tr{height:12px;border-radius:4px;background:var(--grid);overflow:hidden}.hb .tr i{display:block;height:100%;border-radius:0 4px 4px 0;background:var(--s1)}
+.hb b{min-width:70px;text-align:right}
+.stack{display:flex;height:14px;border-radius:5px;overflow:hidden;gap:2px;background:var(--surface);margin:8px 0}
+.st{display:inline-flex;align-items:center;gap:6px;font-weight:600}.st:before{content:"";width:9px;height:9px;border-radius:50%;background:currentColor}
+.ok{color:var(--good)}.wa{color:var(--warn)}.ba{color:var(--bad)}
+.row{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:14px}.row:last-child{border:0}
+.tbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.tbar input,.tbar select{padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font:inherit;min-width:0}
+.tbar input{flex:1;min-width:180px}
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;width:100%;font-size:13px;min-width:900px}
+th{position:sticky;top:0;background:var(--card);text-align:left;font-weight:600;color:var(--ink2);padding:8px;border-bottom:1px solid var(--line);cursor:pointer;white-space:nowrap;user-select:none}
+th.s:after{content:" ▾"}th.s.up:after{content:" ▴"}
+td{padding:8px;border-bottom:1px solid var(--line);white-space:nowrap;vertical-align:top}
+td.n,th.n{text-align:right}
+.pill{display:inline-block;font-size:11.5px;font-weight:600;border-radius:20px;padding:2px 8px;background:var(--grid);color:var(--ink2)}
+.pill.d{background:color-mix(in srgb,var(--good) 16%,transparent);color:var(--good)}.pill.w{background:color-mix(in srgb,var(--s1) 16%,transparent);color:var(--s1)}
+.pill.x{background:color-mix(in srgb,var(--bad) 14%,transparent);color:var(--bad)}
+.score{display:inline-block;width:46px;height:6px;border-radius:3px;background:var(--grid);vertical-align:middle;margin-right:6px;overflow:hidden}.score i{display:block;height:100%;background:var(--s1)}
+.login{max-width:380px;margin:12vh auto 0}.login input{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font:inherit;margin:4px 0 12px}
+.login .btn{width:100%;padding:12px}.err{color:var(--bad);min-height:22px;margin-bottom:6px}
+.empty{color:var(--mute);text-align:center;padding:30px 0}
+</style></head><body><main id="app"></main>
+<script>
+var BASE="https://fwxhclagrwlzxvsmaekt.supabase.co",KEY="sb_publishable_PiCUzSknFyCfGfEVzTiQbg_qEkBYwL_";
+var A={tok:null,d:null,q:"",seg:"",sort:"signed_up",dir:-1};
+var $=function(i){return document.getElementById(i)};
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function n(v){return Number(v||0).toLocaleString("en-IN")}
+function pct(a,b){return b>0?Math.round(a/b*100)+"%":"—"}
+function ago(ts){if(!ts)return "never";var m=Math.round((Date.now()-new Date(ts))/60000);if(m<1)return "just now";if(m<60)return m+" min ago";var h=Math.round(m/60);if(h<24)return h+" h ago";var d=Math.round(h/24);return d+" day"+(d>1?"s":"")+" ago"}
+function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim()}
+function ss(k,v){try{if(v===undefined)return sessionStorage.getItem(k);if(v===null)sessionStorage.removeItem(k);else sessionStorage.setItem(k,v)}catch(e){return null}}
+
+/* ---------- login ---------- */
+function loginView(msg){
+  $("app").innerHTML='<div class="login card"><h1 style="margin:0 0 4px">Admin</h1><div class="mute" style="margin-bottom:16px">Our Expenses · only admin accounts can open this page</div><label class="mute">Email</label><input id="em" type="email" autocomplete="email" autocapitalize="off"><label class="mute">Password</label><input id="pw" type="password" autocomplete="current-password"><div class="err" id="er">'+esc(msg||"")+'</div><button class="btn p" id="go">Log in</button></div>';
+  var go=async function(){var b=$("go");b.disabled=true;b.textContent="Logging in…";
+    try{var r=await fetch(BASE+"/auth/v1/token?grant_type=password",{method:"POST",headers:{apikey:KEY,"Content-Type":"application/json"},body:JSON.stringify({email:$("em").value.trim(),password:$("pw").value})});
+      var o=await r.json().catch(function(){return {}});if(!r.ok||!o.access_token)throw new Error(r.status===400?"Wrong email or password.":"Could not log in.");
+      A.tok=o.access_token;ss("adm",A.tok);await fetchData()}catch(e){$("er").textContent=e.message;b.disabled=false;b.textContent="Log in"}};
+  $("go").onclick=go;$("pw").onkeydown=function(e){if(e.key==="Enter")go()}}
+async function fetchData(){
+  var r=await fetch(BASE+"/rest/v1/rpc/admin_dashboard",{method:"POST",headers:{apikey:KEY,Authorization:"Bearer "+A.tok,"Content-Type":"application/json"},body:"{}"});
+  var t=await r.text();
+  if(r.status===401){ss("adm",null);A.tok=null;return loginView("Session expired. Log in again.")}
+  if(!r.ok){ss("adm",null);A.tok=null;return loginView(/not allowed/.test(t)?"This account is not an admin.":/admin_dashboard/.test(t)?"Run admin_dashboard.sql in Supabase first.":"Error "+r.status+": "+t.slice(0,140))}
+  A.d=JSON.parse(t);render()}
+
+/* ---------- charts ---------- */
+function niceMax(v){if(v<=4)return 4;var p=Math.pow(10,Math.floor(Math.log10(v))),f=v/p;return (f<=1?1:f<=2?2:f<=5?5:10)*p}
+function dl(ds){return new Date(ds+"T00:00:00").toLocaleString("en-IN",{day:"numeric",month:"short"})}
+/* series: [{name,color,key}] ; type line|stack */
+function tsChart(id,rows,series,type,unit){
+  var W=640,H=190,L=34,R=8,T=10,B=24,iw=W-L-R,ih=H-T-B,nn=rows.length;
+  var tot=rows.map(function(r){return type==="stack"?series.reduce(function(a,s){return a+(r[s.key]||0)},0):Math.max.apply(null,series.map(function(s){return r[s.key]||0}))});
+  var mx=niceMax(Math.max.apply(null,tot.concat([0]))),sx=iw/nn,y=function(v){return T+ih-v/mx*ih};
+  var g='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(series.map(function(s){return s.name}).join(", "))+' per day">';
+  for(var i=0;i<=4;i++){var v=mx*i/4,yy=y(v);g+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+yy+'" y2="'+yy+'" stroke="'+css("--grid")+'" stroke-width="1"/><text x="'+(L-6)+'" y="'+(yy+4)+'" text-anchor="end" font-size="10.5" fill="'+css("--mute")+'">'+(v>=1000?Math.round(v/100)/10+"k":Math.round(v))+'</text>'}
+  rows.forEach(function(r,i){if(i%10===(nn-1)%10)g+='<text x="'+(L+sx*i+sx/2)+'" y="'+(H-6)+'" text-anchor="middle" font-size="10.5" fill="'+css("--mute")+'">'+dl(r.day)+'</text>'});
+  if(type==="stack"){var bw=Math.max(2,sx-2);rows.forEach(function(r,i){var acc=0;series.forEach(function(s,si){var v=r[s.key]||0;if(!v)return;var y1=y(acc+v),y0=y(acc),h=Math.max(1,y0-y1-(acc>0?2:0));
+      var top=series.slice(si+1).every(function(s2){return !(r[s2.key])});
+      g+='<path d="'+barPath(L+sx*i+1,y1,bw,h,top?Math.min(4,bw/2):0)+'" fill="'+s.color+'"/>';acc+=v})})}
+  else series.forEach(function(s){var pts=rows.map(function(r,i){return (L+sx*i+sx/2).toFixed(1)+","+y(r[s.key]||0).toFixed(1)}).join(" ");
+    g+='<polyline points="'+pts+'" fill="none" stroke="'+s.color+'" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+    var lr=rows[nn-1];g+='<circle cx="'+(L+sx*(nn-1)+sx/2)+'" cy="'+y(lr[s.key]||0)+'" r="4" fill="'+s.color+'" stroke="'+css("--card")+'" stroke-width="2"/>'});
+  g+='<line id="'+id+'_x" x1="0" x2="0" y1="'+T+'" y2="'+(T+ih)+'" stroke="'+css("--mute")+'" stroke-width="1" opacity="0"/><rect id="'+id+'_h" x="'+L+'" y="'+T+'" width="'+iw+'" height="'+ih+'" fill="transparent"/></svg>';
+  var lgd=series.length>1?'<div class="lg">'+series.map(function(s){return '<span><i style="background:'+s.color+'"></i>'+esc(s.name)+'</span>'}).join('')+'</div>':'';
+  return {html:'<div class="chart" id="'+id+'">'+g+'<div class="tt"></div></div>'+lgd,bind:function(){
+    var el=$(id);if(!el)return;var svg=el.querySelector("svg"),tt=el.querySelector(".tt"),xl=$(id+"_x");
+    function show(cx){var b=svg.getBoundingClientRect(),vx=(cx-b.left)/b.width*W,i=Math.max(0,Math.min(nn-1,Math.floor((vx-L)/sx))),r=rows[i];
+      xl.setAttribute("x1",L+sx*i+sx/2);xl.setAttribute("x2",L+sx*i+sx/2);xl.setAttribute("opacity",".5");
+      tt.innerHTML='<b>'+dl(r.day)+'</b><br>'+series.map(function(s){return '<i style="background:'+s.color+'"></i>'+esc(s.name)+': <b>'+n(r[s.key])+(unit||"")+'</b>'}).join('<br>')+(type==="stack"&&series.length>1?'<br>Total: <b>'+n(tot[i])+'</b>':'');
+      tt.style.display="block";var px=(L+sx*i+sx/2)/W*b.width,w=tt.offsetWidth;tt.style.left=Math.max(0,Math.min(b.width-w,px+12>b.width-w?px-w-12:px+12))+"px";tt.style.top="6px"}
+    svg.addEventListener("pointermove",function(e){show(e.clientX)});svg.addEventListener("pointerdown",function(e){show(e.clientX)});
+    svg.addEventListener("pointerleave",function(){tt.style.display="none";xl.setAttribute("opacity","0")})}}}
+function barPath(x,y,w,h,r){if(r<=0||h<r)return 'M'+x+','+(y+h)+'V'+y+'H'+(x+w)+'V'+(y+h)+'Z';
+  return 'M'+x+','+(y+h)+'V'+(y+r)+'Q'+x+','+y+' '+(x+r)+','+y+'H'+(x+w-r)+'Q'+(x+w)+','+y+' '+(x+w)+','+(y+r)+'V'+(y+h)+'Z'}
+function hbars(rows,base,fmt){var mx=Math.max.apply(null,rows.map(function(r){return r[1]}).concat([1]));
+  return rows.map(function(r){return '<div class="hb" title="'+esc(r[0])+': '+r[1]+'"><span>'+esc(r[0])+'</span><div class="tr"><i style="width:'+(r[1]/mx*100).toFixed(1)+'%;'+(r[2]?'background:'+r[2]:'')+'"></i></div><b>'+n(r[1])+(base?' <span class="mute">'+pct(r[1],base)+'</span>':'')+'</b></div>'}).join('')}
+
+/* ---------- page ---------- */
+function render(){
+  var d=A.d,k=d.kpi||{},rc=d.reach||{},h=d.health||{},daily=d.daily||[],users=d.users||[],fam=d.families||[];
+  var S1=css("--s1"),S2=css("--s2"),S3=css("--s3");
+  var stick=k.active_30d?Math.round((k.active_today||0)/k.active_30d*100):null;
+  var tile=function(lbl,val,sub){return '<div class="k"><small>'+lbl+'</small><b>'+val+'</b>'+(sub?'<span>'+sub+'</span>':'')+'</div>'};
+  var x='<header><h1>Our Expenses <span>· Admin</span></h1><span class="mute">Updated '+new Date(d.generated_at).toLocaleString("en-IN",{hour:"numeric",minute:"2-digit",day:"numeric",month:"short"})+'</span><button class="btn" id="rf">Refresh</button><button class="btn" id="lo">Log out</button></header>';
+  // REACH
+  x+='<h2>Reach</h2><div class="kpis">'+tile("Total users",n(k.total_users),"+"+n(k.new_7d)+" this week · +"+n(rc.new_30d)+" in 30 days")+tile("New today",n(k.new_today))+tile("Families",n(k.families),"avg "+(rc.avg_family||0)+" people")+tile("Joined by invite",n(rc.joined_by_invite),pct(rc.families_multi,k.families)+" of families have 2+")+tile("Installed as app",n(rc.installed),pct(rc.installed,rc.with_os)+" of known devices")+tile("Accounts deleted",n(rc.deleted_30d),"last 30 days")+'</div>';
+  var os=rc.os||{},osRows=[["iPhone",os.ios||0,S1],["Android",os.and||0,S2],["Computer",os.desk||0,S3]],osT=osRows.reduce(function(a,r){return a+r[1]},0);
+  // USAGE
+  x+='<h2>Usage</h2><div class="kpis">'+tile("Active today",n(k.active_today),"opened the app")+tile("Active · 7 days",n(k.active_7d),pct(k.active_7d,k.total_users)+" of users")+tile("Active · 30 days",n(k.active_30d),pct(k.active_30d,k.total_users)+" of users")+tile("Stickiness",stick===null?"—":stick+"%","daily ÷ monthly active")+tile("Avg usage score",(k.avg_usage_score==null?"—":k.avg_usage_score)+"<span style='font-size:15px'>/100</span>","how fully people use it")+'</div>';
+  var c1=tsChart("c1",daily,[{name:"Active users",color:S1,key:"active_users"},{name:"New users",color:S2,key:"new_users"}],"line");
+  var seg=d.segments||{},segRows=[["Daily users",seg["daily user"]||0],["Weekly users",seg["weekly user"]||0],["Occasional",seg["occasional"]||0],["Inactive",seg["inactive"]||0],["Stuck: no family",seg["stuck: no family"]||0]];
+  x+='<div class="grid2" style="margin-top:14px"><div class="card"><h3>Active and new users</h3><div class="sub">Per day, last 60 days. Hover for numbers.</div>'+c1.html+'</div>'+
+     '<div class="card"><h3>How often people use it</h3><div class="sub">Users by active days in the last 30 days</div>'+hbars(segRows,k.total_users)+
+     '<h3 style="margin-top:16px">Devices</h3><div class="sub">Last device each person opened the app on</div>'+(osT?'<div class="stack">'+osRows.filter(function(r){return r[1]}).map(function(r){return '<i title="'+r[0]+': '+r[1]+'" style="width:'+(r[1]/osT*100)+'%;background:'+r[2]+'"></i>'}).join('')+'</div><div class="lg">'+osRows.map(function(r){return '<span><i style="background:'+r[2]+'"></i>'+r[0]+' '+n(r[1])+' ('+pct(r[1],osT)+')</span>'}).join('')+'</div>':'<div class="mute">Appears once people open the updated app.</div>')+'</div></div>';
+  // ADOPTION
+  var fn=(d.funnel||[]).map(function(f){return [f.stage,f.people]}),base=fn.length?fn[0][1]:0;
+  x+='<h2>Feature adoption</h2><div class="grid2"><div class="card"><h3>Funnel</h3><div class="sub">How far people get, as a share of everyone who signed up</div>'+hbars(fn,base)+'</div>';
+  x+='<div class="card"><h3>Tracking set up</h3><div class="sub">How payments reach the app</div>'+hbars([["Email script running",h.email_running||0,S1],["SMS forwarding used",k.using_sms||0,S2],["Uploaded a statement",k.uploaded_statements||0,S3]],k.total_users)+
+     '<div class="row" style="margin-top:10px"><span>Email scripts stopped (no check in 30 min)</span><b class="'+(h.email_stopped?'wa':'')+'">'+n(h.email_stopped)+'</b></div></div></div>';
+  // PERFORMANCE
+  var c2=tsChart("c2",daily,[{name:"Email",color:S1,key:"payments_email"},{name:"SMS",color:S2,key:"payments_sms"},{name:"Manual",color:S3,key:"payments_manual"}],"stack");
+  var hasLoad=daily.some(function(r){return r.load_ms}),c3=tsChart("c3",daily.filter(function(r){return r.load_ms}).map(function(r){return {day:r.day,load_ms:r.load_ms}}),[{name:"Load time",color:S1,key:"load_ms"}],"line"," ms");
+  var lp=h.last_payment_at?(Date.now()-new Date(h.last_payment_at))/36e5:null,stl=lp===null?'<span class="st ba">No automatic payments yet</span>':lp<6?'<span class="st ok">Healthy</span>':lp<24?'<span class="st wa">Quiet for '+Math.round(lp)+' h</span>':'<span class="st ba">Nothing for '+Math.round(lp/24)+' days</span>';
+  var auto=(h.saved_auto_7d||0),ref=(h.refused_7d||0);
+  x+='<h2>Performance</h2><div class="kpis">'+tile("Payments · 24 h",n(k.payments_last_24h))+tile("Saved automatically · 7 d",n(auto),"by email and SMS")+tile("Refused as not a payment",n(ref),pct(ref,auto+ref)+" of incoming · 7 d")+tile("Duplicates skipped",n(h.dup_skipped_7d),"SMS + email copies · 7 d")+tile("App load time",h.avg_load_ms_7d?(h.avg_load_ms_7d/1000).toFixed(1)+" s":"—","average · 7 d")+'</div>';
+  x+='<div class="grid2" style="margin-top:14px"><div class="card"><h3>Payments added per day</h3><div class="sub">By how they arrived. Statement uploads are counted in the table below.</div>'+c2.html+'</div>'+
+     '<div class="card"><h3>Pipeline status</h3><div class="sub">Is data still flowing in?</div><div class="row"><span>Last automatic payment</span><b>'+ago(h.last_payment_at)+'</b></div><div class="row"><span>Status</span>'+stl+'</div><div class="row"><span>Email scripts running</span><b>'+n(h.email_running)+'</b></div><div class="row"><span>Statements uploaded · 60 d</span><b>'+n(daily.reduce(function(a,r){return a+(r.statements_uploaded||0)},0))+'</b></div>'+
+     '<h3 style="margin-top:14px">App load time</h3><div class="sub">Average seconds from opening the app to data on screen</div>'+(hasLoad?c3.html:'<div class="mute">Appears once people open the updated app.</div>')+'</div></div>';
+  // USERS TABLE
+  x+='<h2>Users ('+users.length+')</h2><div class="card"><div class="tbar"><input id="q" type="search" placeholder="Search name, email or family" value="'+esc(A.q)+'"><select id="sg"><option value="">Everyone</option>'+["daily user","weekly user","occasional","inactive","stuck: no family"].map(function(s){return '<option'+(A.seg===s?' selected':'')+'>'+s+'</option>'}).join('')+'</select><span class="mute" id="cnt"></span></div><div class="tw" id="ut"></div></div>';
+  // FAMILIES
+  x+='<h2>Families ('+fam.length+')</h2><div class="card"><div class="tw"><table style="min-width:760px"><thead><tr><th style="cursor:default">Family</th><th style="cursor:default">People</th><th class="n" style="cursor:default">Payments</th><th style="cursor:default">Last payment</th><th class="n" style="cursor:default">Budgets</th><th class="n" style="cursor:default">Bills</th><th class="n" style="cursor:default">Goals</th><th class="n" style="cursor:default">Active · 7 d</th><th style="cursor:default">Created</th></tr></thead><tbody>'+
+     (fam.length?fam.map(function(f){return '<tr><td><b>'+esc(f.family||"—")+'</b></td><td>'+esc(f.names||"")+' <span class="mute">('+f.people+')</span></td><td class="n">'+n(f.payments)+'</td><td>'+ago(f.last_payment_added)+'</td><td class="n">'+n(f.budgets)+'</td><td class="n">'+n(f.bills)+'</td><td class="n">'+n(f.goals)+'</td><td class="n">'+n(f.active_people_7d)+'/'+f.people+'</td><td>'+esc(f.created||"")+'</td></tr>'}).join(''):'<tr><td colspan="9" class="empty">No families yet</td></tr>')+'</tbody></table></div></div>';
+  $("app").innerHTML=x;
+  [c1,c2,c3].forEach(function(c){c.bind()});
+  $("rf").onclick=async function(){this.textContent="Refreshing…";await fetchData()};
+  $("lo").onclick=function(){ss("adm",null);A.tok=null;loginView()};
+  $("q").oninput=function(){A.q=this.value;userTable()};$("sg").onchange=function(){A.seg=this.value;userTable()};
+  userTable()}
+var COLS=[["name","Person"],["family","Family"],["usage","Usage"],["score","Score",1],["active30","Active days · 30 d",1],["opens30","Opens · 30 d",1],["last_opened","Last opened"],["email_setup","Email"],["sms","SMS"],["statements","Statements",1],["payments","Payments",1],["added7","Added · 7 d",1],["pct_cat","Categorised",1],["os","Device"],["signed_up","Signed up"]];
+function userTable(){
+  var q=A.q.toLowerCase().trim(),U=(A.d.users||[]).filter(function(u){return (!A.seg||u.usage===A.seg)&&(!q||[u.name,u.email,u.family].join(" ").toLowerCase().indexOf(q)>=0)});
+  U.sort(function(a,b){var x=a[A.sort],y=b[A.sort];if(x==null)return 1;if(y==null)return -1;return (x>y?1:x<y?-1:0)*A.dir});
+  var pc={"daily user":"d","weekly user":"w","stuck: no family":"x"};
+  var h='<table><thead><tr>'+COLS.map(function(c){return '<th data-k="'+c[0]+'" class="'+(c[2]?'n ':'')+(A.sort===c[0]?'s'+(A.dir>0?' up':''):'')+'">'+c[1]+'</th>'}).join('')+'</tr></thead><tbody>';
+  if(!U.length)h+='<tr><td colspan="'+COLS.length+'" class="empty">No users match</td></tr>';
+  U.forEach(function(u){h+='<tr><td><b>'+esc(u.name||"—")+'</b><div class="mute">'+esc(u.email)+'</div></td><td>'+esc(u.family||"—")+(u.role==="owner"?' <span class="mute">owner</span>':'')+'</td><td><span class="pill '+(pc[u.usage]||'')+'">'+esc(u.usage)+'</span></td>'+
+    '<td class="n"><span class="score"><i style="width:'+(u.score||0)+'%"></i></span>'+(u.score||0)+'</td><td class="n">'+n(u.active30)+'</td><td class="n">'+n(u.opens30)+'</td><td>'+ago(u.last_opened)+'</td>'+
+    '<td>'+(u.email_running?'<span class="ok">✓ running</span>':u.email_setup?'<span class="wa">stopped</span>':'<span class="mute">—</span>')+'</td><td>'+(u.sms?'<span class="ok">✓</span>':'<span class="mute">—</span>')+'</td>'+
+    '<td class="n">'+n(u.statements)+'</td><td class="n">'+n(u.payments)+'</td><td class="n">'+n(u.added7)+'</td><td class="n">'+(u.pct_cat==null?'—':u.pct_cat+'%')+'</td><td>'+({ios:"iPhone",and:"Android",desk:"Computer"}[u.os]||"—")+(u.pwa?' <span class="mute">app</span>':'')+'</td><td>'+esc(u.signed_up||"")+'</td></tr>'});
+  $("ut").innerHTML=h+'</tbody></table>';$("cnt").textContent=U.length+" shown";
+  $("ut").querySelectorAll("th").forEach(function(th){th.onclick=function(){var k=th.dataset.k;if(A.sort===k)A.dir=-A.dir;else{A.sort=k;A.dir=(["name","family","usage","os"].indexOf(k)>=0)?1:-1}userTable()}})}
+
+A.tok=ss("adm");if(A.tok)fetchData().catch(function(){loginView()});else loginView();
+</script></body></html>
