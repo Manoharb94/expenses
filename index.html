@@ -6,8 +6,10 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icon.png">
-<title>Our Expenses</title>
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Nestwise</title>
+<link rel="icon" type="image/png" href="favicon-32.png">
+<meta name="theme-color" content="#6d28d9">
 <style>
 :root{--bg:#f6f5f1;--card:#fff;--ink:#1c1c1a;--mute:#6f6e68;--line:#e4e2da;--acc:#1f6f5c;--out:#b4432f;--in:#1f6f5c;--chip:#ecebe4;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px)}
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#151514;--card:#1f1f1d;--ink:#efeee8;--mute:#9b9a92;--line:#33332f;--acc:#4fb39a;--out:#e8836e;--in:#4fb39a;--chip:#2b2b28;color-scheme:dark}}
@@ -154,6 +156,8 @@ nav button{padding:8px 2px;gap:3px;border-radius:22px}nav button svg{width:22px;
 .evs{width:auto;margin:0;padding:6px 28px 6px 10px;font-size:13px;font-weight:600;border-radius:10px;border:1px solid var(--line);background:var(--chip);color:var(--ink);appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--mute) 50%),linear-gradient(135deg,var(--mute) 50%,transparent 50%);background-position:calc(100% - 14px) 50%,calc(100% - 9px) 50%;background-size:5px 5px;background-repeat:no-repeat}
 .trt{font-size:12px;opacity:.9;text-align:center;margin:-2px 0 8px;min-height:16px}
 .balr{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;padding:12px 14px;border-radius:14px;background:var(--chip);cursor:pointer}.balr small{display:block;font-size:12px;color:var(--mute);font-weight:400}.balr span{font-weight:600}.balr b{font-size:19px;white-space:nowrap}
+.tgl{position:relative;display:inline-block;width:50px;height:30px;flex:none}.tgl input{opacity:0;width:0;height:0;position:absolute}.tgl span{position:absolute;inset:0;border-radius:15px;background:var(--line);transition:background .2s;cursor:pointer}.tgl span:before{content:"";position:absolute;width:24px;height:24px;left:3px;top:3px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .2s}.tgl input:checked+span{background:var(--acc)}.tgl input:checked+span:before{transform:translateX(20px)}
+.pill2{font-size:12px;font-weight:600;border-radius:20px;padding:3px 9px;background:var(--chip);color:var(--ink2,var(--mute));white-space:nowrap}
 </style>
 </head>
 <body>
@@ -168,12 +172,12 @@ var NOBUD={"Salary / Income":1};NOBUD[TRF]=1;NOBUD[IGN]=1;NOBUD[CCB]=1;NOBUD[LOU
 var NOBUDGET={};for(var k in NOBUD)NOBUDGET[k]=1;["Rent / EMI","Education","Home loan EMI","Kid education","Kid day care","Maid","Cook","Car cleaning","Electricity bill","Gas bill","Family donation","Family & Friends"].forEach(function(c){NOBUDGET[c]=1});
 var S={tab:"home",range:"month",from:"",to:"",rp:"this",hf:"all",pf:"",txns:[],budgets:[],fixed:[],planErr:"",goals:[],gents:[],lrows:{},goalErr:"",cur:"₹",code:"",name:"",err:"",loaded:false};
 var ACC={emerald:["Emerald","#1f6f5c"],ocean:["Ocean","#2563eb"],violet:["Violet","#7c3aed"],sunset:["Sunset","#d9622b"],rose:["Rose","#be3a6a"],graphite:["Graphite","#334155"]};
-function applyLook(){var r=document.documentElement,t=ls("theme"),a=ls("accent");
+function applyLook(){var r=document.documentElement,t=ls("theme"),a=ls("accent")||"violet";
   if(t==="light"||t==="dark")r.setAttribute("data-theme",t);else r.removeAttribute("data-theme");
   if(a&&a!=="emerald"&&ACC[a])r.setAttribute("data-accent",a);else r.removeAttribute("data-accent");
   var m=document.querySelector('meta[name=theme-color]');if(!m){m=document.createElement("meta");m.name="theme-color";document.head.appendChild(m)}
   m.content=getComputedStyle(r).getPropertyValue("--bg").trim()||"#151514"}
-function lookCard(){var t=ls("theme")||"auto",a=ls("accent")||"emerald";
+function lookCard(){var t=ls("theme")||"auto",a=ls("accent")||"violet";
   var h='<h2>Look</h2><div class="card"><div class="mute">Mode</div><div class="look">';
   [["auto","Auto"],["light","☀️ Light"],["dark","🌙 Dark"]].forEach(function(x){h+='<button data-theme="'+x[0]+'"'+(t===x[0]?' class="on"':'')+'>'+x[1]+'</button>'});
   h+='</div><div class="mute">Colour</div><div class="sw">';
@@ -229,8 +233,8 @@ async function enter(){
   var pre=S.auth?startFetch():null;
   try{S.profile=await api("rpc/my_profile",{method:"POST",body:"{}"})}
   catch(e){if(!S.auth)return;S.view="err";S.amsg=errText(e);render();return}
-  if(!S.profile){S.view="family";S.amsg="";render();return}
-  S.code=S.profile.household_id;S.name=S.profile.display_name;ls("name","");ls("code","");S.view="";S.pf=ls("pf")||S.name;var qq=!!(S._cached&&S.loaded);S._cached=false;Promise.resolve(load(qq,pre)).then(function(){touch(true)},function(){touch(true)})}
+  if(!S.profile){try{S.invites=await api("rpc/my_invites",{method:"POST",body:"{}"})||[]}catch(e){S.invites=[]}S.view="family";S.amsg="";render();return}
+  S.code=S.profile.household_id;S.name=S.profile.display_name;ls("name","");ls("code","");S.view="";S.pf=ls("pf")||S.name;var qq=!!(S._cached&&S.loaded);S._cached=false;Promise.resolve(load(qq,pre)).then(function(){touch(true)},function(){touch(true)});api("rpc/my_invites",{method:"POST",body:"{}"}).then(function(r){S.invites=r||[];if(S.invites.length&&S.tab==="home")render()}).catch(function(){})}
 function touch(first){if(!S.auth||Date.now()-(S._tt||0)<30*60000)return;S._tt=Date.now();var pwa=false;try{pwa=nativeApp()||window.matchMedia("(display-mode: standalone)").matches||navigator.standalone===true}catch(e){}
   api("rpc/touch",{method:"POST",body:JSON.stringify({p_os:phoneOS(),p_pwa:pwa,p_ms:first&&!S._ttm?Math.round(performance.now()):null})}).catch(function(){});S._ttm=1}
 document.addEventListener("visibilitychange",function(){if(!document.hidden&&S.code)touch()});
@@ -252,7 +256,7 @@ async function copyText(t){
   document.body.appendChild(a);var ok=false;try{a.select();a.setSelectionRange(0,t.length);ok=document.execCommand("copy")}catch(e){}
   document.body.removeChild(a);return ok}
 function authView(){
-  var v=S.view,legacy=!!ls("code"),h='<div class="brand">💸</div><h1 style="text-align:center">Our Expenses</h1><div class="card">';
+  var v=S.view,legacy=!!ls("code"),h='<div class="brand"><svg width="84" height="84" style="display:block;margin:0 auto" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">  <defs>    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">      <stop offset="0" stop-color="#8b5cf6"/><stop offset="1" stop-color="#4c1d95"/>    </linearGradient>    <radialGradient id="glow" cx="0.25" cy="0.15" r="0.7">      <stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>    </radialGradient>  </defs>  <rect width="1024" height="1024" rx="230" fill="url(#bg)"/>  <rect width="1024" height="1024" rx="230" fill="url(#glow)"/>    <path d="M248 488 L512 268 L776 488" fill="none" stroke="#fff" stroke-width="76" stroke-linecap="round" stroke-linejoin="round"/>    <rect x="356" y="652" width="84" height="120" rx="42" fill="#fff" opacity=".78"/>  <rect x="470" y="582" width="84" height="190" rx="42" fill="#fff"/>  <rect x="584" y="512" width="84" height="260" rx="42" fill="#5eead4"/></svg></div><h1 style="text-align:center;margin-bottom:2px">Nestwise</h1><div class="mute" style="text-align:center;margin-bottom:14px">Family money, made clear</div><div class="card">';
   var inp=function(id,ph,type,ac,val){return '<input id="'+id+'" type="'+type+'" placeholder="'+ph+'" autocomplete="'+ac+'"'+(type==="email"?' inputmode="email" autocapitalize="off" autocorrect="off"':'')+(val?' value="'+esc(val)+'"':'')+'>'};
   var btn=function(a,t){return '<button class="btn" data-a="'+a+'">'+t+'</button>'};
   var lnk=function(a,t){return '<div style="text-align:center"><button class="alink" data-a="'+a+'">'+t+'</button></div>'};
@@ -262,6 +266,7 @@ function authView(){
   else if(v==="forgot"){h+='<h2 style="margin-top:0">Reset password</h2><div class="note" style="margin-bottom:10px">Enter your email. We will send a link to choose a new password.</div>'+inp("a_em","Email","email","email",S.lastEmail)+msg+btn("forgot","Send reset link")+lnk("go-login","Back to log in")}
   else if(v==="newpw"){h+='<h2 style="margin-top:0">Choose a new password</h2>'+inp("a_pw","New password (8+ characters)","password","new-password")+inp("a_pw2","Repeat new password","password","new-password")+msg+btn("newpw","Save password")}
   else if(v==="family"){var c=S.fmode==="create";
+    if((S.invites||[]).length){h+='<h2 style="margin-top:0">You’re invited</h2>'+inp("f_inm","Your name, e.g. Manjari","text","given-name")+(S.invites||[]).map(function(x){return '<div class="card" style="box-shadow:none;border:1px solid var(--line);margin:8px 0"><b>'+esc(x.by)+'</b> invited you to <b>'+esc(x.family)+'</b><div class="note" style="margin:2px 0 10px">'+x.members+' '+(x.members===1?'person':'people')+' · you can '+(x.can_edit?'view and edit':'view')+' the family’s payments</div><div class="row" style="gap:8px"><button class="btn s" data-a="iacc:'+x.id+'">Join</button><button class="btn ghost s" data-a="idec:'+x.id+'">Decline</button></div></div>'}).join('')+msg+'<div class="note" style="margin:14px 0 6px;text-align:center">or</div>';msg=''}
     h+='<h2 style="margin-top:0">Your family</h2><div class="seg"><button class="btn s '+(c?'':'ghost')+'" data-a="ftab-c">Start a family</button><button class="btn s '+(c?'ghost':'')+'" data-a="ftab-j">Join with a code</button></div>'+
       (c?'<div class="note" style="margin-bottom:10px">You will get an invite code to share with your family.</div>'+inp("f_fam","Family name (optional)","text","off")+inp("f_nm","Your name, e.g. Manohar","text","given-name")+'<div class="note" style="margin-bottom:10px">Use the same name as PERSON in your Gmail script.</div>'+msg+btn("fcreate","Create family")
         :'<div class="note" style="margin-bottom:10px">Ask the family owner for the invite code (Settings, Family members).</div>'+inp("f_code","Invite code","text","off")+inp("f_nm","Your name, e.g. Manjari","text","given-name")+'<div class="note" style="margin-bottom:10px">Use the same name as PERSON in your Gmail script.</div>'+msg+btn("fjoin","Join family"))+lnk("out","Log out")}
@@ -293,6 +298,9 @@ async function authAction(a){
       busy(false);return m("If this email has an account, a reset link is on its way. Check your inbox and spam.",true)}
     if(a==="newpw"){var n1=g("a_pw"),n2=g("a_pw2");if(n1.length<8)return m("Password needs at least 8 characters.");if(n1!==n2)return m("The two passwords do not match.");busy(true);
       await authFetch("user","PUT",{password:n1},S.auth.access);S.view="";S.amsg="";render();toast("Password changed");await enter();return}
+    if(a.indexOf("iacc:")===0){var nm3=g("f_inm").trim();if(nm3.length<2)return m("Enter your name first.");busy(true);
+      await api("rpc/accept_invite",{method:"POST",body:JSON.stringify({p_id:a.slice(5),p_display:nm3})});S.view="";render();toast("Welcome to the family!");await enter();return}
+    if(a.indexOf("idec:")===0){await api("rpc/decline_invite",{method:"POST",body:JSON.stringify({p_id:a.slice(5)})});S.invites=(S.invites||[]).filter(function(x){return x.id!==a.slice(5)});return go("family")}
     if(a==="fcreate"){var nm=g("f_nm").trim();if(nm.length<2)return m("Enter your name.");busy(true);
       var r=await api("rpc/create_household",{method:"POST",body:JSON.stringify({p_name:g("f_fam").trim(),p_display:nm})});
       S.newCode=r.invite_code;return go("invite")}
@@ -304,7 +312,7 @@ function bindAuth(el){
   el.querySelectorAll("input").forEach(function(i){i.onkeydown=function(e){if(e.key==="Enter"){var pb=el.querySelector(".btn:not(.ghost):not(.s)[data-a]");if(pb)pb.click()}}})}
 
 /* ---------- connect your Gmail (personal script) ---------- */
-var SC_TPL="/* Our Expenses: reads your own bank alert emails and sends the payments to the app.\n   Made for __NAME__. Keep this private: it contains your personal key.\n   1. Press Save (disk icon).  2. In the function box choose  setup  and press Run.\n   3. Allow access when Google asks (Advanced > Go to project). That is all. */\nvar API_ = \"https://fwxhclagrwlzxvsmaekt.supabase.co/rest/v1/rpc/\";\nvar ANON_ = \"sb_publishable_PiCUzSknFyCfGfEVzTiQbg_qEkBYwL_\";\nvar USER_KEY = \"__KEY__\";\n\nfunction call_(fn, payload) {\n  var r = UrlFetchApp.fetch(API_ + fn, { method: \"post\", contentType: \"application/json\",\n    headers: { apikey: ANON_ }, payload: JSON.stringify(payload), muteHttpExceptions: true });\n  if (r.getResponseCode() >= 300) throw new Error(fn + \" replied \" + r.getResponseCode() + \" \" + r.getContentText());\n  return JSON.parse(r.getContentText());\n}\nfunction clip_(b) {\n  b = b.replace(/https?:\\/\\/\\S+/g, \" \").replace(/\\s+/g, \" \");\n  var i = b.search(/(?:Rs\\.?|INR|\\u20B9)\\s?[0-9]/i);\n  if (i > 300) b = b.substring(i - 300);\n  return b.substring(0, 2000);\n}\nfunction sync_(days, stopAt, fresh) {\n  var cfg = call_(\"script_banks\", { p_key: USER_KEY });\n  if (!cfg.queries.length) { Logger.log(\"No banks are selected in the app.\"); return 0; }\n  var props = PropertiesService.getScriptProperties();\n  var last = fresh ? 0 : Number(props.getProperty(\"last\") || 0);\n  var cutoff = last ? last - 3 * 3600 * 1000 : 0;\n  var q = \"(\" + cfg.queries.join(\" OR \") + \") newer_than:\" + days + \"d\";\n  var saved = 0, skipped = 0, seen = 0, newest = last, start = 0, done = false;\n  while (Date.now() < stopAt) {\n    var threads = GmailApp.search(q, start, 25);\n    if (!threads.length) { done = true; break; }\n    start += threads.length;\n    var raws = [];\n    threads.forEach(function (t) { t.getMessages().forEach(function (m) {\n      var ts = m.getDate().getTime();\n      if (ts > cutoff) { raws.push(clip_(m.getPlainBody())); seen++; if (ts > newest) newest = ts; }\n    }); });\n    for (var i = 0; i < raws.length; i += 80) { var r = call_(\"ingest_user\", { p_key: USER_KEY, p_raws: raws.slice(i, i + 80) }); saved += r.saved; skipped += r.skipped; }\n  }\n  if (done && newest > last) props.setProperty(\"last\", String(newest));\n  Logger.log(\"Checked \" + seen + \" emails: \" + saved + \" new, \" + skipped + \" already there or not a payment.\");\n  return saved;\n}\nfunction run() { sync_(2, Date.now() + 240000, false); }\nfunction setup() {\n  ScriptApp.getProjectTriggers().forEach(function (t) { ScriptApp.deleteTrigger(t); });\n  ScriptApp.newTrigger(\"run\").timeBased().everyMinutes(5).create();\n  var n = sync_(60, Date.now() + 270000, true);\n  Logger.log(\"Connected. Saved \" + n + \" payments so far. New alerts are checked every 5 minutes.\");\n}\n";
+var SC_TPL="/* Nestwise: reads your own bank alert emails and sends the payments to the app.\n   Made for __NAME__. Keep this private: it contains your personal key.\n   1. Press Save (disk icon).  2. In the function box choose  setup  and press Run.\n   3. Allow access when Google asks (Advanced > Go to project). That is all. */\nvar API_ = \"https://fwxhclagrwlzxvsmaekt.supabase.co/rest/v1/rpc/\";\nvar ANON_ = \"sb_publishable_PiCUzSknFyCfGfEVzTiQbg_qEkBYwL_\";\nvar USER_KEY = \"__KEY__\";\n\nfunction call_(fn, payload) {\n  var r = UrlFetchApp.fetch(API_ + fn, { method: \"post\", contentType: \"application/json\",\n    headers: { apikey: ANON_ }, payload: JSON.stringify(payload), muteHttpExceptions: true });\n  if (r.getResponseCode() >= 300) throw new Error(fn + \" replied \" + r.getResponseCode() + \" \" + r.getContentText());\n  return JSON.parse(r.getContentText());\n}\nfunction clip_(b) {\n  b = b.replace(/https?:\\/\\/\\S+/g, \" \").replace(/\\s+/g, \" \");\n  var i = b.search(/(?:Rs\\.?|INR|\\u20B9)\\s?[0-9]/i);\n  if (i > 300) b = b.substring(i - 300);\n  return b.substring(0, 2000);\n}\nfunction sync_(days, stopAt, fresh) {\n  var cfg = call_(\"script_banks\", { p_key: USER_KEY });\n  if (!cfg.queries.length) { Logger.log(\"No banks are selected in the app.\"); return 0; }\n  var props = PropertiesService.getScriptProperties();\n  var last = fresh ? 0 : Number(props.getProperty(\"last\") || 0);\n  var cutoff = last ? last - 3 * 3600 * 1000 : 0;\n  var q = \"(\" + cfg.queries.join(\" OR \") + \") newer_than:\" + days + \"d\";\n  var saved = 0, skipped = 0, seen = 0, newest = last, start = 0, done = false;\n  while (Date.now() < stopAt) {\n    var threads = GmailApp.search(q, start, 25);\n    if (!threads.length) { done = true; break; }\n    start += threads.length;\n    var raws = [];\n    threads.forEach(function (t) { t.getMessages().forEach(function (m) {\n      var ts = m.getDate().getTime();\n      if (ts > cutoff) { raws.push(clip_(m.getPlainBody())); seen++; if (ts > newest) newest = ts; }\n    }); });\n    for (var i = 0; i < raws.length; i += 80) { var r = call_(\"ingest_user\", { p_key: USER_KEY, p_raws: raws.slice(i, i + 80) }); saved += r.saved; skipped += r.skipped; }\n  }\n  if (done && newest > last) props.setProperty(\"last\", String(newest));\n  Logger.log(\"Checked \" + seen + \" emails: \" + saved + \" new, \" + skipped + \" already there or not a payment.\");\n  return saved;\n}\nfunction run() { sync_(2, Date.now() + 240000, false); }\nfunction setup() {\n  ScriptApp.getProjectTriggers().forEach(function (t) { ScriptApp.deleteTrigger(t); });\n  ScriptApp.newTrigger(\"run\").timeBased().everyMinutes(5).create();\n  var n = sync_(60, Date.now() + 270000, true);\n  Logger.log(\"Connected. Saved \" + n + \" payments so far. New alerts are checked every 5 minutes.\");\n}\n";
 S.sc=null;S.banks=null;
 function scriptText(){return SC_TPL.split("__NAME__").join(S.sc.name||"").split("__KEY__").join(S.sc.key||"")}
 function ago(ts){if(!ts)return "";var m=Math.round((Date.now()-new Date(ts).getTime())/60000);if(m<1)return "just now";if(m<60)return m+" min ago";var h=Math.round(m/60);if(h<24)return h+" hour"+(h>1?"s":"")+" ago";var d=Math.round(h/24);return d+" day"+(d>1?"s":"")+" ago"}
@@ -500,7 +508,7 @@ function inRange(t){var d=t.txn_date||"";return personOK(t)&&(!S.from||d>=S.from
 function sum(l,ty){return l.filter(function(t){return t.type===ty}).reduce(function(a,t){return a+Number(t.amount)},0)}
 function persons(){var seen={};S.txns.forEach(function(t){if(t.person)seen[t.person]=1});if(S.name)seen[S.name]=1;(S.members||[]).forEach(function(m){if(m.display_name)seen[m.display_name]=1});
   return Object.keys(seen).sort(function(a,b){return a===S.name?-1:b===S.name?1:a<b?-1:1})}
-function allWord(cap){var n=persons().length;return n>2?(cap?'Everyone':'everyone'):(cap?'Both of us':'both of us')}
+function allWord(cap){return cap?'Family':'the family'}
 function personUI(){return personChips()}
 function rangeUI(){
   var o=[["month","This month"],["last","Last month"],["all","All time"],["custom","Custom"]],h=personUI()+'<div class="mute">Period</div><select id="rg">';
@@ -1046,15 +1054,15 @@ function topbar(title,back){
   return '<div class="tb">'+(back?'<button class="tbb" data-go="'+back+'" aria-label="Back">'+IC.back+'</button>':'<button class="tbb" data-go="menu" aria-label="Menu">'+IC.menu+'</button>')+
     '<b>'+esc(title)+'</b>'+(back?'<span class="tbb"></span>':'<button class="tbb" data-go="list" data-srch="1" aria-label="Search">'+IC.search+'</button>')+'</div>'}
 function personChips(){
-  var ns=persons();if(ns.length<2)return '';var cur=S.pf||"__both",h='<div class="seg2">';
+  var ns=persons();if(ns.length<2||!incFam()){if(!incFam()&&S.pf!==S.name)S.pf=S.name;return ''}var cur=S.pf||"__both",h='<div class="seg2">';
   ns.forEach(function(n){h+='<button data-pf="'+esc(n)+'" class="'+(cur===n?'on':'')+'">'+esc(n===S.name?'Me':n)+'</button>'});
-  return h+'<button data-pf="__both" class="'+(cur==="__both"?'on':'')+'">'+(ns.length>2?'Everyone':'Together')+'</button></div>'}
+  return h+'<button data-pf="__both" class="'+(cur==="__both"?'on':'')+'">Family</button></div>'}
 function go(t){
   if(t==="stmt"){S.rp="stmt";t="rep"}
   S.tab=t;if(t==="sms"){S.smsStep=0;if(nativeSmsOK())S.nsms=null}if(t==="mail")S.mailStep=0;
   render();window.scrollTo(0,0);
   if(t==="plan"||t==="goals")quiet(loadPlan());
-  if(t==="fam"||t==="set"||t==="menu")quiet(loadMembers());
+  if(t==="fam"||t==="set"||t==="menu")quiet(loadMembers());if(t==="fam")quiet(loadFam());
   if(t==="track"||t==="sms"||t==="mail")quiet(loadSc());
   if(t==="rep"&&S.rp==="stmt")quiet(loadImports())}
 function byNew(a,b){return (a.txn_date||"")<(b.txn_date||"")?1:(a.txn_date||"")>(b.txn_date||"")?-1:(String(a.created_at||"")<String(b.created_at||"")?1:-1)}
@@ -1122,8 +1130,9 @@ function vDash(){
   if(S.range!=="month")preset("month");
   var L=S.txns.filter(inRange),Lc=L.filter(isCount),pdt=periodDates(),X=expenseSplit(Lc,pdt.from,pdt.to),P=prevInfo(),F=flowCalc(L,Lc,X);
   var pendN=S.txns.filter(function(t){return personOK(t)&&!t.category&&t.type==="out"}).length;
-  var h=topbar("Our Expenses")+personChips();
+  var h=topbar("Nestwise")+personChips();
   if(S.err)h+='<div class="card out">'+esc(S.err)+'</div>';
+  (S.invites||[]).forEach(function(x){h+='<div class="dc" style="border:2px solid var(--acc)"><b>👪 '+esc(x.by)+' invited you to '+esc(x.family)+'</b><div class="note" style="margin:4px 0 12px">Joining moves your own payments into that family, and you’ll see each other’s spending'+(x.can_edit?'':' (view only)')+'.</div><div class="row" style="gap:8px;justify-content:flex-start"><button class="btn s" data-inv="acc|'+x.id+'|'+esc(x.family)+'">Join</button><button class="btn ghost s" data-inv="dec|'+x.id+'|">Decline</button></div></div>'});
   if(pendN)h+='<button class="dc warnc tap" data-go="list" data-ltab="none" style="width:100%;border:0;font:inherit;color:var(--ink)"><span>🏷️ <b>'+pendN+'</b> payment'+(pendN>1?'s need':' needs')+' a category</span><span class="arr">→</span></button>';
   h+=expCard(X,P,F);
   h+=insightBlock(X,Lc,pdt);
@@ -1150,7 +1159,7 @@ function vDash(){
   if(S.pf==="__both"&&Object.keys(people).length>1){more+='<h2>By person</h2><div class="grid">';
     Object.keys(people).forEach(function(p){more+='<div class="card"><div class="mute">'+esc(p)+(p===S.name?" (you)":"")+'</div><div style="font-size:20px;font-weight:700" class="out">'+money(sum(people[p],"out"))+'</div><div class="mute">received '+money(sum(people[p],"in"))+'</div></div>'});
     more+='</div>'}
-  if(more)h+='<div class="sec">'+(S.pf==="__both"||!S.pf?'Together':'More')+' · '+esc(plabel(0))+'</div><div id="acct"></div>'+more;
+  if(more)h+='<div class="sec">'+(S.pf==="__both"||!S.pf?'Family':'More')+' · '+esc(plabel(0))+'</div><div id="acct"></div>'+more;
   h+='<div class="dc"><b style="font-size:19px">Control center</b><div class="cc">'+
     [["track","✨","Automated tracking"],["fam","👥","Family"],["goals","🎯","Goals"],["stmt","📥","Import statement"],["set","⚙️","Settings"],["menu","☰","More"]].map(function(x){return '<button data-go="'+x[0]+'"><i>'+x[1]+'</i>'+x[2]+'</button>'}).join('')+'</div></div>';
   return h+'<button class="fab" id="addx" aria-label="Add a cash payment">+</button>'}
@@ -1181,7 +1190,9 @@ function vBudget(){
   CATS.filter(function(c){return !NOBUDGET[c]}).forEach(function(c){var s=sp[c]||0,a=bm[c]||0;
     h+='<button data-bfocus="'+esc(c)+'"><i class="'+(a&&s>a?'ov':'')+'">'+ci(c)+'</i>'+esc(c)+'<small>'+(s?money(Math.round(s)):'—')+(a?' / '+money(a):'')+'</small></button>'});
   h+='</div></div>';
-  return h+vPlan().replace('<h1>Plan</h1>','')+'<button class="obtn" data-go="rep" data-rp="next">See next month’s forecast →</button>'}
+  var pl=vPlan().replace('<h1>Plan</h1>','');
+  if(S.profile&&S.profile.can_edit===false){pl=pl.replace(/<input /g,'<input disabled ').replace(/<select /g,'<select disabled ').replace('id="svb"','id="svb" style="display:none"').replace('id="fadd"','id="fadd" style="display:none"').replace(/data-sw="fixed\|/g,'data-nosw="');h+='<div class="card" style="text-align:center">👁 View only. Ask the family owner for edit access to change budgets and bills.</div>'}
+  return h+pl+'<button class="obtn" data-go="rep" data-rp="next">See next month’s forecast →</button>'}
 function vMenu(){
   var em=(S.profile&&S.profile.email)||(S.auth&&S.auth.email)||"";
   var row=function(t,i,a,b){return '<button class="mr" data-go="'+t+'"><i>'+i+'</i><span><b>'+a+'</b>'+(b?'<span>'+b+'</span>':'')+'</span><span class="go">›</span></button>'};
@@ -1192,15 +1203,53 @@ function vSet(){
   var h=topbar("Settings","menu")+lookCard();
   h+='<h2>This phone</h2><div class="card"><div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><div class="mute">Your month starts on day (1 = normal calendar month)</div><input id="ms" type="number" inputmode="numeric" min="1" max="31" value="'+(S.ms||1)+'"><button class="btn ghost s" id="msal" style="margin-bottom:10px">Use my salary credit day</button><div class="note" id="msn">Saved on this phone only. Set the same day on the other phone. Reports, budgets and forecasts all follow it.</div><button class="btn" id="sv">Save</button></div>';
   return h}
+function incFam(){return ls("incfam")!=="0"}
+function canEditT(t){return !S.profile||S.profile.can_edit!==false||t.person===S.name}
 function vFam(){
-  var p=S.profile||{},own=p.role==="owner";
-  var h=topbar("Family","menu")+'<div class="card"><div class="mute">Family</div><div style="margin-bottom:8px"><b>'+esc(p.family_name||"")+'</b> · you are <b>'+esc(S.name)+'</b>'+(own?" (owner)":"")+'</div><div class="note">Everyone in the family sees each other’s payments. Use Me / '+esc(persons().filter(function(n){return n!==S.name})[0]||"Spouse")+' / Together on the Home page to switch.</div></div>';
-  h+='<h2>Members</h2><div class="card">';
-  if(S.members===null)h+='<span class="mute">Loading…</span>';
-  else S.members.forEach(function(m){h+='<div class="row" style="margin:6px 0"><span>'+esc(m.display_name)+(m.user_id===p.user_id?" (you)":"")+' <span class="mute">· '+(m.role==="owner"?"owner":"member")+'</span></span>'+(own&&m.user_id!==p.user_id?'<button class="btn ghost s" data-rm="'+esc(m.user_id)+'">Remove</button>':'')+'</div>'});
-  if(own)h+='<div class="mute" style="margin-top:12px">Invite code</div><div class="code">'+esc(p.invite_code||"")+'</div><div class="row" style="gap:8px"><button class="btn ghost s" id="cpy">Copy</button><button class="btn ghost s" id="ncode">New code</button></div><div class="note">To add someone: they open the app, tap Create account, then Join with a code, and enter this. Up to 6 people. A new code stops the old one working.</div>';
-  else h+='<div class="note" style="margin-top:8px">To add another person, ask the family owner for the invite code.</div>';
-  return h+'</div>'}
+  var p=S.profile||{},own=p.role==="owner",ce=p.can_edit!==false,F=S.fam,tab=S.famTab||"share";
+  var h=topbar("Family","menu");
+  h+='<div class="dc trk"><i>👪</i><div class="m"><b>Include family entries</b><span>Home, List and Charts include payments from people in your family</span></div><label class="tgl"><input type="checkbox" id="incf"'+(incFam()?' checked':'')+'><span></span></label></div>';
+  h+='<div class="seg2"><button data-ft="share" class="'+(tab==="share"?'on':'')+'">↗ I’m sharing</button><button data-ft="view" class="'+(tab==="view"?'on':'')+'">👁 I can view</button></div>';
+  if(!F)return h+'<div class="card mute">Loading…</div>';
+  var others=(F.members||[]).filter(function(m){return m.user_id!==p.user_id});
+  if(tab==="share"){
+    h+='<div class="sec" style="margin-top:4px">Sharing your data</div><div class="note" style="margin:-4px 4px 10px">People here can see your payments. '+(own?'You decide whether each can also edit.':'')+'</div>';
+    if(ce)h+='<button class="btn" id="fadd2">＋ Add someone</button>';
+    h+='<div class="card" style="margin-top:12px;padding:4px 14px">';
+    if(!others.length&&!(F.invites||[]).length)h+='<div class="empty"><span class="ei">👥</span><b>No one yet</b><div class="note">Add your spouse or family to share expenses.</div></div>';
+    others.forEach(function(m){h+='<div class="lt" style="cursor:default"><span class="ico">'+esc((m.name||"?").charAt(0).toUpperCase())+'</span><div class="m"><b>'+esc(m.name)+(m.role==="owner"?' <span class="mute" style="font-weight:400">· owner</span>':'')+'</b><span>'+esc(m.email||"")+'</span></div>'+
+      (own&&m.role!=="owner"?'<div style="text-align:center"><label class="tgl" title="Allow editing"><input type="checkbox" data-medit="'+m.user_id+'"'+(m.can_edit?' checked':'')+'><span></span></label><div class="note" style="margin:2px 0 0;font-size:11px">Can edit</div></div>':'<span class="pill2">'+(m.can_edit?'Can edit':'View only')+'</span>')+'</div>'});
+    (F.invites||[]).forEach(function(x){h+='<div class="lt" style="cursor:default"><span class="ico">✉️</span><div class="m"><b>'+esc(x.email)+'</b><span>Invited · waiting · '+(x.can_edit?'can edit':'view only')+'</span></div>'+(ce?'<button class="btn ghost s" data-icancel="'+x.id+'">Cancel</button>':'')+'</div>'});
+    h+='</div>';
+    if(own)h+='<div class="note" style="margin:0 4px">Switch on to let someone edit everyone’s payments, budgets, bills and goals. Off = view only (they can still manage their own payments).</div>';
+    if(own&&others.length)h+='<details style="margin-top:14px"><summary class="mute" style="cursor:pointer">Remove someone</summary><div class="card" style="margin-top:8px">'+others.filter(function(m){return m.role!=="owner"}).map(function(m){return '<div class="row" style="margin:6px 0"><span>'+esc(m.name)+'</span><button class="btn ghost s" data-rm="'+esc(m.user_id)+'">Remove</button></div>'}).join('')+'<div class="note">Their own payments go with them into their own family.</div></div></details>';
+    if(own)h+='<details style="margin-top:10px"><summary class="mute" style="cursor:pointer">Or share an invite code</summary><div class="card" style="margin-top:8px"><div class="code">'+esc(p.invite_code||"")+'</div><div class="row" style="gap:8px"><button class="btn ghost s" id="cpy">Copy</button><button class="btn ghost s" id="ncode">New code</button></div><div class="note">They tap Create account, then Join with a code. A new code stops the old one working.</div></div></details>';
+  }else{
+    h+='<div class="sec" style="margin-top:4px">Shared with you</div><div class="note" style="margin:-4px 4px 10px">You can see these people’s payments'+(ce?' and edit them':' (view only)')+'.</div><div class="card" style="padding:4px 14px">';
+    if(!others.length)h+='<div class="empty"><span class="ei">👁</span><b>Nothing shared with you yet</b><div class="note">When someone adds you, they appear here.</div></div>';
+    others.forEach(function(m){h+='<div class="lt" style="cursor:default"><span class="ico">'+esc((m.name||"?").charAt(0).toUpperCase())+'</span><div class="m"><b>'+esc(m.name)+'</b><span>'+esc(m.email||"")+' · in family since '+esc(String(m.since||"").slice(0,10))+'</span></div><span class="pill2">'+(ce?'Can edit':'View only')+'</span></div>'});
+    h+='</div>';
+    if(others.length)h+='<button class="btn ghost" id="fleave" style="margin-top:16px;color:var(--out)">Leave family</button><div class="note" style="margin:6px 4px">You get your own family again and your payments come with you.</div>';
+  }
+  return h}
+function addPersonSheet(){
+  var sh=document.getElementById("sheet");
+  sh.innerHTML='<div class="sheet"><div><div class="row"><b style="font-size:20px">Share data with</b><button class="x" id="apx">✕</button></div><input id="ape" type="email" inputmode="email" autocapitalize="off" placeholder="✉  Email address" style="margin-top:14px">'+
+    '<div class="dc trk" style="box-shadow:none;border:1px solid var(--line)"><div class="m"><b>Allow editing</b><span>They can view and change the family’s payments, budgets, bills and goals. Off = view only.</span></div><label class="tgl"><input type="checkbox" id="apc" checked><span></span></label></div>'+
+    '<div class="note" style="margin:-4px 0 14px">They see the invite when they log in with this email. If they don’t have an account yet, they sign up with it and the invite is waiting.</div><button class="btn" id="apgo">Add user</button></div></div>';
+  document.getElementById("apx").onclick=function(){sh.innerHTML=""};
+  document.getElementById("apgo").onclick=async function(){var em=document.getElementById("ape").value.trim();if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){toast("Enter a valid email");return}
+    this.disabled=true;try{var r=await api("rpc/invite_by_email",{method:"POST",body:JSON.stringify({p_email:em,p_can_edit:document.getElementById("apc").checked})});sh.innerHTML="";
+      toast(r==="invited_new"?"Invite saved. Ask them to sign up with "+em:"Invite sent. They’ll see it when they open the app");await loadFam();render()}
+    catch(e){this.disabled=false;toast(errText(e).replace(/^\d+\s*/,"").replace(/.*"message":"([^"]+)".*/,"$1"))}}}
+async function loadFam(){try{S.fam=await api("rpc/family_overview",{method:"POST",body:"{}"})||{}}catch(e){S.fam={members:(S.members||[]).map(function(m){return {user_id:m.user_id,name:m.display_name,role:m.role,can_edit:true}}),invites:[],err:errText(e)}}}
+function bindFam(el){
+  var inc=document.getElementById("incf");if(inc)inc.onchange=function(){ls("incfam",inc.checked?"1":"0");S.pf=inc.checked?"__both":S.name;ls("pf",S.pf);toast(inc.checked?"Family payments included":"Showing only your payments")};
+  el.querySelectorAll("[data-ft]").forEach(function(b){b.onclick=function(){S.famTab=b.dataset.ft;render()}});
+  var a=document.getElementById("fadd2");if(a)a.onclick=addPersonSheet;
+  el.querySelectorAll("[data-medit]").forEach(function(c){c.onchange=async function(){try{await api("rpc/set_member_edit",{method:"POST",body:JSON.stringify({p_user:c.dataset.medit,p_can_edit:c.checked})});toast(c.checked?"Can edit now":"View only now");await loadFam()}catch(e){c.checked=!c.checked;showErr(errText(e))}}});
+  el.querySelectorAll("[data-icancel]").forEach(function(b){b.onclick=async function(){try{await api("rpc/cancel_invite",{method:"POST",body:JSON.stringify({p_id:b.dataset.icancel})});await loadFam();render()}catch(e){showErr(errText(e))}}});
+  var lv=document.getElementById("fleave");if(lv)lv.onclick=function(){confirmSheet("Leave the family?","You’ll stop seeing the family’s payments and they’ll stop seeing yours. Your own payments come with you.","Leave",async function(){try{await api("rpc/leave_family",{method:"POST",body:"{}"});toast("You left the family");await enter()}catch(e){showErr(errText(e))}})}}
 function vCatsP(){
   var key=monthKey(0),by={};txIn(key).filter(function(t){return t.type==="out"&&isCount(t)}).forEach(function(t){var c=t.category||UNC;by[c]=(by[c]||0)+Number(t.amount)});
   var h=topbar("Categories","menu")+'<div class="dc"><div class="note" style="margin:0 0 14px">Built-in categories, with what was spent in each this month ('+esc(plabel(0))+'). Tap a payment in List to change its category.</div><div class="cgrid">';
@@ -1229,9 +1278,9 @@ function wz(title,steps,cur,doneTo){
     (cur===steps.length-1?'<button class="btn" data-go="'+doneTo+'">Done</button>':'<button class="btn" data-step="1">Next</button>')+'</div></div>';
   return h}
 function kv(label,val){return '<div class="mute" style="margin-top:10px">'+label+'</div><div class="kv"><span>'+esc(val)+'</span><button class="btn ghost s" data-copy="'+esc(val)+'">Copy</button></div>'}
-/* Paste the iCloud link of the shared "Our Expenses SMS" shortcut here (see setup notes). Empty = step-by-step instructions instead. */
+/* Paste the iCloud link of the shared "Nestwise SMS" shortcut here (see setup notes). Empty = step-by-step instructions instead. */
 var SMS_SHORTCUT_LINK="";
-var SMS_SHORTCUT_NAME="Our Expenses SMS";
+var SMS_SHORTCUT_NAME="Nestwise SMS";
 function phoneOS(){var u=navigator.userAgent||"";if(nativeApp()&&window.Capacitor.getPlatform)return Capacitor.getPlatform()==="ios"?"ios":"and";
   if(/iPhone|iPad|iPod/i.test(u)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1))return "ios";
   if(/Android/i.test(u))return "and";return "desk"}
@@ -1246,13 +1295,13 @@ function vSmsNative(){
   if(st.enabled)return T+'<div class="dc" style="text-align:center"><span style="font-size:46px">✅</span><h3 style="margin:6px 0">SMS tracking is on</h3><p class="mute" style="margin:0">Bank payment SMS are added to the app the moment they arrive, even when the app is closed.</p><div class="note" style="margin-top:10px">'+(st.count?st.count+' sent from this phone'+(st.last?' · last '+ago(new Date(st.last).toISOString()):''):'Waiting for your next bank SMS')+'</div></div>'+
     '<button class="btn" id="nimp">Add bank SMS from the last 30 days</button><div class="note" style="margin:6px 0 16px">Payments already in the app are skipped, so this is safe to run again.</div><button class="btn ghost" id="noff">Turn off SMS tracking</button>';
   return T+'<div class="dc"><div style="text-align:center"><span style="font-size:46px">💬</span><h3 style="margin:6px 0 4px">Track spends from bank SMS</h3><p class="mute" style="margin:0 0 14px">One tap. No other app needed.</p></div>'+
-    '<div class="card" style="background:var(--chip);box-shadow:none;font-size:14px;line-height:1.55;margin:0"><b>What happens when you allow SMS access</b><ul style="margin:6px 0 0;padding-left:18px"><li>Our Expenses reads SMS on this phone to find <b>bank payment alerts</b> (debited, credited, spent).</li><li>Only those alerts are sent to your account. OTPs, personal messages and offers are checked on the phone and never leave it.</li><li>The alerts are used only to show your spending, and only you and your family can see them.</li><li>You can turn this off any time here, or in Android Settings.</li></ul></div>'+
+    '<div class="card" style="background:var(--chip);box-shadow:none;font-size:14px;line-height:1.55;margin:0"><b>What happens when you allow SMS access</b><ul style="margin:6px 0 0;padding-left:18px"><li>Nestwise reads SMS on this phone to find <b>bank payment alerts</b> (debited, credited, spent).</li><li>Only those alerts are sent to your account. OTPs, personal messages and offers are checked on the phone and never leave it.</li><li>The alerts are used only to show your spending, and only you and your family can see them.</li><li>You can turn this off any time here, or in Android Settings.</li></ul></div>'+
     (c&&c.key?'<button class="btn" id="non" style="margin-top:16px">Allow SMS access and turn on</button>':'<div class="note" style="margin-top:14px">Loading your account…</div>')+
     (st.err?'<div class="note out" style="margin-top:8px">'+esc(st.err)+'</div>':'')+'<div class="note" style="text-align:center;margin-top:10px">You can also use <a href="#" data-go="mail" style="color:var(--acc)">email tracking</a> instead, or as well.</div></div>'}
 function bindNativeSms(){
   var on=document.getElementById("non");if(on)on.onclick=async function(){this.disabled=true;this.textContent="Waiting for permission…";
     try{S.nsms=await smsPlugin().enable({key:S.sc.key,url:URLB+"rpc/ingest_sms",apikey:KEY});render();if(S.nsms.enabled&&confirm("SMS tracking is on. Add your bank SMS from the last 30 days now?"))importNativeSms()}
-    catch(e){S.nsms={enabled:false,err:/denied|not given/i.test(e.message||"")?"SMS access was not allowed. Tap the button again, or allow SMS for Our Expenses in Android Settings → Apps → Permissions.":e.message};render()}};
+    catch(e){S.nsms={enabled:false,err:/denied|not given/i.test(e.message||"")?"SMS access was not allowed. Tap the button again, or allow SMS for Nestwise in Android Settings → Apps → Permissions.":e.message};render()}};
   var im=document.getElementById("nimp");if(im)im.onclick=importNativeSms;
   var off=document.getElementById("noff");if(off)off.onclick=async function(){if(!confirm("Turn off SMS tracking on this phone?"))return;try{S.nsms=await smsPlugin().disable()}catch(e){}render()}}
 async function importNativeSms(){toast("Reading bank SMS from the last 30 days…");
@@ -1269,7 +1318,7 @@ function vSms(){
     var run="shortcuts://run-shortcut?name="+encodeURIComponent(SMS_SHORTCUT_NAME)+"&input=text&text="+encodeURIComponent("OEKEY:"+key);
     if(SMS_SHORTCUT_LINK)steps=[
       ['Add the shortcut','<p>Tap the button, then tap <b>Add Shortcut</b> in the Shortcuts app and come back here.</p><a class="btn" style="display:block;text-align:center;text-decoration:none" href="'+esc(SMS_SHORTCUT_LINK)+'" target="_blank" rel="noopener">Add shortcut</a>'],
-      ['Link it to your account','<p>One tap. This hands your personal key to the shortcut, so the SMS it sends are saved as yours. You will see “Linked to Our Expenses”.</p><a class="btn" style="display:block;text-align:center;text-decoration:none" href="'+esc(run)+'">Link my account</a><p class="note">If iPhone asks to allow the shortcut to save a file, tap <b>Always Allow</b>.</p>'],
+      ['Link it to your account','<p>One tap. This hands your personal key to the shortcut, so the SMS it sends are saved as yours. You will see “Linked to Nestwise”.</p><a class="btn" style="display:block;text-align:center;text-decoration:none" href="'+esc(run)+'">Link my account</a><p class="note">If iPhone asks to allow the shortcut to save a file, tap <b>Always Allow</b>.</p>'],
       ['Turn it on for bank SMS','<p>Apple only lets you switch on message automations yourself. It takes about 30 seconds:</p><ol><li>Open <b>Shortcuts</b> → <b>Automation</b> → <b>+</b> → <b>Message</b>.</li><li><b>Message Contains</b>: type <b>Rs</b>.</li><li>Choose <b>Run Immediately</b> → <b>Next</b>.</li><li>Pick <b>'+esc(SMS_SHORTCUT_NAME)+'</b>.</li></ol><a class="btn ghost" style="display:block;text-align:center;text-decoration:none" href="shortcuts://">Open Shortcuts</a><div class="note">Bank writes INR (Axis) or no currency (SBI)? Repeat with <b>INR</b> or <b>debited</b>. Duplicates are ignored.</div>'],
       ['All set','<p>The next bank SMS reaches the app within seconds and shows up in <b>List</b>.</p>'+trackStat()]];
     else steps=[
@@ -1320,6 +1369,10 @@ function bindV2(el){
   var cb=document.getElementById("csvb");if(cb)cb.onclick=function(){csv(S._lastF||[])};
   var da=document.getElementById("delacc");if(da)da.onclick=deleteAccountSheet;
   if(S.tab==="sms"&&nativeSmsOK())bindNativeSms();
+  if(S.tab==="fam")bindFam(el);
+  el.querySelectorAll("[data-inv]").forEach(function(b){b.onclick=async function(){var q=b.dataset.inv.split("|");
+    if(q[0]==="dec"){try{await api("rpc/decline_invite",{method:"POST",body:JSON.stringify({p_id:q[1]})})}catch(e){}S.invites=(S.invites||[]).filter(function(x){return x.id!==q[1]});render();return}
+    confirmSheet("Join "+q[2]+"?","Your own payments move into that family, and you’ll see each other’s spending.","Join",async function(){try{await api("rpc/accept_invite",{method:"POST",body:JSON.stringify({p_id:q[1]})});S.invites=[];toast("Welcome to the family!");S._xcReset=1;await enter()}catch(e){showErr(errText(e))}})}});
   var evs=document.getElementById("evs");if(evs){evs.onclick=function(e){e.stopPropagation()};evs.onchange=function(){S.ev=evs.value;ls("ev",S.ev);render()}}
   el.querySelectorAll(".trend .bg").forEach(function(g){var f=function(){var t=g.closest(".trend").querySelector(".trt");if(t)t.textContent=g.dataset.tip;g.closest("svg").querySelectorAll(".bg rect+rect").forEach(function(r){r.style.opacity=""});var r2=g.querySelector("rect+rect");if(r2)r2.style.opacity="1"};g.addEventListener("pointerenter",f);g.addEventListener("click",f)});
 }
@@ -1365,7 +1418,7 @@ function render(){
   var lo=q("lo");if(lo)lo.onclick=function(){authAction("out")};
   var cpy=q("cpy");if(cpy)cpy.onclick=async function(){toast(await copyText(S.profile.invite_code)?"Code copied":"Press and hold the code to copy")};
   var nc=q("ncode");if(nc)nc.onclick=async function(){if(!confirm("Make a new code? The old one will stop working."))return;try{S.profile.invite_code=await api("rpc/regenerate_invite",{method:"POST",body:"{}"});toast("New code ready");render()}catch(e){showErr(errText(e))}};
-  el.querySelectorAll("[data-rm]").forEach(function(b){b.onclick=async function(){if(!confirm("Remove this person from the family? Their saved payments stay."))return;try{await api("rpc/remove_member",{method:"POST",body:JSON.stringify({p_user:b.dataset.rm})});await loadMembers();render()}catch(e){showErr(errText(e))}}});
+  el.querySelectorAll("[data-rm]").forEach(function(b){b.onclick=async function(){if(!confirm("Remove this person from the family? Their own payments go with them."))return;try{await api("rpc/remove_member",{method:"POST",body:JSON.stringify({p_user:b.dataset.rm})});await loadMembers();await loadFam();render()}catch(e){showErr(errText(e))}}});
   var svb=q("svb");if(svb)svb.onclick=saveBudgets;
   var fa=q("fadd");if(fa)fa.onclick=addFixed;
   var ga=q("gadd");if(ga)ga.onclick=addGoal;
@@ -1467,6 +1520,7 @@ function lendWho(t,cat,kind,label,note,pp){
   document.getElementById("wok").onclick=function(){var n=g("wn").trim();if(!n){alert("Enter the person's name");return}apply(n)};
 }
 function pick(t){
+  if(!canEditT(t)){toast("View only: ask the family owner for edit access");return}
   var sh=document.getElementById("sheet");
   var h='<div class="sheet"><div><b>Choose a category</b><div class="mute" style="margin:4px 0 10px">'+esc(t.merchant||"Unknown")+' · '+money(t.amount)+' · '+esc(t.txn_date||"")+'</div><input id="pn" placeholder="Note (optional)" value="'+esc(t.note||"")+'"><input id="pp" list="pl" placeholder="Person name (only for Lend out / Lend in)" value="'+esc(t.merchant||"")+'"><datalist id="pl">'+lendNames()+'</datalist><label class="mute" style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><input type="checkbox" id="po" style="width:auto;margin:0">Only this payment</label><div class="note" style="margin:0">Otherwise the payee is remembered, and its future payments are filed automatically.</div><div class="cats">';
   CATS.forEach(function(c,i){if(c===LOUT||c===LIN)return;h+='<button data-c="'+i+'">'+esc(c)+'</button>'});
@@ -1561,7 +1615,7 @@ async function doSwipeDelete(spec){
 function showErr(m){var b=document.getElementById("errbar");if(!b){b=document.createElement("div");b.id="errbar";b.style.cssText="position:fixed;top:0;left:0;right:0;background:#b4432f;color:#fff;padding:8px 12px;font-size:13px;z-index:99";b.onclick=function(){b.remove()};document.body.appendChild(b)}b.textContent="Problem: "+m+" (tap to close, and send me this message)"}
 window.addEventListener("error",function(e){showErr(e.message)});
 window.addEventListener("unhandledrejection",function(e){showErr(String(e.reason&&e.reason.message||e.reason))});
-function qsig(){try{return JSON.stringify([S.budgets,S.fixed,S.goals,S.gents,S.members,S.sc,S.imports])}catch(e){return Math.random()}}
+function qsig(){try{return JSON.stringify([S.budgets,S.fixed,S.goals,S.gents,S.members,S.sc,S.imports,S.fam])}catch(e){return Math.random()}}
 function quiet(p){var a=qsig();return p.then(function(){if(qsig()!==a)render()})}
 document.getElementById("nav").onclick=function(e){var bt=e.target.closest&&e.target.closest("button[data-t]");if(bt)go(bt.dataset.t)};
 function idle(){return !document.hidden&&S.code&&["home","list","rep"].indexOf(S.tab)>=0&&!document.activeElement.matches("input,select,textarea")&&!document.getElementById("sheet").innerHTML}
