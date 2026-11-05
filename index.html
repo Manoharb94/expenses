@@ -159,7 +159,7 @@ nav button{padding:8px 2px;gap:3px;border-radius:22px}nav button svg{width:22px;
 <script>
 var URLB="https://fwxhclagrwlzxvsmaekt.supabase.co/rest/v1/",KEY="sb_publishable_PiCUzSknFyCfGfEVzTiQbg_qEkBYwL_";
 var TRF="Transfer between us",IGN="Ignore (don't count)",UNC="Others (no category yet)",CCB="Credit card bill (paid)",LOUT="Lend out",LIN="Lend in",UNPL="Unplanned expense",RENT="Rental income",PASS="Pass-through (received & sent on)";
-var CATS=["Groceries – Offline","Groceries – Online","Shopping – Offline","Shopping – Online","Food – Dining out","Food – Online delivery","Transport","Fuel","Bills & Utilities","Rent / EMI","Health","Beauty / Salon","Entertainment","Travel","Education","Home loan EMI","Kid education","Kid day care","Kid expense","Maid","Cook","Car cleaning","Electricity bill","Gas bill","Family donation",UNPL,"Family & Friends","Pet expenses","Car Expenses","Bike Expenses","Refunds","GPay wallet","Trips","Salary / Income",RENT,"Other",LOUT,LIN,TRF,PASS,CCB,IGN];
+var CATS=["Groceries – Offline","Groceries – Online","Shopping – Offline","Shopping – Online","Food – Dining out","Food – Online delivery","Transport","Fuel","Bills & Utilities","Rent / EMI","Health","Beauty / Salon","Entertainment","Subscriptions","Travel","Education","Home loan EMI","Kid education","Kid day care","Kid expense","Maid","Cook","Car cleaning","Electricity bill","Gas bill","Family donation",UNPL,"Family & Friends","Pet expenses","Car Expenses","Bike Expenses","Refunds","GPay wallet","Trips","Salary / Income",RENT,"Other",LOUT,LIN,TRF,PASS,CCB,IGN];
 var NOBUD={"Salary / Income":1};NOBUD[TRF]=1;NOBUD[IGN]=1;NOBUD[CCB]=1;NOBUD[LOUT]=1;NOBUD[LIN]=1;NOBUD[UNPL]=1;NOBUD[RENT]=1;NOBUD[PASS]=1;
 var NOBUDGET={};for(var k in NOBUD)NOBUDGET[k]=1;["Rent / EMI","Education","Home loan EMI","Kid education","Kid day care","Maid","Cook","Car cleaning","Electricity bill","Gas bill","Family donation","Family & Friends"].forEach(function(c){NOBUDGET[c]=1});
 var S={tab:"home",range:"month",from:"",to:"",rp:"this",hf:"all",pf:"",txns:[],budgets:[],fixed:[],planErr:"",goals:[],gents:[],lrows:{},goalErr:"",cur:"₹",code:"",name:"",err:"",loaded:false};
@@ -525,7 +525,7 @@ function stReplaceInfo(p,f,t){var l=S.txns.filter(function(x){return x.person===
 function vStmt(){
   var h='<h2>Bank statements</h2><div class="card"><div class="note" style="margin:0 0 8px">Use this to fill in the days before your email alerts started, or to check them. For the dates you choose, the statement replaces the email-alert payments. Your cash, lending and tally entries are not touched.</div>';
   var st=S.st;
-  if(!st){h+='<div class="mute">Statement file from any bank</div><input type="file" id="stf"><div class="note" style="margin:6px 0 0">PDF, Excel, CSV, text, OFX or QIF all work. Locked PDFs ask for the password. Photos and screenshots cannot be read reliably.</div><div id="stmsg" class="note"></div>'}
+  if(!st){h+='<div class="mute">Statement file from any bank</div><button class="btn" id="stpick">📄 Choose statement file</button><input type="file" id="stf" style="display:none"><div class="note" style="margin:6px 0 0">PDF, Excel, CSV, text, OFX or QIF all work. Locked PDFs ask for the password. Photos and screenshots cannot be read reliably.</div><div id="stmsg" class="note"></div>'}
   else{var rp=stReplaceInfo(st.person,st.from2,st.to2);
     h+='<div class="row"><b>'+esc(st.file)+'</b><button class="btn ghost s" id="stx">Choose another</button></div>';
     h+='<div class="note" style="margin:6px 0">'+st.rows.length+' payments · '+esc(st.from)+' to '+esc(st.to)+' · out '+money(st.debits)+' · in '+money(st.credits)+'</div><div style="margin-bottom:8px">'+(st.balance_ok==null?'':stBadge(st.balance_ok,st.balance_ok?'opening + in − out = closing balance':'balances do not add up'))+' '+(st.summary_ok==null?'':stBadge(st.summary_ok,st.summary_ok?'matches the statement totals':'differs from statement totals'))+'</div>';
@@ -561,7 +561,7 @@ function vStmtAnalysis(x){
   return h}
 function plabelFor(k){var p=k.split("-"),d=new Date(+p[0],+p[1]-1,1);return d.toLocaleString("en-IN",{month:"long",year:"numeric"})}
 function bindStmt(){
-  var f=document.getElementById("stf");
+  var f=document.getElementById("stf"),pk=document.getElementById("stpick");if(pk&&f)pk.onclick=function(){f.click()};
   if(f)f.onchange=async function(){var file=f.files&&f.files[0],msg=document.getElementById("stmsg");if(!file)return;if(msg){msg.className="note";msg.textContent="Reading the file…"}
     try{var r=await readStatementFile(file);
       r.file=file.name;r.person=S.name;r.from2=r.from;r.to2=r.to;S.st=r;render()}
@@ -777,6 +777,7 @@ function trfBlock(L){
   h+='</details>';
   return h+'<div class="note">Money moved between you two. It is left out of spending and money received.</div></div>';
 }
+var SUBRE=/netflix|spotify|youtube|prime video|amazon prime|hotstar|disney|jiocinema|jio ?cinema|sonyliv|sony liv|zee5|apple\.?com|itunes|icloud|google (one|play|storage)|microsoft|office ?365|adobe|canva|chatgpt|openai|claude|notion|dropbox|audible|kindle|linkedin|duolingo|gaana|wynk|hungama|sun ?nxt|aha|mubi|netflix|crunchyroll|tinder|bumble|cult\.?fit|cultpass|subscription|membership|playstation|xbox|nordvpn|expressvpn/i;
 function isLend(t){return t.category===LOUT||t.category===LIN}
 function privOK(t){return !isLend(t)||t.person===S.name}
 function lendBlock(){
@@ -796,9 +797,11 @@ function lendBlock(){
     if(total===0&&done>0)return '<div style="margin:6px 0"><div class="row"><span class="mute">'+(who==="still to get"?'Got back ':'Paid back ')+money(done)+'</span><span class="in"><b>Settled ✓</b></span></div><div class="note">No earlier '+(who==="still to get"?'lend':'borrowing')+' was recorded, so nothing is pending.</div></div>';
     var pct=total>0?Math.min(100,Math.round(done/total*100)):0;
     return '<div style="margin:6px 0"><div class="row"><span class="mute">'+label+' '+money(total)+'</span><span>'+(rem===0?'<span class="in"><b>'+(who==="still to get"?'Got back in full':'Paid in full')+' ✓</b></span>':who+' <b class="'+(rem>0&&who==="still to get"?"in":"out")+'">'+money(Math.abs(rem))+'</b>')+'</span></div><div class="bar"><i style="width:'+pct+'%"></i></div><div class="note">'+(who==="still to get"?'Got back ':'Paid back ')+money(done)+' of '+money(total)+' ('+pct+'%)'+(done>total?' · '+money(done-total)+' more than recorded, counted as settled':'')+'</div></div>'}
-  var cutoff=iso(pdate(0)),hidden=0;
+  var lf=S.lf||"pend",np=rows.filter(function(r){return r.open>0}).length,nd=rows.length-np;
+  h+='<select id="lflt" style="margin:0 0 4px"><option value="pend"'+(lf==="pend"?' selected':'')+'>Pending ('+np+')</option><option value="done"'+(lf==="done"?' selected':'')+'>Settled ('+nd+')</option><option value="all"'+(lf==="all"?' selected':'')+'>All ('+rows.length+')</option></select>';
+  var shown=0;
   rows.forEach(function(r){var o=r.o;
-    if(r.open===0){var last=o.e.reduce(function(m,x){return x[0]>m?x[0]:m},"");if(last<cutoff){hidden++;return}}
+    if(lf==="pend"&&r.open===0)return;if(lf==="done"&&r.open>0)return;shown++;
     h+='<div class="swp" style="border-radius:0;margin:12px 0 0;border-top:1px solid var(--line)"><div class="swa" data-sw="lend|'+encodeURIComponent(r.k)+'|">Delete</div><div class="swc"><div style="padding:10px 0 12px"><b>'+esc(r.k)+'</b>';
     if(o.lent||o.back)h+=line("You lent",o.lent,o.back,r.r1,"still to get");
     if(o.took||o.paid)h+=line("You borrowed",o.took,o.paid,r.r2,"still to pay");
@@ -808,7 +811,7 @@ function lendBlock(){
       h+='<div class="row" style="margin:6px 0;align-items:center"><span style="font-size:14px"><span class="mute">'+esc(x[0]||"")+'</span> '+x[1]+' <b>'+money(x[2])+'</b>'+(x[3]?'<span class="mute"> · '+esc(x[3])+'</span>':'')+'</span><button class="btn ghost" style="width:auto;flex:none;padding:4px 11px;font-size:12px" data-lt="'+encodeURIComponent(r.k)+'" data-ldef="'+def+'">Tally</button></div>'});
     if(o.e.length>10)h+='<div class="note">'+(o.e.length-10)+' older entries not shown.</div>';
     h+='</div></div></div>'});
-  if(hidden)h+='<div class="note">'+hidden+' fully settled earlier are hidden.</div>';
+  if(!shown)h+='<div class="note" style="margin:10px 0">'+(lf==="pend"?'Nothing pending. Everyone is settled.':lf==="done"?'Nothing settled yet.':'No lending yet.')+'</div>';
   return h+'<div class="note">Lent or borrowed money is not counted as spending or income. Part payments are fine. Tap Tally beside any entry to subtract or add an amount with a comment. Swipe a person to the left to delete them. To link a repayment to the same person, tap it, choose Lend out or Lend in, and type the same name. This covers all dates.</div></div>';
 }
 function unplannedBlock(Lc){
@@ -849,7 +852,7 @@ function periodDates(){
   if(S.range==="month")to=iso(pend(0));
   if(!to)to=iso(new Date());
   return {from:from,to:to}}
-var CATI={"Groceries – Offline":"🛒","Groceries – Online":"🥬","Shopping – Offline":"🛍️","Shopping – Online":"📦","Food – Dining out":"🍽️","Food – Online delivery":"🛵","Transport":"🚌","Fuel":"⛽","Bills & Utilities":"💡","Rent / EMI":"🏠","Health":"💊","Beauty / Salon":"💇","Entertainment":"🎬","Travel":"✈️","Education":"🎓","Home loan EMI":"🏦","Kid education":"📚","Kid day care":"🧸","Kid expense":"👶","Maid":"🧹","Cook":"🍳","Car cleaning":"🚗","Electricity bill":"⚡","Gas bill":"🔥","Family donation":"🙏","Unplanned expense":"⚠️","Family & Friends":"👪","Salary / Income":"💼","Rental income":"🏘️","Other":"📌","Lend out":"🤝","Lend in":"🤝","Mandatory":"📌"};
+var CATI={"Groceries – Offline":"🛒","Groceries – Online":"🥬","Shopping – Offline":"🛍️","Shopping – Online":"📦","Food – Dining out":"🍽️","Food – Online delivery":"🛵","Transport":"🚌","Fuel":"⛽","Bills & Utilities":"💡","Rent / EMI":"🏠","Health":"💊","Beauty / Salon":"💇","Entertainment":"🎬","Subscriptions":"🔁","Travel":"✈️","Education":"🎓","Home loan EMI":"🏦","Kid education":"📚","Kid day care":"🧸","Kid expense":"👶","Maid":"🧹","Cook":"🍳","Car cleaning":"🚗","Electricity bill":"⚡","Gas bill":"🔥","Family donation":"🙏","Unplanned expense":"⚠️","Family & Friends":"👪","Salary / Income":"💼","Rental income":"🏘️","Other":"📌","Lend out":"🤝","Lend in":"🤝","Mandatory":"📌"};
 CATI[TRF]="🔁";CATI[PASS]="🔀";CATI["GPay wallet"]="👛";CATI["Trips"]="🧳";CATI["Pet expenses"]="🐾";CATI["Car Expenses"]="🚗";CATI["Bike Expenses"]="🏍️";CATI["Refunds"]="↩️";CATI[CCB]="💳";CATI[IGN]="🚫";CATI[UNC]="❔";
 function ci(c){return CATI[c]||(c?"•":"❔")}
 function arrow(cur,prev){
@@ -1516,6 +1519,7 @@ function pick(t){
   if(!canEditT(t)){toast("View only: ask the family owner for edit access");return}
   var sh=document.getElementById("sheet");
   var h='<div class="sheet"><div><b>Choose a category</b><div class="mute" style="margin:4px 0 10px">'+esc(t.merchant||"Unknown")+' · '+money(t.amount)+' · '+esc(t.txn_date||"")+'</div><input id="pn" placeholder="Note (optional)" value="'+esc(t.note||"")+'"><input id="pp" list="pl" placeholder="Person name (only for Lend out / Lend in)" value="'+esc(t.merchant||"")+'"><datalist id="pl">'+lendNames()+'</datalist><label class="mute" style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><input type="checkbox" id="po" style="width:auto;margin:0">Only this payment</label><div class="note" style="margin:0">Otherwise the payee is remembered, and its future payments are filed automatically.</div><div class="cats">';
+  if(t.type!=="in"&&SUBRE.test(t.merchant||""))h+='<button data-c="'+CATS.indexOf("Subscriptions")+'" style="border-color:var(--accent,#5fb59a)">⭐ Subscriptions (suggested)</button>';
   CATS.forEach(function(c,i){if(c===LOUT||c===LIN)return;h+='<button data-c="'+i+'">'+esc(c)+'</button>'});
   var LB=t.type==="in"?[["Borrowed (they gave me)",LIN,"new"],["Got back (they repaid me)",LOUT,"settle"]]:[["Lend out (I gave)",LOUT,"new"],["Paid back (I repaid)",LIN,"settle"]];
   LB.forEach(function(x,i){h+='<button data-l="'+i+'" style="border-color:var(--accent,#5fb59a)">'+x[0]+'</button>'});
@@ -1553,6 +1557,7 @@ function addSheet(){
   };
 }
 
+document.addEventListener("change",function(e){if(e.target&&e.target.id==="lflt"){S.lf=e.target.value;render()}});
 document.addEventListener("click",function(e){
   var t=e.target&&e.target.closest?e.target.closest("#addx,[data-lnew],[data-lt]"):null;if(!t)return;
   try{if(t.id==="addx")addSheet();else if(t.hasAttribute("data-lnew"))lendSheet("");else lendSheet(decodeURIComponent(t.getAttribute("data-lt")),t.getAttribute("data-ldef")||undefined)}
