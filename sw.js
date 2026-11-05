@@ -1,6 +1,6 @@
 /* Nestwise service worker: opens the app instantly from the phone's own copy,
    then quietly checks for a newer version. Never touches login or data requests. */
-var CACHE="nestwise-v1";
+var CACHE="nestwise-v2";
 var SHELL=["./","index.html","manifest.json","icon-192.png","icon.png","apple-touch-icon.png","favicon-32.png","logo.svg"];
 self.addEventListener("install",function(e){
   e.waitUntil(caches.open(CACHE).then(function(c){return Promise.all(SHELL.map(function(u){return c.add(u).catch(function(){})}))}).then(function(){return self.skipWaiting()}))});
@@ -22,7 +22,8 @@ self.addEventListener("fetch",function(e){
   if(/(^|\.)(cdn\.jsdelivr\.net|cdnjs\.cloudflare\.com)$/.test(url.hostname)){
     e.respondWith(caches.open(CACHE).then(function(c){return c.match(req).then(function(hit){return hit||fetch(req).then(function(r){if(r&&(r.ok||r.type==="opaque"))c.put(req,r.clone());return r})})}));return}
   if(url.origin!==self.location.origin)return;
-  if(/admin\.html$/.test(url.pathname)||/sw\.js$/.test(url.pathname))return;
+  if(/admin\.html$|privacy\.html$|delete\.html$|sw\.js$/.test(url.pathname))return;
+  if(req.mode==="navigate"&&/\.html$/.test(url.pathname)&&!/index\.html$/.test(url.pathname))return;
   var isPage=req.mode==="navigate"||/(\/|index\.html)$/.test(url.pathname);
   var key=isPage?new Request(new URL("index.html",self.registration.scope).href):req;
   e.respondWith(caches.open(CACHE).then(function(c){
