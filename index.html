@@ -527,7 +527,7 @@ function stReplaceInfo(p,f,t){var l=S.txns.filter(function(x){return x.person===
 function vStmt(){
   var h='<h2>Bank statements</h2><div class="card"><div class="note" style="margin:0 0 8px">Use this to fill in the days before your email alerts started, or to check them. For the dates you choose, the statement replaces the email-alert payments. Your cash, lending and tally entries are not touched.</div>';
   var st=S.st;
-  if(!st){h+='<div class="mute">Statement file from any bank</div><button class="btn" id="stpick">⬆️ Import statement</button><input type="file" id="stf" style="display:none"><div class="note" style="margin:6px 0 0">PDF, Excel, CSV, text, OFX or QIF all work. Locked PDFs ask for the password. Photos and screenshots cannot be read reliably.</div><div id="stmsg" class="note"></div>'}
+  if(!st){h+='<div class="mute">Statement file from any bank</div><button class="btn" id="stpick">📄 Choose bank statement file to import</button><input type="file" id="stf" style="display:none"><div class="note" style="margin:6px 0 0">PDF, Excel, CSV, text, OFX or QIF all work. Locked PDFs ask for the password. Photos and screenshots cannot be read reliably.</div><div id="stmsg" class="note"></div>'}
   else{var rp=stReplaceInfo(st.person,st.from2,st.to2);
     h+='<div class="row"><b>'+esc(st.file)+'</b><button class="btn ghost s" id="stx">Choose another</button></div>';
     h+='<div class="note" style="margin:6px 0">'+st.rows.length+' payments · '+esc(st.from)+' to '+esc(st.to)+' · out '+money(st.debits)+' · in '+money(st.credits)+'</div><div style="margin-bottom:8px">'+(st.balance_ok==null?'':stBadge(st.balance_ok,st.balance_ok?'opening + in − out = closing balance':'balances do not add up'))+' '+(st.summary_ok==null?'':stBadge(st.summary_ok,st.summary_ok?'matches the statement totals':'differs from statement totals'))+'</div>';
@@ -594,7 +594,8 @@ async function loadPlan(){
     (async function(){var bad="";
       await Promise.all([
         api("budgets?select=*").then(function(r){S.budgets=r||[]},function(e){bad=e.message}),
-        api("fixed_items?select=*&order=created_at.asc").then(function(r){S.fixed=r||[]},function(e){bad=bad||e.message})]);
+        api("fixed_items?select=*&order=created_at.asc").then(function(r){S.fixed=r||[]},function(e){bad=bad||e.message}),
+        api("household_categories?select=name&order=created_at.asc").then(function(r){mergeCats((r||[]).map(function(x){return x.name}))},function(){})]);
       S.planErr=bad?"Plan tables are not set up yet ("+bad.slice(0,80)+")":""})(),
     (async function(){try{S.goals=await api("goals?select=*&order=created_at.asc")||[];S.goalErr=""}
       catch(e){S.goals=[];S.goalErr="Goals are not set up yet. Run goals.sql in Supabase."}})(),
@@ -861,7 +862,19 @@ function periodDates(){
   return {from:from,to:to}}
 var CATI={"Groceries – Offline":"🛒","Groceries – Online":"🥬","Shopping – Offline":"🛍️","Shopping – Online":"📦","Food – Dining out":"🍽️","Food – Online delivery":"🛵","Transport":"🚌","Fuel":"⛽","Bills & Utilities":"💡","Rent / EMI":"🏠","Health":"💊","Beauty / Salon":"💇","Entertainment":"🎬","Subscriptions":"🔁","Travel":"✈️","Education":"🎓","Home loan EMI":"🏦","Kid education":"📚","Kid day care":"🧸","Kid expense":"👶","Maid":"🧹","Cook":"🍳","Car cleaning":"🚗","Electricity bill":"⚡","Gas bill":"🔥","Family donation":"🙏","Unplanned expense":"⚠️","Family & Friends":"👪","Salary / Income":"💼","Rental income":"🏘️","Other":"📌","Lend out":"🤝","Lend in":"🤝","Mandatory":"📌"};
 CATI[TRF]="🔁";CATI[PASS]="🔀";CATI["GPay wallet"]="👛";CATI["Trips"]="🧳";CATI["Pet expenses"]="🐾";CATI["Car Expenses"]="🚗";CATI["Bike Expenses"]="🏍️";CATI["Refunds"]="↩️";CATI[CCB]="💳";CATI[IGN]="🚫";CATI[UNC]="❔";
-function ci(c){return CATI[c]||(c?"•":"❔")}
+function ci(c){return CATI[c]||(c?"🏷️":"❔")}
+function mergeCats(names){var oi=CATS.indexOf("Other");names.forEach(function(n){n=(n||"").trim();if(!n)return;if(CATS.some(function(c){return c.toLowerCase()===n.toLowerCase()}))return;CATS.splice(oi<0?CATS.length:oi,0,n);oi=CATS.indexOf("Other")})}
+function localCats(){try{return JSON.parse(ls("ccats")||"[]")}catch(e){return []}}
+mergeCats(localCats());
+async function addCat(name){
+  name=(name||"").replace(/\s+/g," ").trim().slice(0,30);
+  if(!name){return null}
+  if(S.profile&&S.profile.can_edit===false){toast("View only: ask the family owner for edit access");return null}
+  var ex=CATS.filter(function(c){return c.toLowerCase()===name.toLowerCase()})[0];
+  if(ex){toast("“"+ex+"” already exists");return ex}
+  mergeCats([name]);var l=localCats();l.push(name);ls("ccats",JSON.stringify(l));
+  try{await api("household_categories",{method:"POST",headers:{Prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify({name:name})})}catch(e){}
+  toast("Added “"+name+"”");return name}
 function arrow(cur,prev){
   if(!(prev>0))return cur>0?'<span class="chip">new</span>':'';
   var d=Math.round((cur-prev)/prev*100);if(d===0)return '<span class="chip">same</span>';
@@ -1179,32 +1192,34 @@ function vDash(){
     [["track","✨","Automated tracking"],["fam","👥","Family"],["goals","🎯","Goals"],["stmt","📥","Import statement"],["set","⚙️","Settings"],["menu","☰","More"]].map(function(x){return '<button data-go="'+x[0]+'"><i>'+x[1]+'</i>'+x[2]+'</button>'}).join('')+'</div></div>';
   return h+'<button class="fab" id="addx" aria-label="Add a cash payment">+</button>'}
 function vTx(){
-  var key=monthKey(S.lm),lab=plabel(S.lm),items=txIn(key).filter(privOK),q=(S.lq||"").toLowerCase().trim();
+  var q=(S.lq||"").toLowerCase().trim(),key=monthKey(S.lm),lab=q?"All months":plabel(S.lm),items=(q?S.txns.filter(function(t){return personOK(t)&&privOK(t)}):txIn(key).filter(privOK));
   var G={out:items.filter(function(t){return t.type==="out"&&isCount(t)}),in:items.filter(function(t){return t.type==="in"&&isCount(t)}),oth:items.filter(function(t){return !isCount(t)}),none:items.filter(function(t){return !t.category})};
   var lt=G[S.lt]?S.lt:"out",F=G[lt].slice().sort(byNew);
-  if(q)F=F.filter(function(t){return [t.merchant,t.category,t.note,t.person,String(t.amount)].join(" ").toLowerCase().indexOf(q)>=0});
-  S._lastF=F;
-  var h='<div class="lh"><div class="lhm"><button data-lm="-1" aria-label="Previous month">'+IC.back+'</button><b>'+esc(lab)+'</b><button data-lm="1" aria-label="Next month"'+(S.lm>=0?' disabled':'')+' style="transform:scaleX(-1)">'+IC.back+'</button><button id="lsrch" aria-label="Search">'+IC.search+'</button><button id="csvb" aria-label="Export">'+IC.share+'</button></div>'+
-    '<div class="lht">'+[["out","Expenses"],["in","Income"],["oth","Others"]].map(function(x){return '<button data-ltab="'+x[0]+'" class="'+(lt===x[0]?'on':'')+'">'+x[1]+'</button>'}).join('')+'</div></div>';
-  if(S.lsrch||q)h+='<input id="lq" type="search" placeholder="Search payee, category or amount" value="'+esc(S.lq||"")+'" style="margin-bottom:12px">';
+  if(q){var qa=q.replace(/[₹,\s]/g,""),isNum=/^[\d.]+$/.test(qa);
+    F=items.filter(function(t){if((t.merchant||"").toLowerCase().indexOf(q)>=0)return true;if(isNum){var a=Number(t.amount);return String(a).indexOf(qa)>=0||a.toFixed(2).indexOf(qa)>=0}return false}).sort(byNew)}
+  S._lastF=F;var SH=F.length>200?F.slice(0,200):F;
+  var h='<div class="lh"><div class="lhm"><button data-lm="-1" aria-label="Previous month"'+(q?' disabled':'')+'>'+IC.back+'</button><b>'+esc(lab)+'</b><button data-lm="1" aria-label="Next month"'+(S.lm>=0||q?' disabled':'')+' style="transform:scaleX(-1)">'+IC.back+'</button><button id="lsrch" aria-label="Search">'+IC.search+'</button><button id="csvb" aria-label="Export">'+IC.share+'</button></div>'+
+    (q?'':'<div class="lht">'+[["out","Expenses"],["in","Income"],["oth","Others"]].map(function(x){return '<button data-ltab="'+x[0]+'" class="'+(lt===x[0]?'on':'')+'">'+x[1]+'</button>'}).join('')+'</div>')+'</div>';
+  h+='<input id="lq" type="search" placeholder="🔍 Search payee or amount" autocomplete="off" value="'+esc(S.lq||"")+'" style="margin-bottom:12px">';
   h+=personChips();
-  if(G.none.length&&lt!=="none")h+='<button class="tab" data-ltab="none" style="margin-bottom:10px">🏷️ '+G.none.length+' need a category</button>';
-  if(lt==="none")h+='<button class="tab on" data-ltab="out" style="margin-bottom:10px">🏷️ Needs a category · show all</button>';
+  if(!q&&G.none.length&&lt!=="none")h+='<button class="tab" data-ltab="none" style="margin-bottom:10px">🏷️ '+G.none.length+' need a category</button>';
+  if(!q&&lt==="none")h+='<button class="tab on" data-ltab="out" style="margin-bottom:10px">🏷️ Needs a category · show all</button>';
   var tot=lt==="in"?sum(F,"in"):lt==="oth"?null:sum(F,"out");
-  h+='<div class="ltot">'+esc(lab.toUpperCase())+(tot===null?' · in '+money(sum(F,"in"))+' · out '+money(sum(F,"out")):' ('+money(tot)+')')+'</div>';
-  if(lt==="oth")h+='<div class="note" style="margin:-4px 0 10px;text-align:center">Transfers between you, lending, card bill payments and ignored items. They do not count as spending.</div>';
+  h+='<div class="ltot">'+(q?'RESULTS · '+F.length+' payment'+(F.length===1?'':'s')+' · out '+money(sum(F,"out"))+' · in '+money(sum(F,"in")):esc(lab.toUpperCase())+(tot===null?' · in '+money(sum(F,"in"))+' · out '+money(sum(F,"out")):' ('+money(tot)+')'))+'</div>';
+  if(!q&&lt==="oth")h+='<div class="note" style="margin:-4px 0 10px;text-align:center">Transfers between you, lending, card bill payments and ignored items. They do not count as spending.</div>';
   if(!F.length)h+='<div class="empty" style="padding:40px 0"><span class="ei">🧾</span>'+(q?'Nothing matches “'+esc(q)+'”':'No '+(lt==="in"?'income':lt==="oth"?'other':lt==="none"?'uncategorised':'expense')+' transactions for '+esc(lab))+'</div>';
   else{var last=null;h+='<div class="swh">Tap a payment to choose its category. Swipe left to delete.</div>';
-    F.forEach(function(t){if(t.txn_date!==last){if(last!==null)h+='</div>';h+='<div class="dg">'+esc(dayLabel(t.txn_date))+'</div><div class="card" style="padding:4px 14px">';last=t.txn_date}h+=txRow(t)});h+='</div>'}
+    SH.forEach(function(t){if(t.txn_date!==last){if(last!==null)h+='</div>';h+='<div class="dg">'+esc(dayLabel(t.txn_date))+'</div><div class="card" style="padding:4px 14px">';last=t.txn_date}h+=txRow(t)});h+='</div>';if(F.length>SH.length)h+='<div class="note" style="text-align:center;margin:10px 0">Showing the newest 200 of '+F.length+'. Type more to narrow it down.</div>'}
   return h+'<button class="fab" id="addx" aria-label="Add a cash payment">+</button>'}
 function vBudget(){
   var bm={};S.budgets.forEach(function(b){bm[b.category]=Number(b.amount)});var sp=spentThisMonth(),tb=0,ts=0;
   Object.keys(bm).forEach(function(c){if(bm[c]>0){tb+=bm[c];ts+=sp[c]||0}});
   var h=topbar("Budget")+'<div class="dc"><div class="trk"><i>👛</i><div class="m"><b>Monthly</b><span>'+(tb?money(ts)+' spent of '+money(tb)+' · '+esc(plabel(0)):'Tap a category below to set a budget')+'</span></div></div>'+(tb?'<div class="bar" style="margin-top:12px;height:10px"><i class="'+(ts>tb?'over':'')+'" style="width:'+Math.min(100,Math.round(ts/tb*100))+'%"></i></div><div class="note">'+(ts>tb?'<b class="out">Over by '+money(ts-tb)+'</b>':money(tb-ts)+' left this month')+'</div>':'')+'</div>';
-  h+='<div class="dc"><b style="font-size:19px">Categories</b><div class="note" style="margin:2px 0 14px">Spent this month. Tap one to set or change its budget.</div><div class="cgrid">';
-  CATS.filter(function(c){return !NOBUDGET[c]}).forEach(function(c){var s=sp[c]||0,a=bm[c]||0;
+  h+='<div class="dc"><b style="font-size:19px">Categories</b><div class="note" style="margin:2px 0 10px">Spent this month. Tap one to set or change its budget.</div><input id="bq" type="search" placeholder="🔍 Search categories" autocomplete="off" value="'+esc(S.bq||"")+'" style="margin-bottom:12px"><div class="cgrid">';
+  var bq=(S.bq||"").toLowerCase().trim(),bn=0;
+  CATS.filter(function(c){return !NOBUDGET[c]&&(!bq||c.toLowerCase().indexOf(bq)>=0)}).forEach(function(c){bn++;var s=sp[c]||0,a=bm[c]||0;
     h+='<button data-bfocus="'+esc(c)+'"><i class="'+(a&&s>a?'ov':'')+'">'+ci(c)+'</i>'+esc(c)+'<small>'+(s?money(Math.round(s)):'—')+(a?' / '+money(a):'')+'</small></button>'});
-  h+='</div></div>';
+  h+='<button id="bnew" style="border-style:dashed"><i>＋</i>'+(bq&&!bn?'Add “'+esc(S.bq.trim())+'”':'New category')+'<small>Add your own</small></button></div>'+(bq&&!bn?'<div class="note" style="margin-top:10px">No category matches. Tap ＋ to add it.</div>':'')+'</div>';
   var pl=vPlan().replace('<h1>Plan</h1>','');
   if(S.profile&&S.profile.can_edit===false){pl=pl.replace(/<input /g,'<input disabled ').replace(/<select /g,'<select disabled ').replace('id="svb"','id="svb" style="display:none"').replace('id="fadd"','id="fadd" style="display:none"').replace(/data-sw="fixed\|/g,'data-nosw="');h+='<div class="card" style="text-align:center">👁 View only. Ask the family owner for edit access to change budgets and bills.</div>'}
   return h+pl+'<button class="obtn" data-go="rep" data-rp="next">See next month’s forecast →</button>'}
@@ -1363,8 +1378,10 @@ function bindV2(el){
   el.querySelectorAll("[data-pf]").forEach(function(b){b.onclick=function(){S.pf=b.dataset.pf;ls("pf",S.pf);render()}});
   el.querySelectorAll("[data-ltab]:not([data-go])").forEach(function(b){b.onclick=function(){S.lt=b.dataset.ltab;render()}});
   el.querySelectorAll("[data-lm]").forEach(function(b){b.onclick=function(){S.lm=Math.min(0,S.lm+Number(b.dataset.lm));render()}});
-  var ls2=document.getElementById("lsrch");if(ls2)ls2.onclick=function(){S.lsrch=!S.lsrch;if(!S.lsrch)S.lq="";render();var q=document.getElementById("lq");if(q)q.focus()};
-  var lq=document.getElementById("lq");if(lq)lq.oninput=function(){S.lq=lq.value;var p=lq.selectionStart;render();var n=document.getElementById("lq");if(n){n.focus();try{n.setSelectionRange(p,p)}catch(x){}}};
+  var ls2=document.getElementById("lsrch");if(ls2)ls2.onclick=function(){var q=document.getElementById("lq");if(q)q.focus()};
+  var bq2=document.getElementById("bq");if(bq2)bq2.oninput=function(){S.bq=bq2.value;clearTimeout(S._bqt);S._bqt=setTimeout(function(){var p=bq2.selectionStart;render();var n=document.getElementById("bq");if(n){n.focus();try{n.setSelectionRange(p,p)}catch(x){}}},120)};
+  var bnw=document.getElementById("bnew");if(bnw)bnw.onclick=async function(){var nm=(S.bq||"").trim()||prompt("New category name");if(!nm)return;var r=await addCat(nm);if(r){S.bq="";render()}};
+  var lq=document.getElementById("lq");if(lq)lq.oninput=function(){S.lq=lq.value;clearTimeout(S._lqt);S._lqt=setTimeout(function(){var p=lq.selectionStart;render();var n=document.getElementById("lq");if(n){n.focus();try{n.setSelectionRange(p,p)}catch(x){}}},140)};
   el.querySelectorAll("[data-bfocus]:not([data-go])").forEach(function(b){b.onclick=function(){var i=document.querySelector('[data-bud="'+b.dataset.bfocus.replace(/"/g,'\\"')+'"]');if(i){i.scrollIntoView({block:"center"});i.focus()}}});
   el.querySelectorAll("[data-copy]").forEach(function(b){b.onclick=async function(){toast(await copyText(b.dataset.copy)?"Copied":"Press and hold the text to copy")}});
   el.querySelectorAll("[data-dev]").forEach(function(b){b.onclick=function(){S.smsDev=b.dataset.dev;S.smsStep=0;ls("smsdev",S.smsDev);render();window.scrollTo(0,0)}});
@@ -1528,14 +1545,16 @@ function pick(t){
   var h='<div class="sheet"><div><b>Choose a category</b><input id="cq" type="search" placeholder="🔍 Search categories" autocomplete="off" style="margin:8px 0 4px"><div class="mute" style="margin:4px 0 10px">'+esc(t.merchant||"Unknown")+' · '+money(t.amount)+' · '+esc(t.txn_date||"")+'</div><input id="pn" placeholder="Note (optional)" value="'+esc(t.note||"")+'"><input id="pp" list="pl" placeholder="Person name (only for Lend out / Lend in)" value="'+esc(t.merchant||"")+'"><datalist id="pl">'+lendNames()+'</datalist><label class="mute" style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><input type="checkbox" id="po" style="width:auto;margin:0">Only this payment</label><div class="note" style="margin:0">Otherwise the payee is remembered, and its future payments are filed automatically.</div><div class="cats">';
   if(t.type!=="in"&&SUBRE.test(t.merchant||""))h+='<button data-c="'+CATS.indexOf("Subscriptions")+'" style="border-color:var(--accent,#5fb59a)">⭐ Subscriptions (suggested)</button>';
   CATS.forEach(function(c,i){if(c===LOUT||c===LIN)return;h+='<button data-c="'+i+'">'+esc(c)+'</button>'});
+  h+='<button data-new="1" style="border-style:dashed">＋ New category</button>';
   var LB=t.type==="in"?[["Borrowed (they gave me)",LIN,"new"],["Got back (they repaid me)",LOUT,"settle"]]:[["Lend out (I gave)",LOUT,"new"],["Paid back (I repaid)",LIN,"settle"]];
   LB.forEach(function(x,i){h+='<button data-l="'+i+'" style="border-color:var(--accent,#5fb59a)">'+x[0]+'</button>'});
   h+='</div><button class="btn ghost" style="margin-top:12px" id="later">Cancel</button></div></div>';
   sh.innerHTML=h;
   var cq=document.getElementById("cq");if(cq)cq.oninput=function(){var q=cq.value.trim().toLowerCase(),n=0,last=null;
-    sh.querySelectorAll(".cats button").forEach(function(b){var ok=!q||b.textContent.toLowerCase().indexOf(q)>=0;b.style.display=ok?"":"none";if(ok){n++;last=b}});
+    sh.querySelectorAll(".cats button:not([data-new])").forEach(function(b){var ok=!q||b.textContent.toLowerCase().indexOf(q)>=0;b.style.display=ok?"":"none";if(ok){n++;last=b}});
     var nm=document.getElementById("cqn");if(!nm){nm=document.createElement("div");nm.id="cqn";nm.className="note";nm.style.cssText="margin:8px 0";nm.textContent="No category matches. Clear the search to see them all.";sh.querySelector(".cats").parentNode.insertBefore(nm,sh.querySelector(".cats"))}nm.style.display=n?"none":"";cq._one=n===1?last:null};
   if(cq)cq.onkeydown=function(e){if(e.key==="Enter"&&cq._one){e.preventDefault();cq._one.click()}};
+  var nb=sh.querySelector("[data-new]");if(nb)nb.onclick=async function(){var nm=(cq&&cq.value.trim())||prompt("New category name");if(!nm)return;var r=await addCat(nm);if(r)pick(t)};
   sh.querySelectorAll("[data-l]").forEach(function(b){b.onclick=function(){var x=LB[+b.dataset.l];lendWho(t,x[1],x[2],x[0],g("pn").trim(),g("pp").trim())}});
   document.getElementById("later").onclick=function(){sh.innerHTML=""};
   sh.querySelectorAll("[data-c]").forEach(function(b){b.onclick=async function(){
