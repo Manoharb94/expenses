@@ -210,6 +210,8 @@ async function authFetch(path,method,body,token){
   var r=await fetch(AUTHB+path,{method:method,headers:h,body:body?JSON.stringify(body):undefined});
   var t=await r.text(),o={};try{o=t?JSON.parse(t):{}}catch(e){}
   if(!r.ok){var e=new Error(authMsg(o,r.status));e.status=r.status;throw e}return o}
+async function acctStatus(e){try{var r=await fetch(URLB+"rpc/account_status",{method:"POST",headers:{apikey:KEY,"Content-Type":"application/json"},body:JSON.stringify({p_email:e})});if(!r.ok)return null;var t=await r.json();return typeof t==="string"?t:null}catch(x){return null}}
+var EXISTS_MSG="This email already has an account. Please log in, or tap “Forgot password” if you don’t remember it.";
 function saveSess(o){S.auth={access:o.access_token,refresh:o.refresh_token,exp:o.expires_at||(Math.floor(Date.now()/1000)+(o.expires_in||3600)),email:(o.user&&o.user.email)||(S.auth&&S.auth.email)||""};ls("sb",JSON.stringify(S.auth))}
 function refreshSess(){
   if(S.refreshing)return S.refreshing;
@@ -302,12 +304,19 @@ async function authAction(a){
     if(a==="login"){var e1=em(),pw=g("a_pw");if(!e1||!pw)return m("Enter your email and password.");busy(true);
       var o;try{o=await authFetch("token?grant_type=password","POST",{email:e1,password:pw})}catch(e){if(/confirm your email/i.test(e.message)){S.vemail=e1;busy(false);return go("verify","Please confirm your email first. Tap the link we sent, or enter its code below.")}throw e}saveSess(o);S.auth.email=S.auth.email||e1;ls("sb",JSON.stringify(S.auth));S.view="";render();await enter();return}
     if(a==="signup"){var e2=em(),p1=g("a_pw"),p2=g("a_pw2");if(!e2)return m("Enter your email.");if(p1.length<8)return m("Password needs at least 8 characters.");if(p1!==p2)return m("The two passwords do not match.");busy(true);
+      var st2=await acctStatus(e2);
+      if(st2==="confirmed"){busy(false);return m(EXISTS_MSG)}
+      if(st2==="unconfirmed"){S.vemail=e2;try{await authFetch("resend?redirect_to="+encodeURIComponent(APP_URL),"POST",{type:"signup",email:e2})}catch(x){}return go("verify","You started signing up with this email before. We sent a new email. Tap the link or enter the code.",true)}
       var o2=await authFetch("signup?redirect_to="+encodeURIComponent(APP_URL),"POST",{email:e2,password:p1});
       if(o2.access_token){saveSess(o2);S.view="";render();await enter();return}
+      if(o2.user&&Array.isArray(o2.user.identities)&&o2.user.identities.length===0){busy(false);return m(EXISTS_MSG)}
       S.vemail=e2;return go("verify","Account created. We sent you an email.",true)}
     if(a==="forgot"){var e3=em();if(!e3)return m("Enter your email.");busy(true);
+      var st3=await acctStatus(e3);
+      if(st3==="none"){busy(false);return m("No account found with this email. Please check the spelling, or tap “Create account”.")}
+      if(st3==="unconfirmed"){S.vemail=e3;try{await authFetch("resend?redirect_to="+encodeURIComponent(APP_URL),"POST",{type:"signup",email:e3})}catch(x){}return go("verify","This email is not confirmed yet. We sent a new confirmation email. Confirm it first, then you can log in.",true)}
       await authFetch("recover?redirect_to="+encodeURIComponent(APP_URL),"POST",{email:e3});
-      S.vemail=e3;return go("rcode","If this email has an account, we sent a reset email. Check your inbox and spam.",true)}
+      S.vemail=e3;return go("rcode","We sent a reset email. Check your inbox and spam.",true)}
     if(a==="vcode"){var cc=g("a_code").replace(/\s/g,"");if(cc.length<4)return m("Enter the code from the email.");busy(true);
       var vo=await authFetch("verify","POST",{type:"signup",email:S.vemail,token:cc});if(!vo.access_token)throw new Error("That code did not work.");saveSess(vo);S.view="";render();toast("Email confirmed");await enter();return}
     if(a==="vresend"){await authFetch("resend?redirect_to="+encodeURIComponent(APP_URL),"POST",{type:"signup",email:S.vemail});return m("Sent again. Check your inbox and spam.",true)}
@@ -1312,19 +1321,22 @@ function vSmsNative(){
   var T=topbar("SMS tracking","track"),st=S.nsms,c=S.sc;
   if(st===null){nsmsRefresh();return T+'<div class="card mute">Checking…</div>'}
   if(st.enabled)return T+'<div class="dc" style="text-align:center"><span style="font-size:46px">✅</span><h3 style="margin:6px 0">SMS tracking is on</h3><p class="mute" style="margin:0">Bank payment SMS are added to the app the moment they arrive, even when the app is closed.</p><div class="note" style="margin-top:10px">'+(st.count?st.count+' sent from this phone'+(st.last?' · last '+ago(new Date(st.last).toISOString()):''):'Waiting for your next bank SMS')+'</div></div>'+
-    '<button class="btn" id="nimp">Add bank SMS from the last 30 days</button><div class="note" style="margin:6px 0 16px">Payments already in the app are skipped, so this is safe to run again.</div><button class="btn ghost" id="noff">Turn off SMS tracking</button>';
+    '<div class="mute" style="margin:0 0 6px">How far back should we read?</div>'+nmoSel()+'<button class="btn" id="nimp">Add bank SMS from the past '+nmoLab()+'</button><div class="note" style="margin:6px 0 16px">Payments already in the app are skipped, so this is safe to run again.</div><button class="btn ghost" id="noff">Turn off SMS tracking</button>';
   return T+'<div class="dc"><div style="text-align:center"><span style="font-size:46px">💬</span><h3 style="margin:6px 0 4px">Track spends from bank SMS</h3><p class="mute" style="margin:0 0 14px">One tap. No other app needed.</p></div>'+
     '<div class="card" style="background:var(--chip);box-shadow:none;font-size:14px;line-height:1.55;margin:0"><b>What happens when you allow SMS access</b><ul style="margin:6px 0 0;padding-left:18px"><li>Nestwise reads SMS on this phone to find <b>bank payment alerts</b> (debited, credited, spent).</li><li>Only those alerts are sent to your account. OTPs, personal messages and offers are checked on the phone and never leave it.</li><li>The alerts are used only to show your spending, and only you and your family can see them.</li><li>You can turn this off any time here, or in Android Settings.</li></ul></div>'+
-    (c&&c.key?'<button class="btn" id="non" style="margin-top:16px">Allow SMS access and turn on</button>':'<div class="note" style="margin-top:14px">Loading your account…</div>')+
+    (c&&c.key?'<div class="mute" style="margin:16px 0 6px">How far back should we read your bank SMS?</div>'+nmoSel()+'<button class="btn" id="non">Allow SMS access and turn on</button>':'<div class="note" style="margin-top:14px">Loading your account…</div>')+
     (st.err?'<div class="note out" style="margin-top:8px">'+esc(st.err)+'</div>':'')+'<div class="note" style="text-align:center;margin-top:10px">You can also use <a href="#" data-go="mail" style="color:var(--acc)">email tracking</a> instead, or as well.</div></div>'}
+function nmoLab(){var m=S.nmo||1;return m===1?"1 month":m+" months"}
+function nmoSel(){return '<select id="nmo" style="margin-bottom:12px">'+[1,2,3,6].map(function(m){return '<option value="'+m+'"'+((S.nmo||1)===m?' selected':'')+'>Past '+(m===1?'1 month':m+' months')+'</option>'}).join('')+'</select>'}
 function bindNativeSms(){
+  var nm=document.getElementById("nmo");if(nm){nm.onchange=function(){S.nmo=+nm.value;var b=document.getElementById("nimp");if(b)b.textContent="Add bank SMS from the past "+nmoLab()}}
   var on=document.getElementById("non");if(on)on.onclick=async function(){this.disabled=true;this.textContent="Waiting for permission…";
-    try{S.nsms=await smsPlugin().enable({key:S.sc.key,url:URLB+"rpc/ingest_sms",apikey:KEY});render();if(S.nsms.enabled&&confirm("SMS tracking is on. Add your bank SMS from the last 30 days now?"))importNativeSms()}
+    try{S.nsms=await smsPlugin().enable({key:S.sc.key,url:URLB+"rpc/ingest_sms",apikey:KEY});render();if(S.nsms.enabled&&confirm("SMS tracking is on. Add your bank SMS from the past "+nmoLab()+" now?"))importNativeSms()}
     catch(e){S.nsms={enabled:false,err:/denied|not given/i.test(e.message||"")?"SMS access was not allowed. Tap the button again, or allow SMS for Nestwise in Android Settings → Apps → Permissions.":e.message};render()}};
   var im=document.getElementById("nimp");if(im)im.onclick=importNativeSms;
   var off=document.getElementById("noff");if(off)off.onclick=async function(){if(!confirm("Turn off SMS tracking on this phone?"))return;try{S.nsms=await smsPlugin().disable()}catch(e){}render()}}
-async function importNativeSms(){toast("Reading bank SMS from the last 30 days…");
-  try{var r=await smsPlugin().importRecent({days:30});toast(r.found?"Found "+r.found+" bank SMS · new ones are being added":"No bank SMS found in the last 30 days");setTimeout(function(){load(true)},4000);nsmsRefresh()}
+async function importNativeSms(){var mo=S.nmo||1,lab=nmoLab();toast("Reading bank SMS from the past "+lab+"…");
+  try{var r=await smsPlugin().importRecent({days:Math.min(180,mo*30)});toast(r.found?"Found "+r.found+" bank SMS · new ones are being added":"No bank SMS found in the past "+lab);setTimeout(function(){load(true)},4000);nsmsRefresh()}
   catch(e){showErr("Could not read SMS: "+e.message)}}
 function vSms(){
   if(nativeSmsOK())return vSmsNative();
