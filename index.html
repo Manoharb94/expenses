@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://fwxhclagrwlzxvsmaekt.supabase.co" crossorigin>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>Nestwise</title>
@@ -199,6 +200,7 @@ var AUTHB=URLB.replace("/rest/v1/","/auth/v1/");
 S.auth=null;S.view="";S.amsg="";S.aok=false;S.profile=null;S.members=null;S.fmode="create";S.newCode="";
 function authMsg(o,st){var c=o.error_code||o.code||"",m=o.msg||o.message||o.error_description||o.error||("Error "+st);
   var M={invalid_credentials:"Wrong email or password.",user_already_exists:"This email already has an account. Please log in.",email_exists:"This email already has an account. Please log in.",email_not_confirmed:"Please confirm your email first. Check your inbox.",weak_password:"Choose a stronger password (at least 8 characters).",over_email_send_rate_limit:"Too many emails sent. Please wait a few minutes and try again.",over_request_rate_limit:"Too many tries. Please wait a few minutes and try again.",signup_disabled:"New sign-ups are switched off in Supabase.",validation_failed:"Enter a valid email address.",email_address_invalid:"Enter a valid email address.",same_password:"Choose a password different from the old one.",user_not_found:"Wrong email or password."};
+  if(/error sending|sending.*email|unexpected_failure/i.test(c+" "+m)){try{console.warn("Auth email failed:",c,m)}catch(e){}return "We could not send the email just now. Please try again in a few minutes."}
   return M[c]||m}
 function errText(e){var m=String(e&&e.message||e);if(e&&e.name==="TypeError")return "Could not reach the server. Check your internet and try again.";
   if(/PGRST202|Could not find the function|schema cache/.test(m))return "Accounts are not set up yet. Run auth.sql in Supabase, then try again.";
@@ -525,7 +527,7 @@ function stReplaceInfo(p,f,t){var l=S.txns.filter(function(x){return x.person===
 function vStmt(){
   var h='<h2>Bank statements</h2><div class="card"><div class="note" style="margin:0 0 8px">Use this to fill in the days before your email alerts started, or to check them. For the dates you choose, the statement replaces the email-alert payments. Your cash, lending and tally entries are not touched.</div>';
   var st=S.st;
-  if(!st){h+='<div class="mute">Statement file from any bank</div><button class="btn" id="stpick">📄 Choose statement file</button><input type="file" id="stf" style="display:none"><div class="note" style="margin:6px 0 0">PDF, Excel, CSV, text, OFX or QIF all work. Locked PDFs ask for the password. Photos and screenshots cannot be read reliably.</div><div id="stmsg" class="note"></div>'}
+  if(!st){h+='<div class="mute">Statement file from any bank</div><button class="btn" id="stpick">⬆️ Import statement</button><input type="file" id="stf" style="display:none"><div class="note" style="margin:6px 0 0">PDF, Excel, CSV, text, OFX or QIF all work. Locked PDFs ask for the password. Photos and screenshots cannot be read reliably.</div><div id="stmsg" class="note"></div>'}
   else{var rp=stReplaceInfo(st.person,st.from2,st.to2);
     h+='<div class="row"><b>'+esc(st.file)+'</b><button class="btn ghost s" id="stx">Choose another</button></div>';
     h+='<div class="note" style="margin:6px 0">'+st.rows.length+' payments · '+esc(st.from)+' to '+esc(st.to)+' · out '+money(st.debits)+' · in '+money(st.credits)+'</div><div style="margin-bottom:8px">'+(st.balance_ok==null?'':stBadge(st.balance_ok,st.balance_ok?'opening + in − out = closing balance':'balances do not add up'))+' '+(st.summary_ok==null?'':stBadge(st.summary_ok,st.summary_ok?'matches the statement totals':'differs from statement totals'))+'</div>';
@@ -533,7 +535,7 @@ function vStmt(){
     h+='<div class="card" style="box-shadow:none;border:1px solid var(--line);margin:0 0 10px;padding:4px 12px">'+st.rows.slice(0,5).map(function(x){return '<div class="row" style="margin:6px 0"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(x.m)+' <span class="mute">'+esc(x.d)+'</span></span><b class="'+(x.t==="out"?"out":"in")+'" style="white-space:nowrap;margin-left:8px">'+(x.t==="out"?"−":"+")+money(x.a)+'</b></div>'}).join('')+(st.rows.length>5?'<div class="note" style="margin:4px 0">and '+(st.rows.length-5)+' more</div>':'')+'</div>';
     h+='<div class="mute">Whose account is this?</div><select id="stp">'+persons().map(function(n){return '<option value="'+esc(n)+'"'+(n===st.person?' selected':'')+'>'+esc(n)+(n===S.name?' (you)':'')+'</option>'}).join('')+'</select>';
     h+='<div class="grid"><div><div class="mute">From</div><input type="date" id="stfrom" value="'+esc(st.from2)+'"></div><div><div class="mute">To</div><input type="date" id="stto" value="'+esc(st.to2)+'"></div></div>';
-    h+='<div class="note" id="strep" style="margin:0 0 8px">For '+esc(st.person)+', this replaces '+rp.n+' email-alert payment'+(rp.n===1?'':'s')+' ('+money(rp.sum)+') between these dates. They are only hidden, and come back if you remove the import.</div><button class="btn" id="stgo">Import statement</button><div id="stmsg" class="note"></div>'}
+    h+='<div class="note" id="strep" style="margin:0 0 8px">For '+esc(st.person)+', this replaces '+rp.n+' email-alert payment'+(rp.n===1?'':'s')+' ('+money(rp.sum)+') between these dates. They are only hidden, and come back if you remove the import.</div><button class="btn" id="stgo">Confirm and import</button><div id="stmsg" class="note"></div>'}
   h+='</div>';
   var im=S.imports;
   h+='<h2>Imported statements</h2><div class="card">';
@@ -586,7 +588,7 @@ async function stImport(){
     S.st=null;S.stsel=res.batch;await load();await loadImports();render();
     toast("Imported "+res.inserted+" payments");
     var m2=document.getElementById("stmsg");if(m2){m2.className="note";m2.textContent="Imported "+res.inserted+" payments ("+res.replaced+" email-alert payments replaced, "+res.carried+" categories kept, "+res.needs_category+" need a category). "+(ok?"Totals match the file.":"Totals differ from the file by "+money(Math.abs(res.debits-fd)+Math.abs(res.credits-fc))+" (duplicates skipped).")}
-  }catch(e){btn.disabled=false;btn.textContent="Import statement";if(msg){msg.className="note out";msg.textContent=errText(e)}}}
+  }catch(e){btn.disabled=false;btn.textContent="Confirm and import";if(msg){msg.className="note out";msg.textContent=errText(e)}}}
 async function loadPlan(){
   await Promise.all([
     (async function(){var bad="";
@@ -603,6 +605,7 @@ function startFetch(){
   var q0="transactions?select=*&order=txn_date.desc,created_at.desc&limit=5000";
   var side=Promise.all([loadPlan(),loadMembers(),loadImports()]);
   var tx=(async function(){
+    if(!S._noRpc){try{var rr=await api("rpc/app_txns",{method:"POST",body:'{"p_limit":5000}'});if(Array.isArray(rr)){S.txns=rr;S.err="";S.loaded=true;return}}catch(e){if(/PGRST202|Could not find the function|404|schema cache/.test(String(e&&e.message)))S._noRpc=1}}
     try{S.txns=await api(q0+"&hidden=eq.false")||[];S.err="";S.loaded=true}
     catch(e){try{S.txns=await api(q0)||[];S.err="";S.loaded=true}catch(e2){S.err="Could not load: "+e2.message}}})();
   return Promise.all([tx,side])}
@@ -612,13 +615,16 @@ async function load(quiet,pre){
   var sig=dataSig();
   if(quiet&&sig===S._sig)return;
   S._sig=sig;S._q=!!quiet;render();S._q=false;
-  if(S.loaded)setTimeout(saveCache,50);
+  if(S.loaded&&S._sig!==S._saved)(window.requestIdleCallback||function(f){return setTimeout(f,300)})(function(){saveCache();S._saved=S._sig},{timeout:3000});
 }
-function dataSig(){var sig=0;try{var js=JSON.stringify([S.txns,S.budgets,S.fixed,S.imports,S.members,S.profile,S.goals,S.err]);for(var i=0;i<js.length;i++)sig=(sig*31+js.charCodeAt(i))|0;return js.length+":"+sig}catch(e){return String(Math.random())}}
+function hs(s){var x=0,i;s=s==null?"":String(s);for(i=0;i<s.length&&i<14;i++)x=(x*31+s.charCodeAt(i))|0;return x^s.length}
+function dataSig(){try{var h=0,T=S.txns||[],i,t;
+  for(i=0;i<T.length;i++){t=T[i];h=(((h*31+Math.round(t.amount*100))|0)*31+hs(t.id)+hs(t.category)*7+hs(t.merchant)*13+hs(t.note)*17+hs(t.txn_date)*3+(t.hidden?5:0)+(t.type==="in"?11:0)+(t.raw?19:0)+hs(t.person)*23)|0}
+  var js=JSON.stringify([S.budgets,S.fixed,S.imports,S.members,S.profile,S.goals,S.err]),sig=h;for(i=0;i<js.length;i++)sig=(sig*31+js.charCodeAt(i))|0;return T.length+":"+js.length+":"+sig}catch(e){return String(Math.random())}}
 /* a saved copy of the last data, so the app opens instantly and refreshes quietly behind it */
 function saveCache(){try{
   if(!S.auth||!S.profile||S.err)return;
-  var c={e:S.auth.email||"",p:S.profile,t:S.txns.map(function(t){var o={};for(var k in t)if(k!=="raw")o[k]=t[k];if(t.raw)o.raw=1;return o}),b:S.budgets,f:S.fixed,g:S.goals,ge:S.gents,m:S.members,i:S.imports},js=JSON.stringify(c);
+  var c={e:S.auth.email||"",p:S.profile,t:S.txns.map(function(t){if(typeof t.raw!=="string")return t;var o={};for(var k in t)if(k!=="raw")o[k]=t[k];if(t.raw)o.raw=1;return o}),b:S.budgets,f:S.fixed,g:S.goals,ge:S.gents,m:S.members,i:S.imports},js=JSON.stringify(c);
   if(js.length<3500000)ls("xc",js)}catch(e){}}
 function readCache(){try{var c=JSON.parse(ls("xc")||"null");if(c&&S.auth&&c.e&&c.e===S.auth.email&&c.p&&c.t)return c}catch(e){}return null}
 function useCache(c){S.profile=c.p;S.code=c.p.household_id;S.name=c.p.display_name;S.view="";S.pf=ls("pf")||S.name;S.txns=c.t;S.budgets=c.b||[];S.fixed=c.f||[];S.goals=c.g||[];S.gents=c.ge||null;S.members=c.m||null;S.imports=c.i||null;S.loaded=true;S.err="";S._sig=dataSig()}
@@ -626,8 +632,9 @@ function pdate(off){var n=new Date(),ms=S.ms||1,m=n.getMonth()+off;
   if(n.getDate()<Math.min(ms,new Date(n.getFullYear(),n.getMonth()+1,0).getDate()))m--;
   return new Date(n.getFullYear(),m,Math.min(ms,new Date(n.getFullYear(),m+1,0).getDate()))}
 function pend(off){var d=pdate(off+1);d.setDate(d.getDate()-1);return d}
-function pkey(ds){if(!ds)return "";var d=new Date(ds+"T00:00:00"),m=d.getMonth();
-  if(d.getDate()<Math.min(S.ms||1,new Date(d.getFullYear(),m+1,0).getDate()))m--;return ym(new Date(d.getFullYear(),m,1))}
+function pkey(ds){if(!ds)return "";var ms=S.ms||1;if(S._pkm!==ms){S._pkm=ms;S._pk={}}var c=S._pk[ds];if(c)return c;
+  var y=+ds.slice(0,4),m=+ds.slice(5,7)-1,d=+ds.slice(8,10),dim=[31,(y%4===0&&(y%100!==0||y%400===0))?29:28,31,30,31,30,31,31,30,31,30,31][m];
+  if(d<Math.min(ms,dim))m--;if(m<0){m=11;y--}return S._pk[ds]=y+"-"+(m<9?"0":"")+(m+1)}
 function plabel(off){var a=pdate(off),b=pend(off),o={day:"numeric",month:"short"};
   return (S.ms||1)===1?a.toLocaleString("en-IN",{month:"long",year:"numeric"}):a.toLocaleString("en-IN",o)+" – "+b.toLocaleString("en-IN",o)+" "+b.getFullYear()}
 function preset(r){var n=new Date();S.range=r;
@@ -1518,13 +1525,17 @@ function lendWho(t,cat,kind,label,note,pp){
 function pick(t){
   if(!canEditT(t)){toast("View only: ask the family owner for edit access");return}
   var sh=document.getElementById("sheet");
-  var h='<div class="sheet"><div><b>Choose a category</b><div class="mute" style="margin:4px 0 10px">'+esc(t.merchant||"Unknown")+' · '+money(t.amount)+' · '+esc(t.txn_date||"")+'</div><input id="pn" placeholder="Note (optional)" value="'+esc(t.note||"")+'"><input id="pp" list="pl" placeholder="Person name (only for Lend out / Lend in)" value="'+esc(t.merchant||"")+'"><datalist id="pl">'+lendNames()+'</datalist><label class="mute" style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><input type="checkbox" id="po" style="width:auto;margin:0">Only this payment</label><div class="note" style="margin:0">Otherwise the payee is remembered, and its future payments are filed automatically.</div><div class="cats">';
+  var h='<div class="sheet"><div><b>Choose a category</b><input id="cq" type="search" placeholder="🔍 Search categories" autocomplete="off" style="margin:8px 0 4px"><div class="mute" style="margin:4px 0 10px">'+esc(t.merchant||"Unknown")+' · '+money(t.amount)+' · '+esc(t.txn_date||"")+'</div><input id="pn" placeholder="Note (optional)" value="'+esc(t.note||"")+'"><input id="pp" list="pl" placeholder="Person name (only for Lend out / Lend in)" value="'+esc(t.merchant||"")+'"><datalist id="pl">'+lendNames()+'</datalist><label class="mute" style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><input type="checkbox" id="po" style="width:auto;margin:0">Only this payment</label><div class="note" style="margin:0">Otherwise the payee is remembered, and its future payments are filed automatically.</div><div class="cats">';
   if(t.type!=="in"&&SUBRE.test(t.merchant||""))h+='<button data-c="'+CATS.indexOf("Subscriptions")+'" style="border-color:var(--accent,#5fb59a)">⭐ Subscriptions (suggested)</button>';
   CATS.forEach(function(c,i){if(c===LOUT||c===LIN)return;h+='<button data-c="'+i+'">'+esc(c)+'</button>'});
   var LB=t.type==="in"?[["Borrowed (they gave me)",LIN,"new"],["Got back (they repaid me)",LOUT,"settle"]]:[["Lend out (I gave)",LOUT,"new"],["Paid back (I repaid)",LIN,"settle"]];
   LB.forEach(function(x,i){h+='<button data-l="'+i+'" style="border-color:var(--accent,#5fb59a)">'+x[0]+'</button>'});
   h+='</div><button class="btn ghost" style="margin-top:12px" id="later">Cancel</button></div></div>';
   sh.innerHTML=h;
+  var cq=document.getElementById("cq");if(cq)cq.oninput=function(){var q=cq.value.trim().toLowerCase(),n=0,last=null;
+    sh.querySelectorAll(".cats button").forEach(function(b){var ok=!q||b.textContent.toLowerCase().indexOf(q)>=0;b.style.display=ok?"":"none";if(ok){n++;last=b}});
+    var nm=document.getElementById("cqn");if(!nm){nm=document.createElement("div");nm.id="cqn";nm.className="note";nm.style.cssText="margin:8px 0";nm.textContent="No category matches. Clear the search to see them all.";sh.querySelector(".cats").parentNode.insertBefore(nm,sh.querySelector(".cats"))}nm.style.display=n?"none":"";cq._one=n===1?last:null};
+  if(cq)cq.onkeydown=function(e){if(e.key==="Enter"&&cq._one){e.preventDefault();cq._one.click()}};
   sh.querySelectorAll("[data-l]").forEach(function(b){b.onclick=function(){var x=LB[+b.dataset.l];lendWho(t,x[1],x[2],x[0],g("pn").trim(),g("pp").trim())}});
   document.getElementById("later").onclick=function(){sh.innerHTML=""};
   sh.querySelectorAll("[data-c]").forEach(function(b){b.onclick=async function(){
@@ -1631,6 +1642,12 @@ document.addEventListener("click",function(e){
   if(b.hasAttribute("data-theme"))ls("theme",b.getAttribute("data-theme"));else ls("accent",b.getAttribute("data-accent"));
   applyLook();render()});
 applyLook();preset("month");boot();
+if("serviceWorker" in navigator&&(location.protocol==="https:"||location.hostname==="localhost")){
+  window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})});
+  navigator.serviceWorker.addEventListener("message",function(e){if(e.data&&e.data.t==="update"&&!document.getElementById("updbar")){
+    var b=document.createElement("div");b.id="updbar";b.style.cssText="position:fixed;left:12px;right:12px;bottom:calc(86px + env(safe-area-inset-bottom));z-index:60;background:#1f1f23;color:#fff;border-radius:14px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;box-shadow:0 6px 24px rgba(0,0,0,.3);font-size:14px";
+    b.innerHTML='<span>A new version is ready</span><button style="border:0;border-radius:10px;padding:8px 14px;font-weight:600;background:#8b5cf6;color:#fff">Update</button>';
+    b.querySelector("button").onclick=function(){location.reload()};document.body.appendChild(b)}})}
 </script>
 </body>
 </html>
