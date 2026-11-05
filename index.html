@@ -239,15 +239,20 @@ async function shareCode(kind,c,nm){if(!c)return;var msg=joinMsg(c,nm);
   if(kind==="mail"){location.href="mailto:?subject="+encodeURIComponent("Join my family on Nestwise")+"&body="+encodeURIComponent(msg);return}
   if(kind==="link"){toast(await copyText(joinLink(c))?"Link copied":"Press and hold to copy: "+joinLink(c))}}
 function captureJoin(){try{var u=new URLSearchParams(location.search),c=(u.get("join")||"").trim();if(c){ls("pendjoin",c.slice(0,40));u.delete("join");var q=u.toString();history.replaceState(null,"",location.pathname+(q?"?"+q:"")+location.hash)}}catch(e){}}
+function linkErr(m,c){if(c==="otp_expired"||/expired|invalid/i.test(m||""))return "That email link has expired or was already used (some email apps open links early). Log in, or tap Forgot password to get a fresh email, or use the code in the email.";return m||"That link did not work."}
 function parseHash(){var o={};try{new URLSearchParams(location.hash.replace(/^#/,"")).forEach(function(v,k){o[k]=v})}catch(e){}return o}
 async function boot(){
-  captureJoin();var hp=parseHash();
+  captureJoin();var hp=parseHash(),qp={};try{new URLSearchParams(location.search).forEach(function(v,k){qp[k]=v})}catch(e){}
+  if(qp.token_hash&&qp.type){var th=qp.token_hash,ty=qp.type;try{history.replaceState(null,"",location.pathname)}catch(e){}
+    try{var vo=await authFetch("verify","POST",{type:ty,token_hash:th});saveSess(vo);if(ty==="recovery"){S.view="newpw";render();return}}
+    catch(e){S.view="login";S.amsg=linkErr(e.message);render();return}}
+  if(!hp.error_description&&qp.error_description){hp.error_description=qp.error_description;hp.error_code=qp.error_code;try{history.replaceState(null,"",location.pathname)}catch(e){}}
   if(hp.access_token){
     saveSess({access_token:hp.access_token,refresh_token:hp.refresh_token,expires_in:parseInt(hp.expires_in,10)||3600});
     try{history.replaceState(null,"",location.pathname+location.search)}catch(e){}
     if(hp.type==="recovery"){S.view="newpw";render();return}
   }else if(hp.error_description){
-    S.view="login";S.amsg=hp.error_description.replace(/\+/g," ");try{history.replaceState(null,"",location.pathname+location.search)}catch(e){}render();return}
+    S.view="login";S.amsg=linkErr(hp.error_description.replace(/\+/g," "),hp.error_code);try{history.replaceState(null,"",location.pathname+location.search)}catch(e){}render();return}
   if(!S.auth){S.view="login";render();return}
   var cc=readCache();if(cc){useCache(cc);render();S._cached=true}else render();
   await enter()}
@@ -266,6 +271,8 @@ function authView(){
   if(v==="login"){h+='<h2 style="margin-top:0">Log in</h2>'+pjn+(legacy?'<div class="note" style="margin-bottom:10px">The app now uses accounts. Create an account, then join your family with the invite code. Your saved expenses stay as they are.</div>':'')+inp("a_em","Email","email","email",S.lastEmail)+inp("a_pw","Password","password","current-password")+msg+btn("login","Log in")+lnk("go-forgot","Forgot password?")+lnk("go-signup","New here? Create an account")}
   else if(v==="signup"){h+='<h2 style="margin-top:0">Create account</h2>'+pjn+inp("a_em","Email","email","email",S.lastEmail)+inp("a_pw","Password (8+ characters)","password","new-password")+inp("a_pw2","Repeat password","password","new-password")+msg+btn("signup","Create account")+lnk("go-login","I already have an account")}
   else if(v==="forgot"){h+='<h2 style="margin-top:0">Reset password</h2><div class="note" style="margin-bottom:10px">Enter your email. We will send a link to choose a new password.</div>'+inp("a_em","Email","email","email",S.lastEmail)+msg+btn("forgot","Send reset link")+lnk("go-login","Back to log in")}
+  else if(v==="verify"){h+='<h2 style="margin-top:0">Confirm your email</h2><div class="note" style="margin-bottom:10px">We sent a message to <b>'+esc(S.vemail||"")+'</b>. Tap the link inside it, or type the code from it here.</div><input id="a_code" type="text" inputmode="numeric" autocomplete="one-time-code" placeholder="Code from the email">'+msg+btn("vcode","Confirm")+lnk("vresend","Send the email again")+lnk("go-login","Back to log in")}
+  else if(v==="rcode"){h+='<h2 style="margin-top:0">Reset password</h2><div class="note" style="margin-bottom:10px">Tap the link in the email we sent to <b>'+esc(S.vemail||"")+'</b>, or type the code from it here and choose a new password.</div><input id="a_code" type="text" inputmode="numeric" autocomplete="one-time-code" placeholder="Code from the email">'+inp("a_pw","New password (8+ characters)","password","new-password")+inp("a_pw2","Repeat new password","password","new-password")+msg+btn("rcode","Save new password")+lnk("rresend","Send the email again")+lnk("go-login","Back to log in")}
   else if(v==="newpw"){h+='<h2 style="margin-top:0">Choose a new password</h2>'+inp("a_pw","New password (8+ characters)","password","new-password")+inp("a_pw2","Repeat new password","password","new-password")+msg+btn("newpw","Save password")}
   else if(v==="family"){var pj2=ls("pendjoin");if(pj2&&!S._fm)S.fmode="join";var c=S.fmode==="create";
     if((S.invites||[]).length){h+='<h2 style="margin-top:0">You’re invited</h2>'+inp("f_inm","Your name, e.g. Manjari","text","given-name")+(S.invites||[]).map(function(x){return '<div class="card" style="box-shadow:none;border:1px solid var(--line);margin:8px 0"><b>'+esc(x.by)+'</b> invited you to <b>'+esc(x.family)+'</b><div class="note" style="margin:2px 0 10px">'+x.members+' '+(x.members===1?'person':'people')+' · you can '+(x.can_edit?'view and edit':'view')+' the family’s payments</div><div class="row" style="gap:8px"><button class="btn s" data-a="iacc:'+x.id+'">Join</button><button class="btn ghost s" data-a="idec:'+x.id+'">Decline</button></div></div>'}).join('')+msg+'<div class="note" style="margin:14px 0 6px;text-align:center">or</div>';msg=''}
@@ -291,16 +298,23 @@ async function authAction(a){
   m("");
   try{
     if(a==="login"){var e1=em(),pw=g("a_pw");if(!e1||!pw)return m("Enter your email and password.");busy(true);
-      var o=await authFetch("token?grant_type=password","POST",{email:e1,password:pw});saveSess(o);S.auth.email=S.auth.email||e1;ls("sb",JSON.stringify(S.auth));S.view="";render();await enter();return}
+      var o;try{o=await authFetch("token?grant_type=password","POST",{email:e1,password:pw})}catch(e){if(/confirm your email/i.test(e.message)){S.vemail=e1;busy(false);return go("verify","Please confirm your email first. Tap the link we sent, or enter its code below.")}throw e}saveSess(o);S.auth.email=S.auth.email||e1;ls("sb",JSON.stringify(S.auth));S.view="";render();await enter();return}
     if(a==="signup"){var e2=em(),p1=g("a_pw"),p2=g("a_pw2");if(!e2)return m("Enter your email.");if(p1.length<8)return m("Password needs at least 8 characters.");if(p1!==p2)return m("The two passwords do not match.");busy(true);
-      var o2=await authFetch("signup","POST",{email:e2,password:p1});
+      var o2=await authFetch("signup?redirect_to="+encodeURIComponent(APP_URL),"POST",{email:e2,password:p1});
       if(o2.access_token){saveSess(o2);S.view="";render();await enter();return}
-      return go("login","Account created. Check your email to confirm it, then log in.",true)}
+      S.vemail=e2;return go("verify","Account created. We sent you an email.",true)}
     if(a==="forgot"){var e3=em();if(!e3)return m("Enter your email.");busy(true);
-      await authFetch("recover?redirect_to="+encodeURIComponent(location.origin+location.pathname),"POST",{email:e3});
-      busy(false);return m("If this email has an account, a reset link is on its way. Check your inbox and spam.",true)}
-    if(a==="newpw"){var n1=g("a_pw"),n2=g("a_pw2");if(n1.length<8)return m("Password needs at least 8 characters.");if(n1!==n2)return m("The two passwords do not match.");busy(true);
-      await authFetch("user","PUT",{password:n1},S.auth.access);S.view="";S.amsg="";render();toast("Password changed");await enter();return}
+      await authFetch("recover?redirect_to="+encodeURIComponent(APP_URL),"POST",{email:e3});
+      S.vemail=e3;return go("rcode","If this email has an account, we sent a reset email. Check your inbox and spam.",true)}
+    if(a==="vcode"){var cc=g("a_code").replace(/\s/g,"");if(cc.length<4)return m("Enter the code from the email.");busy(true);
+      var vo=await authFetch("verify","POST",{type:"signup",email:S.vemail,token:cc});if(!vo.access_token)throw new Error("That code did not work.");saveSess(vo);S.view="";render();toast("Email confirmed");await enter();return}
+    if(a==="vresend"){await authFetch("resend?redirect_to="+encodeURIComponent(APP_URL),"POST",{type:"signup",email:S.vemail});return m("Sent again. Check your inbox and spam.",true)}
+    if(a==="rcode"){var rc=g("a_code").replace(/\s/g,""),q1=g("a_pw"),q2=g("a_pw2");if(rc.length<4)return m("Enter the code from the email.");if(q1.length<8)return m("Password needs at least 8 characters.");if(q1!==q2)return m("The two passwords do not match.");busy(true);
+      var ro=await authFetch("verify","POST",{type:"recovery",email:S.vemail,token:rc});if(!ro.access_token)throw new Error("That code did not work.");saveSess(ro);
+      await authFetch("user","PUT",{password:q1},S.auth.access);S.view="";S.amsg="";render();toast("Password changed");await enter();return}
+    if(a==="rresend"){await authFetch("recover?redirect_to="+encodeURIComponent(APP_URL),"POST",{email:S.vemail});return m("Sent again. Check your inbox and spam.",true)}
+    if(a==="newpw"){var n1=g("a_pw"),n2=g("a_pw2");if(!S.auth||!S.auth.access){S.view="forgot";return go("forgot","This link has expired. Enter your email for a new one.")}if(n1.length<8)return m("Password needs at least 8 characters.");if(n1!==n2)return m("The two passwords do not match.");busy(true);
+      await ensureToken();await authFetch("user","PUT",{password:n1},S.auth.access);S.view="";S.amsg="";render();toast("Password changed");await enter();return}
     if(a.indexOf("iacc:")===0){var nm3=g("f_inm").trim();if(nm3.length<2)return m("Enter your name first.");busy(true);
       await api("rpc/accept_invite",{method:"POST",body:JSON.stringify({p_id:a.slice(5),p_display:nm3})});S.view="";render();toast("Welcome to the family!");await enter();return}
     if(a.indexOf("idec:")===0){await api("rpc/decline_invite",{method:"POST",body:JSON.stringify({p_id:a.slice(5)})});S.invites=(S.invites||[]).filter(function(x){return x.id!==a.slice(5)});return go("family")}
@@ -375,6 +389,134 @@ function parseHdfc(aoa){
   var ds=rows.map(function(x){return x.d}).sort(),has=sum.opening!=null&&sum.closing!=null;
   var bal=has?Math.abs(sum.opening+sc-sd-sum.closing)<0.5:null,tie=sum.debits!=null?Math.abs(sum.debits-sd)<0.5&&Math.abs(sum.credits-sc)<0.5:null;
   return {rows:rows,from:ds[0],to:ds[ds.length-1],debits:Math.round(sd*100)/100,credits:Math.round(sc*100)/100,opening:sum.opening,closing:sum.closing,balance_ok:bal,summary_ok:tie}}
+/* ---------- any-file statement reader ---------- */
+var PDFJS_URL="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js",PDFW_URL="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+function loadPdfjs(){return new Promise(function(res,rej){if(window.pdfjsLib)return res();var x=document.createElement("script");x.src=PDFJS_URL;x.onload=function(){res()};x.onerror=function(){rej(new Error("Could not load the PDF reader. Check your internet and try again."))};document.head.appendChild(x)}).then(async function(){
+  if(pdfjsLib.GlobalWorkerOptions.workerSrc)return;
+  try{var t=await (await fetch(PDFW_URL)).text();pdfjsLib.GlobalWorkerOptions.workerSrc=URL.createObjectURL(new Blob([t],{type:"application/javascript"}))}catch(e){pdfjsLib.GlobalWorkerOptions.workerSrc=PDFW_URL}})}
+async function pdfLines(buf){
+  await loadPdfjs();
+  var task=pdfjsLib.getDocument({data:new Uint8Array(buf)});
+  task.onPassword=function(cb,reason){var p=prompt(reason===2?"That password was not right. Try again:":"This PDF is locked. Enter its password (banks often use your customer ID, date of birth or phone number):");if(p==null){cb("")}else cb(p)};
+  var pdf;try{pdf=await task.promise}catch(e){if(e&&e.name==="PasswordException")throw new Error("This PDF is locked and the password was not accepted.");throw new Error("Could not open this PDF.")}
+  var out=[];
+  for(var pn=1;pn<=pdf.numPages;pn++){var pg=await pdf.getPage(pn),tc=await pg.getTextContent(),its=tc.items.filter(function(i){return String(i.str).trim()}).map(function(i){return {s:i.str,x:i.transform[4],y:i.transform[5],w:i.width||0}});
+    its.sort(function(a,b){return b.y-a.y||a.x-b.x});var ln=[],cur=null;
+    its.forEach(function(i){if(cur&&Math.abs(cur.y-i.y)<=3){cur.p.push(i)}else{cur={y:i.y,p:[i]};ln.push(cur)}});
+    ln.forEach(function(l){l.p.sort(function(a,b){return a.x-b.x});var s="",end=null;l.p.forEach(function(i){if(end!=null&&i.x-end>1.5)s+=" ";else if(end!=null&&i.x-end>-1&&/\w$/.test(s)&&/^\w/.test(i.s)&&i.x-end>0.3)s+=" ";s+=i.s;end=i.x+i.w});out.push(s.replace(/\s+/g," ").trim())})}
+  if(!out.join("").trim())throw new Error("This PDF has no readable text (it may be a scan or photo). Download the statement as Excel or CSV from your bank instead.");
+  return out}
+var MON={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+function p2(n){return (n<10?"0":"")+n}
+var DRE=/^(?:(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})|(\d{1,2})[-\/. ]([A-Za-z]{3})[a-z]*[-\/. ,]*(\d{2,4})|(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{2,4}))(?![\d])/;
+function stDate(s,mdy){s=String(s).trim();var m=s.match(DRE),y,mo,d;if(!m)return "";
+  if(m[1]){y=+m[1];mo=+m[2];d=+m[3]}else if(m[4]){d=+m[4];mo=MON[m[5].toLowerCase()];y=+m[6];if(!mo)return ""}else{var a=+m[7],b=+m[8];y=+m[9];if(mdy){mo=a;d=b}else{d=a;mo=b}}
+  if(y<100)y+=2000;if(mo<1||mo>12||d<1||d>31||y<2000||y>2100)return "";return y+"-"+p2(mo)+"-"+p2(d)}
+function serialDate(n){if(typeof n!=="number"||n<36526||n>73050)return "";var d=new Date(Math.round((n-25569)*86400000));return d.getUTCFullYear()+"-"+p2(d.getUTCMonth()+1)+"-"+p2(d.getUTCDate())}
+function cellDate(c,mdy){if(c instanceof Date&&!isNaN(c))return c.getFullYear()+"-"+p2(c.getMonth()+1)+"-"+p2(c.getDate());if(typeof c==="number")return serialDate(c);return stDate(c,mdy)}
+function guessMdy(strs){var a=0,b=0;strs.forEach(function(s){var m=String(s).trim().match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.]\d{2,4}/);if(m){if(+m[1]>12)a++;if(+m[2]>12)b++}});return b>0&&a===0}
+function amtOf(x){if(typeof x==="number")return x;var s=String(x==null?"":x).replace(/[₹,\s]|Rs\.?|INR/gi,"");var neg=/^\(.*\)$/.test(s)||/^-/.test(s)||/Dr\.?$/i.test(s);s=s.replace(/[()\-]|Dr\.?|Cr\.?/gi,"");var v=parseFloat(s);return isNaN(v)?null:(neg?-v:v)}
+function genInfo(n0){var n=String(n0||"").replace(/\s+/g," ").trim(),o={m:"",rrn:"",c:""},m;
+  if(/\bUPI\b/i.test(n)){m=n.match(/\b(\d{12})\b/);if(m)o.rrn=m[1];
+    var seg=n.split(/[\/\-@|]/).map(function(x){return x.trim()}).filter(function(x){return x.length>2&&/[A-Za-z]{3}/.test(x)&&!/^(UPI|DR|CR|PAYMENT|PAID|TO|FROM|DEBIT|CREDIT|TRANSFER|BANK|REF|IMPS|NEFT|P2A|P2M|P2P|UTR)$/i.test(x)&&!/^(payment from|payment to|paid via|sent using|received from)/i.test(x)});
+    o.m=(seg[0]||"UPI payment").slice(0,40);return o}
+  if(/^(NEFT|RTGS|IMPS)\b/i.test(n)){var q=n.split(/[\/\-]/).map(function(x){return x.trim()}).filter(function(x){return /[A-Za-z]{3}/.test(x)&&!/^(NEFT|RTGS|IMPS|CR|DR|IN|OUT)$/i.test(x)});o.m=(q[q.length>2?1:0]||n).slice(0,40);return o}
+  if(/\b(ATM|ATW|NWD|CASH WDL|CASH WITHDRAWAL)\b/i.test(n)){o.m="ATM cash withdrawal";return o}
+  if(/\b(INT\.?\s*PD|INTEREST)\b/i.test(n)&&n.length<60){o.m="Bank interest";return o}
+  if(/\b(CHARGES?|CHRG|GST|FEE)\b/i.test(n)&&n.length<60){o.m="Bank charges";return o}
+  m=n.replace(/^(POS|ECOM|PUR|PURCHASE|BIL|BILLPAY|ACH D-?|ACH C-?|NACH|SI)[\/\- ]+/i,"").replace(/[\/\-]+\d{6,}.*$/,"").trim();
+  o.m=(m||n).slice(0,40);return o}
+function hash6(s){var h=5381;for(var i=0;i<s.length;i++)h=((h<<5)+h+s.charCodeAt(i))|0;return (h>>>0).toString(36)}
+function finishRows(raw,note){
+  /* raw: [{d,a,t,n,rc,bal}] in file order. Fixes order, fills types from balance chain, builds the preview object */
+  if(!raw.length)throw new Error("No transactions found in this file. If this is a bank statement, download it as Excel, CSV or PDF from your bank and try again.");
+  var asc=raw.length<2||raw[0].d<=raw[raw.length-1].d;if(!asc)raw=raw.slice().reverse();
+  var hasBal=raw.every(function(r){return r.bal!=null}),breaks=0,i,r;
+  if(hasBal){
+    for(i=1;i<raw.length;i++){r=raw[i];var dl=Math.round((r.bal-raw[i-1].bal)*100)/100,am=Math.round(r.a*100)/100;
+      if(Math.abs(dl-am)<0.011)r.t="in";else if(Math.abs(dl+am)<0.011)r.t="out";else{breaks++;if(!r.t)r.t=dl>=0?"in":"out"}}
+    r=raw[0];if(!r.t)r.t=guessDir(r.n)||"out"
+  }
+  raw.forEach(function(x){if(!x.t)x.t=guessDir(x.n)||"out"});
+  var rows=[],sd=0,sc=0,seen={};
+  raw.forEach(function(x){var inf=/^(HDFC)/i.test(note||"")?stInfo(x.n,x.rc):genInfo(x.n),a=Math.round(Math.abs(x.a)*100)/100,out=x.t==="out",k=x.d+"|"+a+"|"+x.n;seen[k]=(seen[k]||0)+1;
+    var ref=inf.rrn||("S"+x.d+"-"+hash6(k)+"-"+seen[k]);
+    rows.push({d:x.d,a:a,t:x.t,m:inf.m||"Unknown",r:ref,c:inf.c||"",n:String(x.n||"").slice(0,200)});if(out)sd+=a;else sc+=a});
+  var ds=rows.map(function(x){return x.d}).sort(),op=null,cl=null;
+  if(hasBal){var f=raw[0];op=Math.round((f.bal+(f.t==="out"?f.a:-f.a))*100)/100;cl=raw[raw.length-1].bal}
+  return {rows:rows,from:ds[0],to:ds[ds.length-1],debits:Math.round(sd*100)/100,credits:Math.round(sc*100)/100,opening:op,closing:cl,balance_ok:hasBal?breaks===0:null,summary_ok:null,generic:true,breaks:breaks}}
+function guessDir(n){n=String(n||"");if(/\b(salary|refund|reversal|interest (?:paid|credit)|int\.?\s*pd|received|deposit|cashback|credited|cr\b|by transfer|neft cr|imps cr)/i.test(n))return "in";return ""}
+var NUMRE=/\(?-?\d[\d,]*\.\d{1,2}\)?(?:\s?(?:Cr|Dr)\b\.?)?/gi;
+function parseLines(lines){
+  var mdy=guessMdy(lines.map(function(l){return l.replace(/^\D*/,"")})),raw=[],prev=null;
+  lines.forEach(function(l){l=String(l).replace(/\s+/g," ").trim();if(!l)return;
+    var d="",rest="";
+    var dm=l.match(/^(?:\d{1,3}\s+)?(\d{4}[-\/.]\d{1,2}[-\/.]\d{1,2}|\d{1,2}[-\/. ][A-Za-z]{3}[a-z]*[-\/. ,]+\d{2,4}|\d{1,2}[-\/.]\d{1,2}[-\/.]\d{2,4})\b\s*(.*)$/);
+    if(dm){d=stDate(dm[1],mdy);rest=dm[2]}
+    if(!d){if(prev&&!prev.closed&&l.length<90&&!/page|statement|summary|opening|closing|total|brought|carried|date|particulars|narration|balance/i.test(l)&&!(l.match(NUMRE)||[]).length)prev.n+=" "+l;return}
+    var vd=rest.match(/^(\d{4}[-\/.]\d{1,2}[-\/.]\d{1,2}|\d{1,2}[-\/. ][A-Za-z]{3}[a-z]*[-\/. ,]+\d{2,4}|\d{1,2}[-\/.]\d{1,2}[-\/.]\d{2,4})\b\s*(.*)$/);if(vd&&stDate(vd[1],mdy))rest=vd[2];
+    var nums=rest.match(NUMRE)||[];if(!nums.length){prev=null;return}
+    var first=rest.indexOf(nums[0]),narr=rest.slice(0,first).trim(),vals=nums.map(function(x){return {v:amtOf(x),dr:/Dr\b\.?$/i.test(x),cr:/Cr\b\.?$/i.test(x),neg:/^\(|^-/.test(x)}});
+    var bal=null,a,t="";
+    if(vals.length>=2){bal=vals[vals.length-1].v;a=vals[vals.length-2]}else a=vals[0];
+    if(bal!=null&&vals[vals.length-1].dr)bal=-Math.abs(bal);
+    t=a.dr?"out":a.cr?"in":a.neg?"out":"";
+    prev={d:d,a:Math.abs(a.v),t:t,n:narr,rc:"",bal:bal};raw.push(prev)});
+  return finishRows(raw)}
+function parseGrid(aoa){
+  var hi=-1,i,j,c;
+  for(i=0;i<Math.min(aoa.length,80)&&hi<0;i++){var hd=(aoa[i]||[]).map(function(x){return String(x==null?"":x).trim().toLowerCase()});
+    var hasD=hd.some(function(x){return /^(txn\.?\s*|transaction\s*|posting\s*|value\s*)?date\b|^date$/.test(x)}),hasA=hd.some(function(x){return /withdraw|debit|\bdr\b|amount|paid out|money out/.test(x)});
+    if(hasD&&hasA)hi=i}
+  if(hi<0)return null;
+  var H=aoa[hi].map(function(x){return String(x==null?"":x).trim().toLowerCase()}),ix=function(re,skip){for(var k=0;k<H.length;k++)if(re.test(H[k])&&k!==skip)return k;return -1};
+  var cD=ix(/^(txn\.?\s*|transaction\s*|posting\s*)?date\b|^date$/),cV=ix(/value/),cN=ix(/narration|description|particulars|details|remarks|transaction remarks/),cR=ix(/chq|cheque|ref|utr/),
+      cW=ix(/withdraw|debit|paid out|money out|\bdr\b/),cP=ix(/deposit|credit|paid in|money in|\bcr\b/),cA=ix(/^amount|transaction amount|\bamount\b/),cT=ix(/^type$|dr\s*\/\s*cr|cr\s*\/\s*dr|debit\s*\/\s*credit|txn type|transaction type/),cB=ix(/balance/);
+  if(cN<0){for(j=0;j<H.length;j++)if(j!==cD&&j!==cV&&j!==cR&&j!==cW&&j!==cP&&j!==cA&&j!==cT&&j!==cB&&H[j]){cN=j;break}}
+  if(cD<0||(cW<0&&cP<0&&cA<0))return null;
+  var dstr=[];for(i=hi+1;i<aoa.length;i++){c=(aoa[i]||[])[cD];if(typeof c==="string")dstr.push(c)}
+  var mdy=guessMdy(dstr),raw=[];
+  for(i=hi+1;i<aoa.length;i++){var r=aoa[i]||[],d=cellDate(r[cD],mdy);if(!d)continue;
+    var w=cW>=0?amtOf(r[cW]):null,p=cP>=0&&cP!==cW?amtOf(r[cP]):null,a=null,t="";
+    if(cW>=0&&cP>=0&&cW!==cP){if(w&&Math.abs(w)>0){a=Math.abs(w);t="out"}else if(p&&Math.abs(p)>0){a=Math.abs(p);t="in"}}
+    else{var v=amtOf(r[cA>=0?cA:cW]);if(v!=null&&v!==0){a=Math.abs(v);if(cT>=0){var tt=String(r[cT]).toLowerCase();t=/^(cr|credit|c)\b|deposit|in$/.test(tt)?"in":/^(dr|debit|d)\b|withdraw|out$/.test(tt)?"out":""}if(!t){var rs=String(r[cA>=0?cA:cW]);t=/Cr\b/i.test(rs)?"in":/Dr\b/i.test(rs)||v<0?"out":""}}}
+    if(!a)continue;
+    var bal=cB>=0?amtOf(r[cB]):null;if(bal!=null&&/Dr\b/i.test(String(r[cB])))bal=-Math.abs(bal);
+    raw.push({d:d,a:a,t:t,n:String(r[cN]==null?"":r[cN]).replace(/\s+/g," ").trim(),rc:cR>=0?String(r[cR]||"").trim():"",bal:bal})}
+  if(!raw.length)return null;
+  /* a Cr/Dr-less single-amount sheet: let the balance chain decide */
+  return finishRows(raw)}
+function parseOfx(txt){var raw=[],re=/<STMTTRN>([\s\S]*?)(?:<\/STMTTRN>|(?=<STMTTRN>)|$)/gi,m,tag=function(b,t){var x=b.match(new RegExp("<"+t+">([^<\\r\\n]*)","i"));return x?x[1].trim():""};
+  while((m=re.exec(txt))){var b=m[1],ds=tag(b,"DTPOSTED").slice(0,8),amt=parseFloat(tag(b,"TRNAMT"));if(!/^\d{8}$/.test(ds)||isNaN(amt)||!amt)continue;
+    raw.push({d:ds.slice(0,4)+"-"+ds.slice(4,6)+"-"+ds.slice(6,8),a:Math.abs(amt),t:amt<0?"out":"in",n:(tag(b,"NAME")+" "+tag(b,"MEMO")).trim(),rc:tag(b,"FITID"),bal:null})}
+  var r=finishRows(raw),lb=txt.match(/<LEDGERBAL>[\s\S]*?<BALAMT>([-\d.,]+)/i);if(lb){r.closing=parseFloat(lb[1]);r.opening=Math.round((r.closing-r.credits+r.debits)*100)/100}return r}
+function parseQif(txt){var raw=[],cur={},mdy=false;txt.split(/\r?\n/).forEach(function(l){var c=l.charAt(0),v=l.slice(1).trim();
+  if(c==="D")cur.d=stDate(v.replace(/'/g,"/"),mdy);else if(c==="T"||c==="U"){if(cur.v==null)cur.v=amtOf(v)}else if(c==="P")cur.n=v;else if(c==="M"&&!cur.n)cur.n=v;
+  else if(c==="^"){if(cur.d&&cur.v)raw.push({d:cur.d,a:Math.abs(cur.v),t:cur.v<0?"out":"in",n:cur.n||"",rc:"",bal:null});cur={}}});return finishRows(raw)}
+async function readStatementFile(file){
+  var buf=await file.arrayBuffer(),u=new Uint8Array(buf.slice(0,8)),name=(file.name||"").toLowerCase(),ext=name.split(".").pop(),
+      isPdf=u[0]===0x25&&u[1]===0x50&&u[2]===0x44&&u[3]===0x46,isZip=u[0]===0x50&&u[1]===0x4B,isOle=u[0]===0xD0&&u[1]===0xCF,
+      isImg=/^image\//.test(file.type||"")||/(png|jpe?g|gif|webp|heic|bmp)$/.test(ext)||(u[0]===0xFF&&u[1]===0xD8)||(u[0]===0x89&&u[1]===0x50);
+  if(isImg)throw new Error("A photo or screenshot cannot be read reliably, and money needs to be exact. Download the statement from your bank as PDF, Excel or CSV and choose that file.");
+  if(isPdf){return parseLines(await pdfLines(buf))}
+  var sheets=null,txt=null;
+  if(isZip||isOle){await loadXlsx();var wb=XLSX.read(buf,{type:"array",cellDates:true});sheets=wb.SheetNames.map(function(n){return XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:""})})}
+  else{try{txt=new TextDecoder("utf-8",{fatal:true}).decode(buf)}catch(e){txt=new TextDecoder("windows-1252").decode(buf)}
+    txt=txt.replace(/^﻿/,"");
+    if(/<OFX|OFXHEADER/i.test(txt))return parseOfx(txt);
+    if(/^\s*!Type/im.test(txt))return parseQif(txt);
+    await loadXlsx();var wb2=XLSX.read(txt,{type:"string",raw:true,cellDates:false});sheets=wb2.SheetNames.map(function(n){return XLSX.utils.sheet_to_json(wb2.Sheets[n],{header:1,raw:true,defval:""})});
+    if(!/<table/i.test(txt)){/* plain text or CSV: also keep the raw lines for the line reader */sheets.push(null)}}
+  var firstErr=null,k,aoa,res;
+  if(txt!=null&&!/csv|tsv|html?|xml/.test(ext)&&!/<table/i.test(txt)){try{return parseLines(txt.split(/\r?\n/))}catch(e){firstErr=e}}
+  for(k=0;k<sheets.length;k++){aoa=sheets[k];if(!aoa)continue;
+    try{res=parseHdfc(aoa);return res}catch(e){}
+    try{res=parseGrid(aoa);if(res)return res}catch(e){firstErr=firstErr||e}}
+  for(k=0;k<sheets.length;k++){aoa=sheets[k];if(!aoa)continue;
+    try{return parseLines(aoa.map(function(r){return r.map(function(c){return c instanceof Date?cellDate(c):String(c==null?"":c)}).join(" ")}))}catch(e){firstErr=firstErr||e}}
+  if(txt!=null){try{return parseLines(txt.split(/\r?\n/))}catch(e){firstErr=firstErr||e}}
+  throw firstErr||new Error("This file does not look like a bank statement. Try the PDF, Excel or CSV from your bank.")}
+/* ---------- end any-file reader ---------- */
 /* ---------- end statement import ---------- */
 
 function stBadge(ok,t){return '<span class="tag'+(ok?'':' warn')+'">'+(ok?'✓ ':'⚠ ')+t+'</span>'}
@@ -383,10 +525,12 @@ function stReplaceInfo(p,f,t){var l=S.txns.filter(function(x){return x.person===
 function vStmt(){
   var h='<h2>Bank statements</h2><div class="card"><div class="note" style="margin:0 0 8px">Use this to fill in the days before your email alerts started, or to check them. For the dates you choose, the statement replaces the email-alert payments. Your cash, lending and tally entries are not touched.</div>';
   var st=S.st;
-  if(!st){h+='<div class="mute">Statement file (HDFC NetBanking: Excel or CSV)</div><input type="file" id="stf" accept=".xls,.xlsx,.csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"><div id="stmsg" class="note"></div>'}
+  if(!st){h+='<div class="mute">Statement file from any bank</div><input type="file" id="stf"><div class="note" style="margin:6px 0 0">PDF, Excel, CSV, text, OFX or QIF all work. Locked PDFs ask for the password. Photos and screenshots cannot be read reliably.</div><div id="stmsg" class="note"></div>'}
   else{var rp=stReplaceInfo(st.person,st.from2,st.to2);
     h+='<div class="row"><b>'+esc(st.file)+'</b><button class="btn ghost s" id="stx">Choose another</button></div>';
     h+='<div class="note" style="margin:6px 0">'+st.rows.length+' payments · '+esc(st.from)+' to '+esc(st.to)+' · out '+money(st.debits)+' · in '+money(st.credits)+'</div><div style="margin-bottom:8px">'+(st.balance_ok==null?'':stBadge(st.balance_ok,st.balance_ok?'opening + in − out = closing balance':'balances do not add up'))+' '+(st.summary_ok==null?'':stBadge(st.summary_ok,st.summary_ok?'matches the statement totals':'differs from statement totals'))+'</div>';
+    if(st.generic)h+='<div class="note" style="margin:0 0 8px">Read automatically from your file. Check these first rows and the totals before importing.</div>';
+    h+='<div class="card" style="box-shadow:none;border:1px solid var(--line);margin:0 0 10px;padding:4px 12px">'+st.rows.slice(0,5).map(function(x){return '<div class="row" style="margin:6px 0"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(x.m)+' <span class="mute">'+esc(x.d)+'</span></span><b class="'+(x.t==="out"?"out":"in")+'" style="white-space:nowrap;margin-left:8px">'+(x.t==="out"?"−":"+")+money(x.a)+'</b></div>'}).join('')+(st.rows.length>5?'<div class="note" style="margin:4px 0">and '+(st.rows.length-5)+' more</div>':'')+'</div>';
     h+='<div class="mute">Whose account is this?</div><select id="stp">'+persons().map(function(n){return '<option value="'+esc(n)+'"'+(n===st.person?' selected':'')+'>'+esc(n)+(n===S.name?' (you)':'')+'</option>'}).join('')+'</select>';
     h+='<div class="grid"><div><div class="mute">From</div><input type="date" id="stfrom" value="'+esc(st.from2)+'"></div><div><div class="mute">To</div><input type="date" id="stto" value="'+esc(st.to2)+'"></div></div>';
     h+='<div class="note" id="strep" style="margin:0 0 8px">For '+esc(st.person)+', this replaces '+rp.n+' email-alert payment'+(rp.n===1?'':'s')+' ('+money(rp.sum)+') between these dates. They are only hidden, and come back if you remove the import.</div><button class="btn" id="stgo">Import statement</button><div id="stmsg" class="note"></div>'}
@@ -419,7 +563,7 @@ function plabelFor(k){var p=k.split("-"),d=new Date(+p[0],+p[1]-1,1);return d.to
 function bindStmt(){
   var f=document.getElementById("stf");
   if(f)f.onchange=async function(){var file=f.files&&f.files[0],msg=document.getElementById("stmsg");if(!file)return;if(msg){msg.className="note";msg.textContent="Reading the file…"}
-    try{await loadXlsx();var buf=await file.arrayBuffer(),wb=XLSX.read(buf,{type:"array"}),ws=wb.Sheets[wb.SheetNames[0]],aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:""}),r=parseHdfc(aoa);
+    try{var r=await readStatementFile(file);
       r.file=file.name;r.person=S.name;r.from2=r.from;r.to2=r.to;S.st=r;render()}
     catch(e){if(msg){msg.className="note out";msg.textContent=errText(e)}}};
   var x=document.getElementById("stx");if(x)x.onclick=function(){S.st=null;render()};
@@ -1059,7 +1203,7 @@ function vMenu(){
   var row=function(t,i,a,b){return '<button class="mr" data-go="'+t+'"><i>'+i+'</i><span><b>'+a+'</b>'+(b?'<span>'+b+'</span>':'')+'</span><span class="go">›</span></button>'};
   return topbar("Menu","home")+'<div class="sec">App settings</div><div class="card" style="padding:0 12px">'+row("set","⚙️","Settings","Theme, colour, currency, month start")+row("cats","🗂️","Categories","What each category has this month")+'</div>'+
     '<div class="sec">Automation & sharing</div><div class="card" style="padding:0 12px">'+row("track","💬","Automated tracking","SMS & email")+row("fam","👥","Family","Share expenses with family")+row("goals","🎯","Goals","Save for things together")+row("stmt","📥","Bank statements","Upload a statement file")+'</div>'+
-    '<div class="sec">Account</div><div class="card" style="padding:0 12px"><a class="mr" href="privacy.html" target="_blank" rel="noopener" style="text-decoration:none"><i>🔒</i><span><b>Privacy policy</b><span>What the app stores and why</span></span><span class="go">›</span></a><button class="mr" id="lo"><i>⏻</i><span><b>Log out</b><span>'+esc(em)+'</span></span></button><button class="mr" id="delacc"><i>🗑️</i><span><b class="out">Delete my account</b><span>Removes your login and your payments</span></span></button></div>'}
+    '<div class="sec">Account</div><div class="card" style="padding:0 12px"><a class="mr" href="privacy.html" target="_blank" rel="noopener" style="text-decoration:none"><i>🔒</i><span><b>Privacy policy</b><span>What the app stores and why</span></span><span class="go">›</span></a><button class="mr" id="chpw"><i>🔑</i><span><b>Change password</b><span>Choose a new password for '+esc(em)+'</span></span></button><button class="mr" id="lo"><i>⏻</i><span><b>Log out</b><span>'+esc(em)+'</span></span></button><button class="mr" id="delacc"><i>🗑️</i><span><b class="out">Delete my account</b><span>Removes your login and your payments</span></span></button></div>'}
 function vSet(){
   var h=topbar("Settings","menu")+lookCard();
   h+='<h2>This phone</h2><div class="card"><div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><div class="mute">Your month starts on day (1 = normal calendar month)</div><input id="ms" type="number" inputmode="numeric" min="1" max="31" value="'+(S.ms||1)+'"><button class="btn ghost s" id="msal" style="margin-bottom:10px">Use my salary credit day</button><div class="note" id="msn">Saved on this phone only. Set the same day on the other phone. Reports, budgets and forecasts all follow it.</div><button class="btn" id="sv">Save</button></div>';
@@ -1218,6 +1362,7 @@ function bindV2(el){
     if(S.tab==="sms")S.smsStep=Math.max(0,S.smsStep+d);else S.mailStep=Math.max(0,S.mailStep+d);render();window.scrollTo(0,0)}});
   var cb=document.getElementById("csvb");if(cb)cb.onclick=function(){csv(S._lastF||[])};
   var da=document.getElementById("delacc");if(da)da.onclick=deleteAccountSheet;
+  var cp=document.getElementById("chpw");if(cp)cp.onclick=changePwSheet;
   if(S.tab==="sms"&&nativeSmsOK())bindNativeSms();
   if(S.tab==="fam")bindFam(el);
   el.querySelectorAll("[data-inv]").forEach(function(b){b.onclick=async function(){var q=b.dataset.inv.split("|");
@@ -1226,6 +1371,16 @@ function bindV2(el){
   var evs=document.getElementById("evs");if(evs){evs.onclick=function(e){e.stopPropagation()};evs.onchange=function(){S.ev=evs.value;ls("ev",S.ev);render()}}
   el.querySelectorAll(".trend .bg").forEach(function(g){var f=function(){var t=g.closest(".trend").querySelector(".trt");if(t)t.textContent=g.dataset.tip;g.closest("svg").querySelectorAll(".bg rect+rect").forEach(function(r){r.style.opacity=""});var r2=g.querySelector("rect+rect");if(r2)r2.style.opacity="1"};g.addEventListener("pointerenter",f);g.addEventListener("click",f)});
 }
+function changePwSheet(){
+  var sh=document.getElementById("sheet");
+  sh.innerHTML='<div class="sheet"><div><div class="row"><b style="font-size:20px">Change password</b><button class="x" id="cpx">✕</button></div><input id="cp1" type="password" autocomplete="new-password" placeholder="New password (8+ characters)" style="margin-top:14px"><input id="cp2" type="password" autocomplete="new-password" placeholder="Repeat new password"><div class="amsg" id="cpm"></div><button class="btn" id="cpgo">Save password</button></div></div>';
+  var msg=function(t,ok){var e=document.getElementById("cpm");e.textContent=t;e.className="amsg"+(ok?" ok":"")};
+  document.getElementById("cpx").onclick=function(){sh.innerHTML=""};
+  document.getElementById("cpgo").onclick=async function(){var a=document.getElementById("cp1").value,b=document.getElementById("cp2").value;
+    if(a.length<8)return msg("Password needs at least 8 characters.");if(a!==b)return msg("The two passwords do not match.");
+    this.disabled=true;this.textContent="Saving…";
+    try{await ensureToken();await authFetch("user","PUT",{password:a},S.auth.access);sh.innerHTML="";toast("Password changed")}
+    catch(e){this.disabled=false;this.textContent="Save password";msg(errText(e))}}}
 function deleteAccountSheet(){
   var sh=document.getElementById("sheet"),others=(S.members||[]).filter(function(m){return m.display_name!==S.name}).length;
   sh.innerHTML='<div class="sheet"><div><b style="font-size:18px">Delete your account?</b><div style="margin:10px 0;line-height:1.5">This permanently removes:<ul style="margin:6px 0;padding-left:20px"><li>your login ('+esc((S.profile&&S.profile.email)||(S.auth&&S.auth.email)||"")+')</li><li>every payment saved under <b>'+esc(S.name)+'</b>, and your statement uploads</li>'+(others?'<li>you from the family. Budgets, bills and goals stay with the others'+((S.profile||{}).role==="owner"?', and another member becomes the owner':'')+'</li>':'<li>your whole family’s data: budgets, bills, goals and categories</li>')+'</ul>It cannot be undone. Also delete your Gmail script and SMS shortcut, or they will stop working anyway.</div><div class="mute">Type <b>DELETE</b> to confirm</div><input id="delc" autocomplete="off" autocapitalize="characters"><button class="btn" id="delok" style="background:var(--out)">Delete my account</button><button class="btn ghost" style="margin-top:8px" id="delno">Cancel</button></div></div>';
