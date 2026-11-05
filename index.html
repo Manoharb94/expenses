@@ -230,7 +230,7 @@ async function enter(){
 function touch(first){if(!S.auth||Date.now()-(S._tt||0)<30*60000)return;S._tt=Date.now();var pwa=false;try{pwa=nativeApp()||window.matchMedia("(display-mode: standalone)").matches||navigator.standalone===true}catch(e){}
   api("rpc/touch",{method:"POST",body:JSON.stringify({p_os:phoneOS(),p_pwa:pwa,p_ms:first&&!S._ttm?Math.round(performance.now()):null})}).catch(function(){});S._ttm=1}
 document.addEventListener("visibilitychange",function(){if(!document.hidden&&S.code)touch()});
-var APP_URL="https://manoharb94.github.io/expenses/",PLAY_URL="";
+var APP_URL="https://nest-wise.in/",PLAY_URL="";
 function joinLink(c){return APP_URL+"?join="+encodeURIComponent(c)}
 function joinMsg(c,nm){return (nm||"I")+" invited you to share family expenses on Nestwise.\n\n1) Open this link and install the app: "+joinLink(c)+"\n2) Create your account. Your invite code "+c+" is filled in for you."+(PLAY_URL?"\n\nAndroid app: "+PLAY_URL:"")}
 function shareBtns(pre){return '<div class="note" style="margin:10px 0 6px">Send the invite link. It opens the app and fills in the code.</div><div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn s" '+pre+'="wa">💬 WhatsApp</button><button class="btn ghost s" '+pre+'="mail">✉️ Email</button><button class="btn ghost s" '+pre+'="link">🔗 Copy link</button></div>'}
