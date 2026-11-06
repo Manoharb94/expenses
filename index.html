@@ -1204,7 +1204,7 @@ function vDash(){
     more+='</div>'}
   if(more)h+='<div class="sec">'+(S.pf==="__both"||!S.pf?'Family':'More')+' · '+esc(plabel(0))+'</div><div id="acct"></div>'+more;
   h+='<div class="dc"><b style="font-size:19px">Control center</b><div class="cc">'+
-    [["track","✨","Automated tracking"],["fam","👥","Family"],["goals","🎯","Goals"],["stmt","📥","Import statement"],["set","⚙️","Settings"],["menu","☰","More"]].map(function(x){return '<button data-go="'+x[0]+'"><i>'+x[1]+'</i>'+x[2]+'</button>'}).join('')+'</div></div>';
+    [["track","✨","Automated tracking"],["fam","👥","Family Sync"],["goals","🎯","Goals"],["stmt","📥","Import statement"],["set","⚙️","Settings"],["menu","☰","More"]].map(function(x){return '<button data-go="'+x[0]+'"><i>'+x[1]+'</i>'+x[2]+'</button>'}).join('')+'</div></div>';
   return h+'<button class="fab" id="addx" aria-label="Add a cash payment">+</button>'}
 function vTx(){
   var q=(S.lq||"").toLowerCase().trim(),key=monthKey(S.lm),lab=q?"All months":plabel(S.lm),items=(q?S.txns.filter(function(t){return personOK(t)&&privOK(t)}):txIn(key).filter(privOK));
@@ -1242,7 +1242,7 @@ function vMenu(){
   var em=(S.profile&&S.profile.email)||(S.auth&&S.auth.email)||"";
   var row=function(t,i,a,b){return '<button class="mr" data-go="'+t+'"><i>'+i+'</i><span><b>'+a+'</b>'+(b?'<span>'+b+'</span>':'')+'</span><span class="go">›</span></button>'};
   return topbar("Menu","home")+'<div class="sec">App settings</div><div class="card" style="padding:0 12px">'+row("set","⚙️","Settings","Theme, colour, currency, month start")+row("cats","🗂️","Categories","What each category has this month")+'</div>'+
-    '<div class="sec">Automation & sharing</div><div class="card" style="padding:0 12px">'+row("track","💬","Automated tracking","SMS & email")+row("fam","👥","Family","Share expenses with family")+row("goals","🎯","Goals","Save for things together")+row("stmt","📥","Bank statements","Upload a statement file")+'</div>'+
+    '<div class="sec">Automation & sharing</div><div class="card" style="padding:0 12px">'+row("track","💬","Automated tracking","SMS & email")+row("fam","👥","Family Sync","Share expenses with family")+row("goals","🎯","Goals","Save for things together")+row("stmt","📥","Bank statements","Upload a statement file")+'</div>'+
     '<div class="sec">Account</div><div class="card" style="padding:0 12px"><a class="mr" href="privacy.html" target="_blank" rel="noopener" style="text-decoration:none"><i>🔒</i><span><b>Privacy policy</b><span>What the app stores and why</span></span><span class="go">›</span></a><button class="mr" id="chpw"><i>🔑</i><span><b>Change password</b><span>Choose a new password for '+esc(em)+'</span></span></button><button class="mr" id="lo"><i>⏻</i><span><b>Log out</b><span>'+esc(em)+'</span></span></button><button class="mr" id="delacc"><i>🗑️</i><span><b class="out">Delete my account</b><span>Removes your login and your payments</span></span></button></div><div class="note" style="text-align:center;margin:14px 0">Gharwise version 2.0 (build 44)</div>'}
 function vSet(){
   var h=topbar("Settings","menu")+lookCard();
@@ -1252,7 +1252,7 @@ function incFam(){return ls("incfam")!=="0"}
 function canEditT(t){return !S.profile||S.profile.can_edit!==false||t.person===S.name}
 function vFam(){
   var p=S.profile||{},own=p.role==="owner",ce=p.can_edit!==false,F=S.fam,tab=S.famTab||"share";
-  var h=topbar("Family","menu");
+  var h=topbar("Family Sync","menu");
   h+='<div class="dc trk"><i>👪</i><div class="m"><b>Include family entries</b><span>Home, List and Charts include payments from people in your family</span></div><label class="tgl"><input type="checkbox" id="incf"'+(incFam()?' checked':'')+'><span></span></label></div>';
   h+='<div class="seg2"><button data-ft="share" class="'+(tab==="share"?'on':'')+'">↗ I’m sharing</button><button data-ft="view" class="'+(tab==="view"?'on':'')+'">👁 I can view</button></div>';
   if(!F)return h+'<div class="card">'+skBox(3)+'</div>';
@@ -1566,8 +1566,8 @@ function pick(t){
   if(t.type!=="in"&&SUBRE.test(t.merchant||""))h+='<button class="wide" data-c="'+CATS.indexOf("Subscriptions")+'" style="border-color:var(--accent,#5fb59a)">⭐ Subscriptions (suggested)</button>';
   CATS.forEach(function(c,i){if(c===LOUT||c===LIN)return;h+='<button data-c="'+i+'"><i>'+ci(c)+'</i>'+esc(c)+'</button>'});
   var LB=t.type==="in"?[["Borrowed (they gave me)",LIN,"new","📥"],["Got back (they repaid me)",LOUT,"settle","🤝"]]:[["Lend out (I gave)",LOUT,"new","📤"],["Paid back (I repaid)",LIN,"settle","🤝"]];
-  h+='<button data-new="1"><i style="border:1.5px dashed var(--mute);background:none">＋</i>New category</button>';
   LB.forEach(function(x,i){h+='<button data-l="'+i+'"><i>'+x[3]+'</i>'+x[0]+'</button>'});
+  h+='<button data-new="1"><i style="border:1.5px dashed var(--mute);background:none">＋</i>New category</button>';
   h+='</div></div></div>';
   sh.innerHTML=h;
   var cq=document.getElementById("cq");if(cq)cq.oninput=function(){var q=cq.value.trim().toLowerCase(),n=0,last=null;
