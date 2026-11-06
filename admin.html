@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>Admin · Nestwise</title>
+<title>Admin · Gharwise</title>
 <style>
 :root{color-scheme:light;--bg:#f4f4f1;--surface:#fcfcfb;--card:#fff;--ink:#0b0b0b;--ink2:#52514e;--mute:#7a7974;--line:#e4e2da;--grid:#ecebe6;
   --s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--good:#1f8a4c;--warn:#b26b00;--bad:#c2372f;--acc:#6250d6;--shadow:0 1px 2px rgba(20,20,10,.05),0 6px 18px rgba(20,20,10,.06)}
@@ -63,7 +63,7 @@ function ss(k,v){try{if(v===undefined)return sessionStorage.getItem(k);if(v===nu
 
 /* ---------- login ---------- */
 function loginView(msg){
-  $("app").innerHTML='<div class="login card"><h1 style="margin:0 0 4px">Admin</h1><div class="mute" style="margin-bottom:16px">Nestwise · only admin accounts can open this page</div><label class="mute">Email</label><input id="em" type="email" autocomplete="email" autocapitalize="off"><label class="mute">Password</label><input id="pw" type="password" autocomplete="current-password"><div class="err" id="er">'+esc(msg||"")+'</div><button class="btn p" id="go">Log in</button></div>';
+  $("app").innerHTML='<div class="login card"><h1 style="margin:0 0 4px">Admin</h1><div class="mute" style="margin-bottom:16px">Gharwise · only admin accounts can open this page</div><label class="mute">Email</label><input id="em" type="email" autocomplete="email" autocapitalize="off"><label class="mute">Password</label><input id="pw" type="password" autocomplete="current-password"><div class="err" id="er">'+esc(msg||"")+'</div><button class="btn p" id="go">Log in</button></div>';
   var go=async function(){var b=$("go");b.disabled=true;b.textContent="Logging in…";
     try{var r=await fetch(BASE+"/auth/v1/token?grant_type=password",{method:"POST",headers:{apikey:KEY,"Content-Type":"application/json"},body:JSON.stringify({email:$("em").value.trim(),password:$("pw").value})});
       var o=await r.json().catch(function(){return {}});if(!r.ok||!o.access_token)throw new Error(r.status===400?"Wrong email or password.":"Could not log in.");
@@ -115,7 +115,7 @@ function render(){
   var S1=css("--s1"),S2=css("--s2"),S3=css("--s3");
   var stick=k.active_30d?Math.round((k.active_today||0)/k.active_30d*100):null;
   var tile=function(lbl,val,sub){return '<div class="k"><small>'+lbl+'</small><b>'+val+'</b>'+(sub?'<span>'+sub+'</span>':'')+'</div>'};
-  var x='<header><h1>Nestwise <span>· Admin</span></h1><span class="mute">Updated '+new Date(d.generated_at).toLocaleString("en-IN",{hour:"numeric",minute:"2-digit",day:"numeric",month:"short"})+'</span><button class="btn" id="rf">Refresh</button><button class="btn" id="lo">Log out</button></header>';
+  var x='<header><h1>Gharwise <span>· Admin</span></h1><span class="mute">Updated '+new Date(d.generated_at).toLocaleString("en-IN",{hour:"numeric",minute:"2-digit",day:"numeric",month:"short"})+'</span><button class="btn" id="rf">Refresh</button><button class="btn" id="lo">Log out</button></header>';
   // REACH
   x+='<h2>Reach</h2><div class="kpis">'+tile("Total users",n(k.total_users),"+"+n(k.new_7d)+" this week · +"+n(rc.new_30d)+" in 30 days")+tile("New today",n(k.new_today))+tile("Families",n(k.families),"avg "+(rc.avg_family||0)+" people")+tile("Joined by invite",n(rc.joined_by_invite),pct(rc.families_multi,k.families)+" of families have 2+")+tile("Installed as app",n(rc.installed),pct(rc.installed,rc.with_os)+" of known devices")+tile("Accounts deleted",n(rc.deleted_30d),"last 30 days")+'</div>';
   var os=rc.os||{},osRows=[["iPhone",os.ios||0,S1],["Android",os.and||0,S2],["Computer",os.desk||0,S3]],osT=osRows.reduce(function(a,r){return a+r[1]},0);
