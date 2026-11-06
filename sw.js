@@ -22,7 +22,7 @@ self.addEventListener("fetch",function(e){
   if(/(^|\.)(cdn\.jsdelivr\.net|cdnjs\.cloudflare\.com)$/.test(url.hostname)){
     e.respondWith(caches.open(CACHE).then(function(c){return c.match(req).then(function(hit){return hit||fetch(req).then(function(r){if(r&&(r.ok||r.type==="opaque"))c.put(req,r.clone());return r})})}));return}
   if(url.origin!==self.location.origin)return;
-  if(/admin\.html$|privacy\.html$|delete\.html$|sw\.js$/.test(url.pathname))return;
+  if(/admin\.html$|privacy\.html$|delete\.html$|get\.html$|sw\.js$/.test(url.pathname)||/^\/get\/?$/.test(url.pathname))return;
   if(req.mode==="navigate"&&/\.html$/.test(url.pathname)&&!/index\.html$/.test(url.pathname))return;
   var isPage=req.mode==="navigate"||/(\/|index\.html)$/.test(url.pathname);
   var key=isPage?new Request(new URL("index.html",self.registration.scope).href):req;
