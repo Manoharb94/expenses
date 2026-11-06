@@ -155,6 +155,7 @@ nav button{padding:8px 2px;gap:3px;border-radius:22px}nav button svg{width:22px;
 .balr{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;padding:12px 14px;border-radius:14px;background:var(--chip);cursor:pointer}.balr small{display:block;font-size:12px;color:var(--mute);font-weight:400}.balr span{font-weight:600}.balr b{font-size:19px;white-space:nowrap}
 .tgl{position:relative;display:inline-block;width:50px;height:30px;flex:none}.tgl input{opacity:0;width:0;height:0;position:absolute}.tgl span{position:absolute;inset:0;border-radius:15px;background:var(--line);transition:background .2s;cursor:pointer}.tgl span:before{content:"";position:absolute;width:24px;height:24px;left:3px;top:3px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .2s}.tgl input:checked+span{background:var(--acc)}.tgl input:checked+span:before{transform:translateX(20px)}
 .pill2{font-size:12px;font-weight:600;border-radius:20px;padding:3px 9px;background:var(--chip);color:var(--ink2,var(--mute));white-space:nowrap}
+.sk{background:linear-gradient(90deg,var(--chip) 25%,var(--line) 50%,var(--chip) 75%);background-size:200% 100%;animation:skm 1.3s ease-in-out infinite;border-radius:8px}@keyframes skm{0%{background-position:200% 0}100%{background-position:-200% 0}}@media (prefers-reduced-motion:reduce){.sk{animation:none}}.skc{background:var(--card);border-radius:16px;padding:16px;margin:12px 0}.skr{display:flex;align-items:center;gap:12px;margin:12px 0}.skr .sk:first-child{width:40px;height:40px;border-radius:50%;flex:none}.skr div{flex:1}.skl{height:12px;margin:6px 0}
 </style>
 </head>
 <body>
@@ -348,7 +349,7 @@ var SC_TPL="/* Gharwise: reads your own bank alert emails and sends the payments
 S.sc=null;S.banks=null;
 function scriptText(){return SC_TPL.split("__NAME__").join(S.sc.name||"").split("__KEY__").join(S.sc.key||"")}
 function ago(ts){if(!ts)return "";var m=Math.round((Date.now()-new Date(ts).getTime())/60000);if(m<1)return "just now";if(m<60)return m+" min ago";var h=Math.round(m/60);if(h<24)return h+" hour"+(h>1?"s":"")+" ago";var d=Math.round(h/24);return d+" day"+(d>1?"s":"")+" ago"}
-function scStat(){var c=S.sc;if(!c)return '<span class="mute">Loading…</span>';
+function scStat(){var c=S.sc;if(!c)return skBox(1);
   var ok=c.last_run&&(Date.now()-new Date(c.last_run).getTime())<30*60000,
       line=c.alert_count>0?c.alert_count+' payment'+(c.alert_count>1?'s':'')+' received · last '+ago(c.last_alert):'no payments received yet';
   if(!c.last_run)return '<div class="row"><b>Not connected yet</b></div>';
@@ -552,7 +553,7 @@ function vStmt(){
   h+='</div>';
   var im=S.imports;
   h+='<h2>Imported statements</h2><div class="card">';
-  if(im===null)h+='<span class="mute">Loading…</span>';
+  if(im===null)h+=skBox(2);
   else if(S.impErr)h+='<span class="out">'+esc(S.impErr)+'</span><div class="note">If this mentions step5.sql, run it in Supabase first.</div>';
   else if(!im.length)h+='<span class="mute">Nothing imported yet.</span>';
   else im.forEach(function(x){var on=S.stsel===x.id;
@@ -1179,7 +1180,8 @@ function vDash(){
   h+=insightBlock(X,Lc,pdt);
   var rec=S.txns.filter(function(t){return personOK(t)&&privOK(t)}).slice().sort(byNew).slice(0,5);
   h+='<div class="dc"><div class="dch" data-go="list"><b>Latest transactions</b><span class="arr">→</span></div>';
-  if(!rec.length)h+='<div class="empty"><span class="ei">🧾</span>'+(S.loaded?'No transactions yet':'Loading…')+'<button class="obtn" data-go="track">Set up automatic tracking</button></div>';
+  if(!rec.length&&!S.loaded)h+=skBox(6);
+  else if(!rec.length)h+='<div class="empty"><span class="ei">🧾</span>'+(S.loaded?'No transactions yet':'')+'<button class="obtn" data-go="track">Set up automatic tracking</button></div>';
   else h+='<div style="margin-top:6px">'+rec.map(miniRow).join('')+'</div>';
   h+='</div>';
   var ps=(S.pf&&S.pf!=="__both")?[S.pf]:persons(),bals=ps.map(acctBal).filter(Boolean),bt=0;bals.forEach(function(b){bt+=b.bal});
@@ -1228,14 +1230,14 @@ function vBudget(){
   var bm={};S.budgets.forEach(function(b){bm[b.category]=Number(b.amount)});var sp=spentThisMonth(),tb=0,ts=0;
   Object.keys(bm).forEach(function(c){if(bm[c]>0){tb+=bm[c];ts+=sp[c]||0}});
   var h=topbar("Budget")+'<div class="dc"><div class="trk"><i>👛</i><div class="m"><b>Monthly</b><span>'+(tb?money(ts)+' spent of '+money(tb)+' · '+esc(plabel(0)):'Tap a category below to set a budget')+'</span></div></div>'+(tb?'<div class="bar" style="margin-top:12px;height:10px"><i class="'+(ts>tb?'over':'')+'" style="width:'+Math.min(100,Math.round(ts/tb*100))+'%"></i></div><div class="note">'+(ts>tb?'<b class="out">Over by '+money(ts-tb)+'</b>':money(tb-ts)+' left this month')+'</div>':'')+'</div>';
-  h+='<div class="dc"><b style="font-size:19px">Categories</b><div class="note" style="margin:2px 0 10px">Spent this month. Tap one to set or change its budget.</div><input id="bq" type="search" placeholder="🔍 Search categories" autocomplete="off" value="'+esc(S.bq||"")+'" style="margin-bottom:12px"><div class="cgrid">';
+  var ch='<div class="dc"><b style="font-size:19px">Categories</b><div class="note" style="margin:2px 0 10px">Spent this month. Tap one to set or change its budget.</div><input id="bq" type="search" placeholder="🔍 Search categories" autocomplete="off" value="'+esc(S.bq||"")+'" style="margin-bottom:12px"><div class="cgrid">';
   var bq=(S.bq||"").toLowerCase().trim(),bn=0;
   CATS.filter(function(c){return !NOBUDGET[c]&&(!bq||c.toLowerCase().indexOf(bq)>=0)}).forEach(function(c){bn++;var s=sp[c]||0,a=bm[c]||0;
-    h+='<button data-bfocus="'+esc(c)+'"><i class="'+(a&&s>a?'ov':'')+'">'+ci(c)+'</i>'+esc(c)+'<small>'+(s?money(Math.round(s)):'—')+(a?' / '+money(a):'')+'</small></button>'});
-  h+='<button id="bnew" style="border-style:dashed"><i>＋</i>'+(bq&&!bn?'Add “'+esc(S.bq.trim())+'”':'New category')+'<small>Add your own</small></button></div>'+(bq&&!bn?'<div class="note" style="margin-top:10px">No category matches. Tap ＋ to add it.</div>':'')+'</div>';
+    ch+='<button data-bfocus="'+esc(c)+'"><i class="'+(a&&s>a?'ov':'')+'">'+ci(c)+'</i>'+esc(c)+'<small>'+(s?money(Math.round(s)):'—')+(a?' / '+money(a):'')+'</small></button>'});
+  ch+='<button id="bnew" style="border-style:dashed"><i>＋</i>'+(bq&&!bn?'Add “'+esc(S.bq.trim())+'”':'New category')+'<small>Add your own</small></button></div>'+(bq&&!bn?'<div class="note" style="margin-top:10px">No category matches. Tap ＋ to add it.</div>':'')+'</div>';
   var pl=vPlan().replace('<h1>Plan</h1>','');
   if(S.profile&&S.profile.can_edit===false){pl=pl.replace(/<input /g,'<input disabled ').replace(/<select /g,'<select disabled ').replace('id="svb"','id="svb" style="display:none"').replace('id="fadd"','id="fadd" style="display:none"').replace(/data-sw="fixed\|/g,'data-nosw="');h+='<div class="card" style="text-align:center">👁 View only. Ask the family owner for edit access to change budgets and bills.</div>'}
-  return h+pl+'<button class="obtn" data-go="rep" data-rp="next">See next month’s forecast →</button>'}
+  return h+pl+ch+'<button class="obtn" data-go="rep" data-rp="next">See next month’s forecast →</button>'}
 function vMenu(){
   var em=(S.profile&&S.profile.email)||(S.auth&&S.auth.email)||"";
   var row=function(t,i,a,b){return '<button class="mr" data-go="'+t+'"><i>'+i+'</i><span><b>'+a+'</b>'+(b?'<span>'+b+'</span>':'')+'</span><span class="go">›</span></button>'};
@@ -1253,7 +1255,7 @@ function vFam(){
   var h=topbar("Family","menu");
   h+='<div class="dc trk"><i>👪</i><div class="m"><b>Include family entries</b><span>Home, List and Charts include payments from people in your family</span></div><label class="tgl"><input type="checkbox" id="incf"'+(incFam()?' checked':'')+'><span></span></label></div>';
   h+='<div class="seg2"><button data-ft="share" class="'+(tab==="share"?'on':'')+'">↗ I’m sharing</button><button data-ft="view" class="'+(tab==="view"?'on':'')+'">👁 I can view</button></div>';
-  if(!F)return h+'<div class="card mute">Loading…</div>';
+  if(!F)return h+'<div class="card">'+skBox(3)+'</div>';
   var others=(F.members||[]).filter(function(m){return m.user_id!==p.user_id});
   if(tab==="share"){
     h+='<div class="sec" style="margin-top:4px">Sharing your data</div><div class="note" style="margin:-4px 4px 10px">People here can see your payments. '+(own?'You decide whether each can also edit.':'')+'</div>';
@@ -1345,7 +1347,7 @@ async function importNativeSms(){var mo=S.nmo||1,lab=nmoLab();toast("Reading ban
 function vSms(){
   if(nativeSmsOK())return vSmsNative();
   var c=S.sc,os=phoneOS(),T=topbar("SMS tracking","track");
-  if(!c)return T+'<div class="card mute">Loading…</div>';
+  if(!c)return T+'<div class="card">'+skBox(3)+'</div>';
   if(c.err)return T+'<div class="card out">'+esc(c.err)+'</div>';
   var key=c.key||"",j=URLB+"rpc/ingest_sms",tx=URLB+"rpc/ingest_sms_text",steps;
   if(os==="desk")return T+'<div class="dc" style="text-align:center"><span style="font-size:44px">📱</span><h3 style="margin:8px 0">Open this on your phone</h3><p class="mute" style="margin:0 0 6px">SMS tracking is set up on the phone that receives your bank messages. Open the app on that phone and come back to <b>Menu → Automated tracking → SMS</b>.</p><p class="note">The app works out by itself whether it is an iPhone or an Android phone.</p></div>';
@@ -1370,7 +1372,7 @@ function vSms(){
   return wz("SMS tracking · "+(os==="ios"?"iPhone":"Android"),steps,S.smsStep,"track")}
 function vMail(){
   var c=S.sc;
-  if(!c)return topbar("Email tracking","track")+'<div class="card mute">Loading…</div>';
+  if(!c)return topbar("Email tracking","track")+'<div class="card">'+skBox(3)+'</div>';
   if(c.err)return topbar("Email tracking","track")+'<div class="card out">'+esc(c.err)+'</div>';
   var steps=[
     ['Copy your script','<p style="margin-top:0">This script runs inside your own Gmail. It finds your bank alert emails on its own, for any bank, and sends only the payments to this app.</p><button class="btn" id="sccopy">Copy script</button><details style="margin-top:10px"><summary class="mute" style="cursor:pointer">If copying does not work, show the script</summary><textarea readonly id="sctxt" rows="6" style="width:100%;font-size:16px;margin-top:6px">'+esc(scriptText())+'</textarea></details>'],
@@ -1432,8 +1434,12 @@ function deleteAccountSheet(){
     try{await api("rpc/delete_my_account",{method:"POST",body:"{}"});sh.innerHTML="";logoutLocal("Your account and data were deleted.")}
     catch(e){sh.innerHTML="";showErr("Could not delete: "+errText(e))}}}
 
+function skRows(n){var h='';for(var i=0;i<n;i++)h+='<div class="skr"><div class="sk"></div><div><div class="sk skl" style="width:'+(55+(i*13)%35)+'%"></div><div class="sk skl" style="width:35%;height:9px"></div></div><div class="sk skl" style="width:56px;flex:none"></div></div>';return h}
+function skPage(n){return '<div aria-busy="true" aria-label="Loading"><div class="skc"><div class="sk skl" style="width:40%"></div><div class="sk" style="height:34px;width:60%;margin:12px 0"></div><div class="sk skl" style="width:75%"></div></div><div class="skc">'+skRows(n||5)+'</div></div>'}
+function skBox(n){return '<div aria-busy="true">'+skRows(n||3)+'</div>'}
 function render(){
   var el=document.getElementById("app"),nav=document.getElementById("nav");
+  if(!S.view&&(!S.code||!S.name)&&!S.err){nav.classList.add("hide");el.innerHTML=skPage(6)+'<div class="note" id="skslow" style="text-align:center;opacity:0;transition:opacity .4s">Getting your family’s data…</div>';setTimeout(function(){var e=document.getElementById("skslow");if(e)e.style.opacity=1},3000);return}
   if(S.view||!S.code||!S.name){nav.classList.add("hide");el.innerHTML=authView();bindAuth(el);return}
   if(S.pf&&S.pf!=="__both"&&persons().indexOf(S.pf)<0)S.pf=S.name;
   nav.classList.remove("hide");
@@ -1559,9 +1565,9 @@ function pick(t){
   var h='<div class="sheet"><div><div style="position:sticky;top:-18px;z-index:2;background:var(--card);margin:-18px -16px 0;padding:18px 16px 6px;display:flex;align-items:center;justify-content:space-between"><b>Choose a category</b><button id="later" aria-label="Close" style="background:transparent;border:0;color:inherit;font-size:24px;line-height:1;padding:4px 8px;margin:-4px -8px;cursor:pointer">✕</button></div><input id="cq" type="search" placeholder="🔍 Search categories" autocomplete="off" style="margin:8px 0 4px"><div class="mute" style="margin:4px 0 10px">'+esc(t.merchant||"Unknown")+' · '+money(t.amount)+' · '+esc(t.txn_date||"")+'</div><input id="pn" placeholder="Note (optional)" value="'+esc(t.note||"")+'"><input id="pp" list="pl" placeholder="Person name (only for Lend out / Lend in)" value="'+esc(t.merchant||"")+'"><datalist id="pl">'+lendNames()+'</datalist><label class="mute" style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><input type="checkbox" id="po" style="width:auto;margin:0">Only this payment</label><div class="note" style="margin:0">Otherwise the payee is remembered, and its future payments are filed automatically.</div><div class="cats pk">';
   if(t.type!=="in"&&SUBRE.test(t.merchant||""))h+='<button class="wide" data-c="'+CATS.indexOf("Subscriptions")+'" style="border-color:var(--accent,#5fb59a)">⭐ Subscriptions (suggested)</button>';
   CATS.forEach(function(c,i){if(c===LOUT||c===LIN)return;h+='<button data-c="'+i+'"><i>'+ci(c)+'</i>'+esc(c)+'</button>'});
-  h+='<button class="wide" data-new="1" style="border-style:dashed">＋ New category</button>';
-  var LB=t.type==="in"?[["Borrowed (they gave me)",LIN,"new"],["Got back (they repaid me)",LOUT,"settle"]]:[["Lend out (I gave)",LOUT,"new"],["Paid back (I repaid)",LIN,"settle"]];
-  LB.forEach(function(x,i){h+='<button class="wide" data-l="'+i+'" style="border-color:var(--accent,#5fb59a)">'+x[0]+'</button>'});
+  var LB=t.type==="in"?[["Borrowed (they gave me)",LIN,"new","📥"],["Got back (they repaid me)",LOUT,"settle","🤝"]]:[["Lend out (I gave)",LOUT,"new","📤"],["Paid back (I repaid)",LIN,"settle","🤝"]];
+  h+='<button data-new="1"><i style="border:1.5px dashed var(--mute);background:none">＋</i>New category</button>';
+  LB.forEach(function(x,i){h+='<button data-l="'+i+'"><i>'+x[3]+'</i>'+x[0]+'</button>'});
   h+='</div></div></div>';
   sh.innerHTML=h;
   var cq=document.getElementById("cq");if(cq)cq.oninput=function(){var q=cq.value.trim().toLowerCase(),n=0,last=null;
