@@ -175,12 +175,12 @@ var NOBUD={"Salary / Income":1};NOBUD[TRF]=1;NOBUD[IGN]=1;NOBUD[CCB]=1;NOBUD[LOU
 var NOBUDGET={};for(var k in NOBUD)NOBUDGET[k]=1;["Rent / EMI","Education","Home loan EMI","Kid education","Kid day care","Maid","Cook","Car cleaning","Electricity bill","Gas bill","Family donation","Family & Friends"].forEach(function(c){NOBUDGET[c]=1});
 var S={tab:"home",range:"month",from:"",to:"",rp:"this",hf:"all",pf:"",txns:[],budgets:[],fixed:[],planErr:"",goals:[],gents:[],lrows:{},goalErr:"",cur:"₹",code:"",name:"",err:"",loaded:false};
 var ACC={emerald:["Emerald","#1f6f5c"],ocean:["Ocean","#2563eb"],violet:["Violet","#7c3aed"],sunset:["Sunset","#d9622b"],rose:["Rose","#be3a6a"],graphite:["Graphite","#334155"]};
-function applyLook(){var r=document.documentElement,t=ls("theme")||"light",a=ls("accent")||"graphite";
+function applyLook(){var r=document.documentElement,t=ls("theme")||"light",a=ls("accent")||"violet";
   if(t==="light"||t==="dark")r.setAttribute("data-theme",t);else r.removeAttribute("data-theme");
   if(a&&a!=="emerald"&&ACC[a])r.setAttribute("data-accent",a);else r.removeAttribute("data-accent");
   var m=document.querySelector('meta[name=theme-color]');if(!m){m=document.createElement("meta");m.name="theme-color";document.head.appendChild(m)}
   m.content=getComputedStyle(r).getPropertyValue("--bg").trim()||"#151514"}
-function lookCard(){var t=ls("theme")||"light",a=ls("accent")||"graphite";
+function lookCard(){var t=ls("theme")||"light",a=ls("accent")||"violet";
   var h='<h2>Look</h2><div class="card"><div class="mute">Mode</div><div class="look">';
   [["auto","Auto"],["light","☀️ Light"],["dark","🌙 Dark"]].forEach(function(x){h+='<button data-theme="'+x[0]+'"'+(t===x[0]?' class="on"':'')+'>'+x[1]+'</button>'});
   h+='</div><div class="mute">Colour</div><div class="sw">';
@@ -543,9 +543,9 @@ function stBadge(ok,t){return '<span class="tag'+(ok?'':' warn')+'">'+(ok?'✓ '
 async function loadImports(){try{S.imports=await api("statement_imports?select=*&order=created_at.desc")||[]}catch(e){S.imports=[];S.impErr=errText(e)}}
 function stReplaceInfo(p,f,t){var l=S.txns.filter(function(x){return x.person===p&&x.txn_date>=f&&x.txn_date<=t&&!x.source&&x.raw});return {n:l.length,sum:sum(l,"out")}}
 function vStmt(){
-  var h='<h2>Bank statements</h2><div class="card"><div class="note" style="margin:0 0 8px">Use this to fill in the days before your email alerts started, or to check them. For the dates you choose, the statement replaces the email-alert payments. Your cash, lending and tally entries are not touched.</div>';
+  var h='<div class="row" style="align-items:flex-start;margin:14px 0 10px"><div><h2 style="margin:0">Import</h2><div class="mute" style="margin-top:4px">Bank statements from any bank</div></div><button class="btn ghost s" id="stpast">🕘 Past Files</button></div><div class="card" style="border:2px dashed var(--line);box-shadow:none;text-align:center;padding:22px 16px">';
   var st=S.st;
-  if(!st){h+='<div class="mute">Statement file from any bank</div><button class="btn" id="stpick">📄 Import</button><input type="file" id="stf" style="display:none"><div class="note" style="margin:6px 0 0">PDF, Excel, CSV, text, OFX or QIF all work. Locked PDFs ask for the password. Photos and screenshots cannot be read reliably.</div><div id="stmsg" class="note"></div>'}
+  if(!st){h+='<div style="width:56px;height:56px;border-radius:50%;background:var(--bg);margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:24px">📄</div><div class="mute" style="font-size:16px">Pick a PDF, Excel or CSV file</div><button class="btn" id="stpick" style="margin-top:14px">Select File</button><input type="file" id="stf" style="display:none"><div class="note" style="margin:10px 0 0">PDF, Excel, CSV, text, OFX or QIF all work. Locked PDFs ask for the password. Photos and screenshots cannot be read reliably. For the dates you choose, the statement replaces the email-alert payments. Your cash, lending and tally entries are not touched.</div><div id="stmsg" class="note"></div>'}
   else{var rp=stReplaceInfo(st.person,st.from2,st.to2);
     h+='<div class="row"><b>'+esc(st.file)+'</b><button class="btn ghost s" id="stx">Choose another</button></div>';
     h+='<div class="note" style="margin:6px 0">'+st.rows.length+' payments · '+esc(st.from)+' to '+esc(st.to)+' · out '+money(st.debits)+' · in '+money(st.credits)+'</div><div style="margin-bottom:8px">'+(st.balance_ok==null?'':stBadge(st.balance_ok,st.balance_ok?'opening + in − out = closing balance':'balances do not add up'))+' '+(st.summary_ok==null?'':stBadge(st.summary_ok,st.summary_ok?'matches the statement totals':'differs from statement totals'))+'</div>';
@@ -556,7 +556,7 @@ function vStmt(){
     h+='<div class="note" id="strep" style="margin:0 0 8px">For '+esc(st.person)+', this replaces '+rp.n+' email-alert payment'+(rp.n===1?'':'s')+' ('+money(rp.sum)+') between these dates. They are only hidden, and come back if you remove the import.</div><button class="btn" id="stgo">Confirm and import</button><div id="stmsg" class="note"></div>'}
   h+='</div>';
   var im=S.imports;
-  h+='<h2>Imported statements</h2><div class="card">';
+  h+='<h2 id="stpastbox">Past Files</h2><div class="card">';
   if(im===null)h+=skBox(2);
   else if(S.impErr)h+='<span class="out">'+esc(S.impErr)+'</span><div class="note">If this mentions step5.sql, run it in Supabase first.</div>';
   else if(!im.length)h+='<span class="mute">Nothing imported yet.</span>';
@@ -581,7 +581,7 @@ function vStmtAnalysis(x){
   return h}
 function plabelFor(k){var p=k.split("-"),d=new Date(+p[0],+p[1]-1,1);return d.toLocaleString("en-IN",{month:"long",year:"numeric"})}
 function bindStmt(){
-  var f=document.getElementById("stf"),pk=document.getElementById("stpick");if(pk&&f)pk.onclick=function(){f.click()};
+  var f=document.getElementById("stf"),pk=document.getElementById("stpick"),pb=document.getElementById("stpast");if(pb)pb.onclick=function(){var e=document.getElementById("stpastbox");if(e)e.scrollIntoView({behavior:"smooth"})};if(pk&&f)pk.onclick=function(){f.click()};
   if(f)f.onchange=async function(){var file=f.files&&f.files[0],msg=document.getElementById("stmsg");if(!file)return;if(msg){msg.className="note";msg.textContent="Reading the file…"}
     try{var r=await readStatementFile(file);
       r.file=file.name;r.person=S.name;r.from2=r.from;r.to2=r.to;S.st=r;render()}
@@ -1279,6 +1279,7 @@ function vDash(){
   if(!rec.length&&!S.loaded)h+=skBox(6);
   else if(!rec.length)h+='<div class="empty"><span class="ei">🧾</span>'+(S.loaded?'No transactions yet':'')+'<button class="obtn" data-go="track">Set up automatic tracking</button></div>';
   else h+='<div style="margin-top:6px">'+rec.map(miniRow).join('')+'</div>';
+  if(S.loaded)h+='<button class="obtn" data-go="stmt" style="display:flex;align-items:center;justify-content:center;gap:8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg>Import</button>';
   h+='</div>';
   var ps=(S.pf&&S.pf!=="__both")?[S.pf]:persons(),bals=ps.map(acctBal).filter(Boolean),bt=0;bals.forEach(function(b){bt+=b.bal});
   var bd=billsDue(30);
@@ -1331,7 +1332,7 @@ function vMenu(){
   var em=(S.profile&&S.profile.email)||(S.auth&&S.auth.email)||"";
   var row=function(t,i,a,b){return '<button class="mr" data-go="'+t+'"><i>'+i+'</i><span><b>'+a+'</b>'+(b?'<span>'+b+'</span>':'')+'</span><span class="go">›</span></button>'};
   return topbar("Menu","home")+'<div class="sec">App settings</div><div class="card" style="padding:0 12px">'+row("set","⚙️","Settings","Theme, colour, currency, month start")+row("cats","🗂️","Categories","What each category has this month")+'</div>'+
-    '<div class="sec">Automation & sharing</div><div class="card" style="padding:0 12px">'+row("track","💬","Automated tracking","SMS, Email & Bank Statement")+row("fam","👥","Family Sync","Share expenses with family")+row("goals","🎯","Goals","Save for things together")+'</div>'+
+    '<div class="sec">Automation & sharing</div><div class="card" style="padding:0 12px">'+row("track","💬","Automated tracking","SMS & Email")+row("fam","👥","Family Sync","Share expenses with family")+row("goals","🎯","Goals","Save for things together")+'</div>'+
     '<div class="sec">Account</div><div class="card" style="padding:0 12px"><a class="mr" href="privacy.html" target="_blank" rel="noopener" style="text-decoration:none"><i>🔒</i><span><b>Privacy policy</b><span>What the app stores and why</span></span><span class="go">›</span></a><button class="mr" id="chpw"><i>🔑</i><span><b>Change password</b><span>Choose a new password for '+esc(em)+'</span></span></button><button class="mr" id="lo"><i>⏻</i><span><b>Log out</b><span>'+esc(em)+'</span></span></button><button class="mr" id="delacc"><i>🗑️</i><span><b class="out">Delete my account</b><span>Removes your login and your payments</span></span></button></div><div class="note" style="text-align:center;margin:14px 0">Gharwise version 2.0 (build 44)</div>'}
 function vSet(){
   var h=topbar("Settings","menu")+lookCard();
@@ -1387,7 +1388,6 @@ function vTrack(){
   h+='<div class="dc trk"><i>💬</i><div class="m"><b>SMS Tracking</b><span>Capture spends from bank SMS, seconds after you pay'+(ns&&S.nsms&&S.nsms.enabled?' · <span class="in">✓ On</span>':'')+'</span></div><button class="sbtn" data-go="sms">'+(ns&&S.nsms&&S.nsms.enabled?'Manage':ns?'Turn On':'Set Up')+'</button></div>';
   h+='<div class="dc trk"><i>✉️</i><div class="m"><b>Email Tracking</b><span>Capture spends from bank emails · '+mail+'</span></div><button class="sbtn" data-go="mail">'+(c&&c.last_run?'Manage':'Set Up')+'</button></div>';
   h+=trackStat();
-  h+='<div class="sec">🕘 Import Past Payments</div><div class="dc trk"><i>📥</i><div class="m"><b>Bank Statement</b><span>Upload a statement file from any bank to load months at once</span></div><button class="sbtn" data-go="stmt">Upload</button></div>';
   h+='<div class="sec">❔ How It Works</div><div class="card" style="font-size:14px;line-height:1.55">'+
     '<p style="margin:0 0 8px"><b>SMS</b> is fastest. Your phone forwards each bank SMS to the app the moment it arrives. On iPhone this uses Apple’s Shortcuts app; on Android, a free SMS-forwarding app.</p>'+
     '<p style="margin:0 0 8px"><b>Email</b> is the back-up. A small script in your own Gmail checks for bank alerts every 5 minutes.</p>'+
@@ -1534,7 +1534,7 @@ function render(){
   nav.classList.remove("hide");
   nav.querySelectorAll("button").forEach(function(b){b.classList.toggle("on",b.dataset.t===S.tab)});nav.classList.toggle("hide",["sms","mail","stmt"].indexOf(S.tab)>=0);
   if(S.tab==="me")S.tab="menu";
-  var V={home:vDash,list:vTx,rep:function(){return vReports().replace('<h1>Reports</h1>',topbar("Analytics"))},plan:vBudget,goals:function(){return vGoals().replace('<h1>Goals</h1>',topbar("Goals","menu"))},stmt:function(){return topbar("Bank Statement","track")+vStmt()},menu:vMenu,set:vSet,fam:vFam,cats:vCatsP,track:vTrack,sms:vSms,mail:vMail};
+  var V={home:vDash,list:vTx,rep:function(){return vReports().replace('<h1>Reports</h1>',topbar("Analytics"))},plan:vBudget,goals:function(){return vGoals().replace('<h1>Goals</h1>',topbar("Goals","menu"))},stmt:function(){return topbar("Import","home")+vStmt()},menu:vMenu,set:vSet,fam:vFam,cats:vCatsP,track:vTrack,sms:vSms,mail:vMail};
   el.innerHTML=(V[S.tab]||vDash)();tcApply(el);
   var hb=el.querySelector(".hb");if(hb){var to=parseFloat(hb.textContent.replace(/[^0-9.]/g,""))||0;if(!S._hbOnce&&to>0&&!window.matchMedia("(prefers-reduced-motion: reduce)").matches){var t0=performance.now(),fr=S._hb>0&&Math.abs(S._hb-to)<to?S._hb:0;(function step(n){var k=Math.min(1,(n-t0)/650),e=1-Math.pow(1-k,3);if(hb.isConnected)hb.textContent=money(Math.round(fr+(to-fr)*e));if(k<1)requestAnimationFrame(step);else if(hb.isConnected)hb.textContent=money(to)})(t0)}if(to>0)S._hbOnce=true;S._hb=to}
   var q=function(i){return document.getElementById(i)};
