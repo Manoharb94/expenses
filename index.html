@@ -160,7 +160,7 @@ nav button{padding:8px 2px;gap:3px;border-radius:22px}nav button svg{width:22px;
 </head>
 <body>
 <main id="app"></main>
-<nav id="nav" class="hide"><button data-t="home" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 11l8-7 8 7v9a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1z"/></svg>Home</button><button data-t="rep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/></svg>Charts</button><button data-t="list"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>List</button><button data-t="plan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4.5 17a8 8 0 1 1 15 0"/><path d="m12 13 4-4"/></svg>Budget</button></nav>
+<nav id="nav" class="hide"><button data-t="home" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 11l8-7 8 7v9a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1z"/></svg>Home</button><button data-t="rep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/></svg>Analytics</button><button data-t="list"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>List</button><button data-t="plan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4.5 17a8 8 0 1 1 15 0"/><path d="m12 13 4-4"/></svg>Budget</button></nav>
 <div id="sheet"></div>
 <script>
 var URLB="https://fwxhclagrwlzxvsmaekt.supabase.co/rest/v1/",KEY="sb_publishable_PiCUzSknFyCfGfEVzTiQbg_qEkBYwL_";
@@ -285,10 +285,9 @@ function authView(){
   else if(v==="newpw"){h+='<h2 style="margin-top:0">Choose a new password</h2>'+inp("a_pw","New password (8+ characters)","password","new-password")+inp("a_pw2","Repeat new password","password","new-password")+msg+btn("newpw","Save password")}
   else if(v==="family"){var pj2=ls("pendjoin");if(pj2&&!S._fm)S.fmode="join";var c=S.fmode==="create";
     if((S.invites||[]).length){h+='<h2 style="margin-top:0">You’re invited</h2>'+inp("f_inm","Your name, e.g. Manjari","text","given-name")+(S.invites||[]).map(function(x){return '<div class="card" style="box-shadow:none;border:1px solid var(--line);margin:8px 0"><b>'+esc(x.by)+'</b> invited you to <b>'+esc(x.family)+'</b><div class="note" style="margin:2px 0 10px">'+x.members+' '+(x.members===1?'person':'people')+' · you can '+(x.can_edit?'view and edit':'view')+' the family’s payments</div><div class="row" style="gap:8px"><button class="btn s" data-a="iacc:'+x.id+'">Join</button><button class="btn ghost s" data-a="idec:'+x.id+'">Decline</button></div></div>'}).join('')+msg+'<div class="note" style="margin:14px 0 6px;text-align:center">or</div>';msg=''}
-    h+='<h2 style="margin-top:0">Your family</h2><div class="seg"><button class="btn s '+(c?'':'ghost')+'" data-a="ftab-c">Start a family</button><button class="btn s '+(c?'ghost':'')+'" data-a="ftab-j">Join with a code</button></div>'+
-      (c?'<div class="note" style="margin-bottom:10px">You will get an invite code to share with your family.</div>'+inp("f_nm","Your name, e.g. Manohar","text","given-name")+msg+btn("fcreate","Create family")
-        :'<div class="note" style="margin-bottom:10px">Ask the family owner for the invite code (Settings, Family members).</div>'+inp("f_code","Invite code","text","off",pj2)+inp("f_nm","Your name, e.g. Manjari","text","given-name")+msg+btn("fjoin","Join family"))+lnk("out","Log out")}
-  else if(v==="invite"){h+='<h2 style="margin-top:0">Family created</h2><div class="note">Share this code with your family. They create an account, tap <b>Join with a code</b> and enter it.</div><div class="code">'+esc(S.newCode)+'</div><button class="btn ghost" data-a="copy" style="margin-bottom:10px">Copy code</button>'+shareBtns('data-a').replace(/data-a="(wa|mail|link)"/g,'data-a="sh-$1"')+'<div style="height:14px"></div>'+btn("cont","Continue")}
+    h+='<div class="seg"><button class="btn s '+(c?'':'ghost')+'" data-a="ftab-c">I’m new</button><button class="btn s '+(c?'ghost':'')+'" data-a="ftab-j">Join with a code</button></div>'+
+      (c?'<div class="note" style="margin-bottom:10px">We’ll set up your own space. You can invite family later.</div>'+inp("f_nm","Your name, e.g. Manohar","text","given-name")+msg+btn("fcreate","Get started")
+        :'<div class="note" style="margin-bottom:10px">Ask the person who set up Gharwise for the invite code.</div>'+inp("f_code","Invite code","text","off",pj2)+inp("f_nm","Your name, e.g. Manjari","text","given-name")+msg+btn("fjoin","Join"))+lnk("out","Log out")}
   else if(v==="err"){h+='<h2 style="margin-top:0">Something went wrong</h2>'+msg+btn("retry","Try again")+lnk("out","Log out")}
   else h+='<div class="mute">Loading…</div>';
   return h+'</div><div class="note" style="text-align:center;margin-top:14px"><a href="privacy.html" target="_blank" rel="noopener" style="color:var(--mute)">Privacy policy</a> · <a href="delete.html" target="_blank" rel="noopener" style="color:var(--mute)">Delete account</a></div>'}
@@ -336,7 +335,7 @@ async function authAction(a){
     if(a.indexOf("idec:")===0){await api("rpc/decline_invite",{method:"POST",body:JSON.stringify({p_id:a.slice(5)})});S.invites=(S.invites||[]).filter(function(x){return x.id!==a.slice(5)});return go("family")}
     if(a==="fcreate"){var nm=g("f_nm").trim();if(nm.length<2)return m("Enter your name.");busy(true);
       var r=await api("rpc/create_household",{method:"POST",body:JSON.stringify({p_name:"",p_display:nm})});
-      S.newCode=r.invite_code;return go("invite")}
+      S.newCode=r.invite_code;S.view="";render();toast("You’re all set");await enter();return}
     if(a==="fjoin"){var cd=g("f_code").trim(),nm2=g("f_nm").trim();if(!cd)return m("Enter the invite code.");if(nm2.length<2)return m("Enter your name.");busy(true);
       await api("rpc/join_household",{method:"POST",body:JSON.stringify({p_code:cd,p_display:nm2})});ls("pendjoin","");S.view="";render();toast("Welcome!");await enter();return}
   }catch(e){busy(false);m(errText(e))}}
@@ -667,6 +666,21 @@ function personUI(){return personChips()}
 /* ---------- charts and ideas ---------- */
 var PAL=["#1f6f5c","#c9772b","#4b7bb5","#b4432f","#8a6bb1","#d1a52b","#3f9aa8","#a35c7a"];
 function colr(n,i){return n===UNC?"#9b9a92":PAL[i%8]}
+function donut(by,total){
+  var ks=Object.keys(by).sort(function(a,b){return by[b]-by[a]}),items=[],rest=0;
+  ks.forEach(function(k,i){if(i<7)items.push([k,by[k]]);else rest+=by[k]});
+  if(rest>0)items.push(["Other small ones",rest]);
+  var C=2*Math.PI*52,acc=0,svg='<svg viewBox="0 0 140 140" width="190" height="190" role="img" aria-label="Spending by category"><g transform="rotate(-90 70 70)" fill="none" stroke-width="20"><circle cx="70" cy="70" r="52" stroke="var(--chip)"/>';
+  items.forEach(function(it,i){var len=Math.max(0,it[1]/total*C);
+    svg+='<circle class="dn-s" data-i="'+i+'" cx="70" cy="70" r="52" stroke="'+colr(it[0],i)+'" stroke-dasharray="'+Math.max(0,len-1.5).toFixed(2)+' '+(C-len+1.5).toFixed(2)+'" stroke-dashoffset="'+(-acc).toFixed(2)+'"/>';acc+=len});
+  svg+='</g></svg>';
+  var ctr='<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none;padding:0 38px"><small id="dnl" class="mute" style="font-size:11px;line-height:1.2">Total spent</small><b id="dna" data-t="'+esc(money(Math.round(total)))+'" style="font-size:18px">'+money(Math.round(total))+'</b></div>';
+  var lg='<div style="flex:1;min-width:170px">';
+  items.forEach(function(it,i){var nm=it[0]===UNC?"No category yet":it[0],pc=Math.round(it[1]/total*100),dot='<i style="display:inline-block;width:11px;height:11px;border-radius:3px;background:'+colr(it[0],i)+';margin-right:7px;flex:none"></i>';
+    var at=it[0]===UNC?'data-go="list" data-ltab="none"':'data-dn="'+i+'" data-nm="'+esc(nm)+'" data-amt="'+esc(money(Math.round(it[1])))+'"';
+    lg+='<button class="dn-r" '+at+' style="display:flex;width:100%;align-items:center;justify-content:space-between;gap:8px;background:none;border:0;padding:6px 0;font:inherit;color:inherit;text-align:left;cursor:pointer"><span style="display:flex;align-items:center;min-width:0">'+dot+'<span>'+esc(nm)+'</span></span><span><b>'+pc+'%</b> <span class="mute" style="font-size:12px">'+money(Math.round(it[1]))+'</span></span></button>'});
+  lg+='</div>';
+  return '<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:center"><div style="position:relative;width:190px;height:190px;flex:none">'+svg+ctr+'</div>'+lg+'</div>'+(by[UNC]?'<div class="note" style="margin-top:8px">Tap “No category yet” to sort those payments into categories.</div>':'')}
 function pie(by,total){
   var ks=Object.keys(by).sort(function(a,b){return by[b]-by[a]}),items=[],rest=0;
   ks.forEach(function(k,i){if(i<7)items.push([k,by[k]]);else rest+=by[k]});
@@ -877,7 +891,8 @@ function periodDates(){
 var CATI={"Groceries – Offline":"🛒","Groceries – Online":"🥬","Shopping – Offline":"🛍️","Shopping – Online":"📦","Food – Dining out":"🍽️","Food – Online delivery":"🛵","Transport":"🚌","Fuel":"⛽","Bills & Utilities":"💡","Rent / EMI":"🏠","Health":"💊","Beauty / Salon":"💇","Entertainment":"🎬","Subscriptions":"🔁","Travel":"✈️","Education":"🎓","Home loan EMI":"🏦","Kid education":"📚","Kid day care":"🧸","Kid expense":"👶","Maid":"🧹","Cook":"🍳","Car cleaning":"🚗","Electricity bill":"⚡","Gas bill":"🔥","Family donation":"🙏","Unplanned expense":"⚠️","Family & Friends":"👪","Salary / Income":"💼","Rental income":"🏘️","Other":"📌","Lend out":"🤝","Lend in":"🤝","Mandatory":"📌"};
 CATI[TRF]="🔁";CATI[PASS]="🔀";CATI["GPay wallet"]="👛";CATI["Trips"]="🧳";CATI["Pet expenses"]="🐾";CATI["Car Expenses"]="🚗";CATI["Bike Expenses"]="🏍️";CATI["Refunds"]="↩️";CATI[CCB]="💳";CATI[IGN]="🚫";CATI[UNC]="❔";
 function ci(c){return CATI[c]||(c?"🏷️":"❔")}
-function mergeCats(names){var oi=CATS.indexOf("Other");names.forEach(function(n){n=(n||"").trim();if(!n)return;if(CATS.some(function(c){return c.toLowerCase()===n.toLowerCase()}))return;CATS.splice(oi<0?CATS.length:oi,0,n);oi=CATS.indexOf("Other")})}
+var CUSTOMC=[];
+function mergeCats(names){names.forEach(function(n){n=(n||"").trim();if(!n)return;if(CATS.some(function(c){return c.toLowerCase()===n.toLowerCase()}))return;CATS.push(n);CUSTOMC.push(n)})}
 function localCats(){try{return JSON.parse(ls("ccats")||"[]")}catch(e){return []}}
 mergeCats(localCats());
 async function addCat(name){
@@ -957,12 +972,10 @@ function mandBlock(x){
   return h+'<div class="row" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line)"><b>Total mandatory</b><b class="out">'+money(x.mand)+'</b></div><div class="note">Included in Total expenses. Payments filed under these same categories (for example your EMI payee as Home loan EMI) are not counted a second time.</div></div>';
 }
 function vReports(){
-  var opts=[["last","Last month"],["this","This month so far"],["next","Next month (forecast)"],["year","Next 12 months (forecast)"],["stmt","Bank statements (upload)"]];
+  var opts=[["last","Last month"],["this","This month so far"],["next","Next month (forecast)"],["year","Next 12 months (forecast)"]];
   var h='<h1>Reports</h1>'+personUI()+'<div class="mute">Report</div><select id="rp">';
   opts.forEach(function(o){h+='<option value="'+o[0]+'"'+(S.rp===o[0]?" selected":"")+'>'+o[1]+'</option>'});
   h+='</select>';
-  if(S.rp!=="stmt")h+='<div style="margin-top:10px"><button class="btn ghost s" id="stbtn2">Upload bank statement</button></div>';
-  if(S.rp==="stmt")return h+vStmt();
   if(S.rp==="next")return h+forecastView(1);
   if(S.rp==="year")return h+forecastView(12);
   var off=S.rp==="last"?-1:0,key=monthKey(off),items=txIn(key),Lc=items.filter(isCount);
@@ -975,15 +988,13 @@ function vReports(){
   h+=trfBlock(items);
   var by=RX.by,pby=expenseSplit(txIn(monthKey(off-1)).filter(isCount),iso(pdate(off-1)),iso(pend(off-1))).by;
   var ks=Object.keys(by).sort(function(a,b){return by[b]-by[a]});
+  var tot=ks.reduce(function(a,k){return a+by[k]},0);
+  if(tot>0)h+='<h2>Where the money goes</h2><div class="card">'+donut(by,tot)+'</div>';
   h+='<h2>By category'+(off===0?' (compared with all of last month)':' (compared with the month before)')+'</h2><div class="card">';
   if(!ks.length)h+='<span class="mute">No spending in this month.</span>';
   ks.forEach(function(k){var was=pby[k]||0,d=was?Math.round((by[k]-was)/was*100):null;
     h+='<div class="row" style="margin:6px 0"><span>'+esc(k)+'</span><span><b>'+money(by[k])+'</b> <span class="mute">'+(d===null?"new":(d>=0?"+":"")+d+"%")+'</span></span></div>'});
   h+='</div>';
-  var tot=ks.reduce(function(a,k){return a+by[k]},0);
-  if(tot>0){h+='<h2>Where the money goes</h2><div class="card">'+pie(by,tot)+'</div>';
-    var tp=insights(Lc,by,tot);
-    if(tp.length){h+='<h2>Ideas to spend less</h2><div class="card">';tp.forEach(function(x){h+='<div style="margin:0 0 10px">• '+x+'</div>'});h+='<div class="mute">Simple checks on your own numbers, not financial advice.</div></div>'}}
   h+=whoSpent(Lc,RX,{X:{by:pby}});
   h+=topPayees(RX);
   return h;
@@ -1110,13 +1121,12 @@ function personChips(){
   ns.forEach(function(n){h+='<button data-pf="'+esc(n)+'" class="'+(cur===n?'on':'')+'">'+esc(n===S.name?'Me':n)+'</button>'});
   return h+'<button data-pf="__both" class="'+(cur==="__both"?'on':'')+'">Family</button></div>'}
 function go(t){
-  if(t==="stmt"){S.rp="stmt";t="rep"}
   S.tab=t;if(t==="sms"){S.smsStep=0;if(nativeSmsOK())S.nsms=null}if(t==="mail")S.mailStep=0;
   render();window.scrollTo(0,0);
   if(t==="plan"||t==="goals")quiet(loadPlan());
   if(t==="fam"||t==="set"||t==="menu")quiet(loadMembers());if(t==="fam")quiet(loadFam());
   if(t==="track"||t==="sms"||t==="mail")quiet(loadSc());
-  if(t==="rep"&&S.rp==="stmt")quiet(loadImports())}
+  if(t==="stmt")quiet(loadImports())}
 function byNew(a,b){return (a.txn_date||"")<(b.txn_date||"")?1:(a.txn_date||"")>(b.txn_date||"")?-1:(String(a.created_at||"")<String(b.created_at||"")?1:-1)}
 function dayLabel(ds){if(!ds)return "No date";var t=iso(new Date()),y=new Date();y.setDate(y.getDate()-1);
   if(ds===t)return "Today";if(ds===iso(y))return "Yesterday";
@@ -1185,26 +1195,20 @@ function vDash(){
   else h+='<div style="margin-top:6px">'+rec.map(miniRow).join('')+'</div>';
   h+='</div>';
   var ps=(S.pf&&S.pf!=="__both")?[S.pf]:persons(),bals=ps.map(acctBal).filter(Boolean),bt=0;bals.forEach(function(b){bt+=b.bal});
-  h+='<div class="tiles"><button class="tile" data-go="'+(bals.length?'acct':'stmt')+'"><span class="ti">🏦</span><span><small>Accounts</small><b>'+(bals.length?money(bt):'Add statement')+'</b></span></button><button class="tile" data-go="list" data-ltab="in"><span class="ti">💰</span><span><small>Received</small><b>'+money(F.rec)+'</b></span></button></div>';
+  h+='<div class="tiles" style="grid-template-columns:1fr"><button class="tile" data-go="list" data-ltab="in"><span class="ti">💰</span><span><small>Received</small><b>'+money(F.rec)+'</b></span></button></div>';
   var bd=billsDue(30);
   h+='<div class="dc"><div class="dch" data-go="plan"><b>Bills due</b><span class="arr">→</span></div>';
   if(!bd.length)h+='<div class="empty"><span class="ei">⏰</span>No bills in the next 30 days</div><button class="obtn" data-go="plan" data-bfocus="#fn">+ Add bill</button>';
   else bd.slice(0,4).forEach(function(x){h+='<div class="lt" data-go="plan"><span class="ico">'+ci(x.f.category)+'</span><div class="m"><b>'+esc(x.f.name)+'</b><span>'+(x.diff===0?'Due today':x.diff===1?'Due tomorrow':'In '+x.diff+' days · '+x.d.toLocaleString("en-IN",{day:"numeric",month:"short"}))+'</span></div><b>'+money(x.f.amount)+'</b></div>'});
   h+='</div>';
-  var spm=spentThisMonth(),spp=spentByPerson();
-  var bs=S.budgets.map(function(b){return {c:b.category,a:Number(b.amount),s:spm[b.category]||0,p:spp[b.category]||{}}}).filter(function(r){return r.a>0}).sort(function(a,b){return b.s/b.a-a.s/a.a});
-  h+='<div class="dc"><div class="dch" data-go="plan"><b>Budgets</b><span class="arr">→</span></div>';
-  if(!bs.length)h+='<div class="empty"><span class="ei">🎯</span>No budget set</div><button class="obtn" data-go="plan">+ Add budget</button>';
-  else bs.slice(0,3).forEach(function(r){h+='<div style="margin-top:12px"><div class="row"><span>'+ci(r.c)+' '+esc(r.c)+'</span><b class="'+(r.s>r.a?"out":"")+'">'+money(r.s)+' / '+money(r.a)+'</b></div>'+budBar(r.a,r.p)+'</div>'});
-  h+='</div>';
-  var more=balBlock()+incomeBlock(Lc,L)+mandBlock(X)+unplannedBlock(Lc)+cardBlock(L)+trfBlock(L)+lendBlock();
+  var more=unplannedBlock(Lc)+cardBlock(L)+trfBlock(L)+lendBlock();
   var people={};Lc.forEach(function(t){var p=t.person||"?";(people[p]=people[p]||[]).push(t)});
   if(S.pf==="__both"&&Object.keys(people).length>1){more+='<h2>By person</h2><div class="grid">';
     Object.keys(people).forEach(function(p){more+='<div class="card"><div class="mute">'+esc(p)+(p===S.name?" (you)":"")+'</div><div style="font-size:20px;font-weight:700" class="out">'+money(sum(people[p],"out"))+'</div><div class="mute">received '+money(sum(people[p],"in"))+'</div></div>'});
     more+='</div>'}
-  if(more)h+='<div class="sec">'+(S.pf==="__both"||!S.pf?'Family':'More')+' · '+esc(plabel(0))+'</div><div id="acct"></div>'+more;
+  if(more)h+=more;
   h+='<div class="dc"><b style="font-size:19px">Control center</b><div class="cc">'+
-    [["track","✨","Automated tracking"],["fam","👥","Family Sync"],["goals","🎯","Goals"],["stmt","📥","Import statement"],["set","⚙️","Settings"],["menu","☰","More"]].map(function(x){return '<button data-go="'+x[0]+'"><i>'+x[1]+'</i>'+x[2]+'</button>'}).join('')+'</div></div>';
+    [["track","✨","Automated tracking"],["fam","👥","Family Sync"],["goals","🎯","Goals"],["set","⚙️","Settings"],["menu","☰","More"]].map(function(x){return '<button data-go="'+x[0]+'"><i>'+x[1]+'</i>'+x[2]+'</button>'}).join('')+'</div></div>';
   return h+'<button class="fab" id="addx" aria-label="Add a cash payment">+</button>'}
 function vTx(){
   var q=(S.lq||"").toLowerCase().trim(),key=monthKey(S.lm),lab=q?"All months":plabel(S.lm),items=(q?S.txns.filter(function(t){return personOK(t)&&privOK(t)}):txIn(key).filter(privOK));
@@ -1242,7 +1246,7 @@ function vMenu(){
   var em=(S.profile&&S.profile.email)||(S.auth&&S.auth.email)||"";
   var row=function(t,i,a,b){return '<button class="mr" data-go="'+t+'"><i>'+i+'</i><span><b>'+a+'</b>'+(b?'<span>'+b+'</span>':'')+'</span><span class="go">›</span></button>'};
   return topbar("Menu","home")+'<div class="sec">App settings</div><div class="card" style="padding:0 12px">'+row("set","⚙️","Settings","Theme, colour, currency, month start")+row("cats","🗂️","Categories","What each category has this month")+'</div>'+
-    '<div class="sec">Automation & sharing</div><div class="card" style="padding:0 12px">'+row("track","💬","Automated tracking","SMS & email")+row("fam","👥","Family Sync","Share expenses with family")+row("goals","🎯","Goals","Save for things together")+row("stmt","📥","Bank statements","Upload a statement file")+'</div>'+
+    '<div class="sec">Automation & sharing</div><div class="card" style="padding:0 12px">'+row("track","💬","Automated tracking","SMS & email")+row("fam","👥","Family Sync","Share expenses with family")+row("goals","🎯","Goals","Save for things together")+'</div>'+
     '<div class="sec">Account</div><div class="card" style="padding:0 12px"><a class="mr" href="privacy.html" target="_blank" rel="noopener" style="text-decoration:none"><i>🔒</i><span><b>Privacy policy</b><span>What the app stores and why</span></span><span class="go">›</span></a><button class="mr" id="chpw"><i>🔑</i><span><b>Change password</b><span>Choose a new password for '+esc(em)+'</span></span></button><button class="mr" id="lo"><i>⏻</i><span><b>Log out</b><span>'+esc(em)+'</span></span></button><button class="mr" id="delacc"><i>🗑️</i><span><b class="out">Delete my account</b><span>Removes your login and your payments</span></span></button></div><div class="note" style="text-align:center;margin:14px 0">Gharwise version 2.0 (build 44)</div>'}
 function vSet(){
   var h=topbar("Settings","menu")+lookCard();
@@ -1253,7 +1257,7 @@ function canEditT(t){return !S.profile||S.profile.can_edit!==false||t.person===S
 function vFam(){
   var p=S.profile||{},own=p.role==="owner",ce=p.can_edit!==false,F=S.fam,tab=S.famTab||"share";
   var h=topbar("Family Sync","menu");
-  h+='<div class="dc trk"><i>👪</i><div class="m"><b>Include family entries</b><span>Home, List and Charts include payments from people in your family</span></div><label class="tgl"><input type="checkbox" id="incf"'+(incFam()?' checked':'')+'><span></span></label></div>';
+  h+='<div class="dc trk"><i>👪</i><div class="m"><b>Include family entries</b><span>Home, List and Analytics include payments from people in your family</span></div><label class="tgl"><input type="checkbox" id="incf"'+(incFam()?' checked':'')+'><span></span></label></div>';
   h+='<div class="seg2"><button data-ft="share" class="'+(tab==="share"?'on':'')+'">↗ I’m sharing</button><button data-ft="view" class="'+(tab==="view"?'on':'')+'">👁 I can view</button></div>';
   if(!F)return h+'<div class="card">'+skBox(3)+'</div>';
   var others=(F.members||[]).filter(function(m){return m.user_id!==p.user_id});
@@ -1293,13 +1297,13 @@ function trackStat(){var c=S.sc;if(!c||c.err)return '';
   return c.alert_count>0?'<div class="note" style="margin-top:10px">✓ '+c.alert_count+' payment'+(c.alert_count>1?'s':'')+' received automatically · last '+ago(c.last_alert)+'</div>':'<div class="note" style="margin-top:10px">No payments received automatically yet.</div>'}
 function vTrack(){
   var c=S.sc,mail=c&&c.last_run?((Date.now()-new Date(c.last_run).getTime())<30*60000?'<span class="in">✓ Connected</span>':'<span class="out">⚠ Stopped</span>'):'Not set up';
-  var h=topbar("Automated tracking","menu")+'<div class="sec">✨ Live tracking</div>';
+  var h=topbar("Automated Tracking","menu")+'<div class="sec">✨ Live Tracking</div>';
   var ns=nativeSmsOK();if(ns&&S.nsms===null)nsmsRefresh();
-  h+='<div class="dc trk"><i>💬</i><div class="m"><b>SMS tracking</b><span>Capture spends from bank SMS, seconds after you pay'+(ns&&S.nsms&&S.nsms.enabled?' · <span class="in">✓ On</span>':'')+'</span></div><button class="sbtn" data-go="sms">'+(ns&&S.nsms&&S.nsms.enabled?'Manage':ns?'Turn on':'Set up')+'</button></div>';
-  h+='<div class="dc trk"><i>✉️</i><div class="m"><b>Email tracking</b><span>Capture spends from bank emails · '+mail+'</span></div><button class="sbtn" data-go="mail">'+(c&&c.last_run?'Manage':'Set up')+'</button></div>';
+  h+='<div class="dc trk"><i>💬</i><div class="m"><b>SMS Tracking</b><span>Capture spends from bank SMS, seconds after you pay'+(ns&&S.nsms&&S.nsms.enabled?' · <span class="in">✓ On</span>':'')+'</span></div><button class="sbtn" data-go="sms">'+(ns&&S.nsms&&S.nsms.enabled?'Manage':ns?'Turn On':'Set Up')+'</button></div>';
+  h+='<div class="dc trk"><i>✉️</i><div class="m"><b>Email Tracking</b><span>Capture spends from bank emails · '+mail+'</span></div><button class="sbtn" data-go="mail">'+(c&&c.last_run?'Manage':'Set Up')+'</button></div>';
   h+=trackStat();
-  h+='<div class="sec">🕘 Import past payments</div><div class="dc trk"><i>📥</i><div class="m"><b>Bank statement</b><span>Upload an HDFC statement file (.xls) to load months at once</span></div><button class="sbtn" data-go="stmt">Upload</button></div>';
-  h+='<div class="sec">❔ How it works</div><div class="card" style="font-size:14px;line-height:1.55">'+
+  h+='<div class="sec">🕘 Import Past Payments</div><div class="dc trk"><i>📥</i><div class="m"><b>Bank Statement</b><span>Upload a statement file from any bank to load months at once</span></div><button class="sbtn" data-go="stmt">Upload</button></div>';
+  h+='<div class="sec">❔ How It Works</div><div class="card" style="font-size:14px;line-height:1.55">'+
     '<p style="margin:0 0 8px"><b>SMS</b> is fastest. Your phone forwards each bank SMS to the app the moment it arrives. On iPhone this uses Apple’s Shortcuts app; on Android, a free SMS-forwarding app.</p>'+
     '<p style="margin:0 0 8px"><b>Email</b> is the back-up. A small script in your own Gmail checks for bank alerts every 5 minutes.</p>'+
     '<p style="margin:0">Use both if you like. The same payment arriving by SMS and by email is saved once. OTPs and offers are ignored.</p></div>';
@@ -1443,15 +1447,17 @@ function render(){
   if(S.view||!S.code||!S.name){nav.classList.add("hide");el.innerHTML=authView();bindAuth(el);return}
   if(S.pf&&S.pf!=="__both"&&persons().indexOf(S.pf)<0)S.pf=S.name;
   nav.classList.remove("hide");
-  nav.querySelectorAll("button").forEach(function(b){b.classList.toggle("on",b.dataset.t===S.tab)});nav.classList.toggle("hide",["sms","mail"].indexOf(S.tab)>=0);
+  nav.querySelectorAll("button").forEach(function(b){b.classList.toggle("on",b.dataset.t===S.tab)});nav.classList.toggle("hide",["sms","mail","stmt"].indexOf(S.tab)>=0);
   if(S.tab==="me")S.tab="menu";
-  var V={home:vDash,list:vTx,rep:function(){return vReports().replace('<h1>Reports</h1>',topbar("Charts"))},plan:vBudget,goals:function(){return vGoals().replace('<h1>Goals</h1>',topbar("Goals","menu"))},menu:vMenu,set:vSet,fam:vFam,cats:vCatsP,track:vTrack,sms:vSms,mail:vMail};
+  var V={home:vDash,list:vTx,rep:function(){return vReports().replace('<h1>Reports</h1>',topbar("Analytics"))},plan:vBudget,goals:function(){return vGoals().replace('<h1>Goals</h1>',topbar("Goals","menu"))},stmt:function(){return topbar("Bank Statement","track")+vStmt()},menu:vMenu,set:vSet,fam:vFam,cats:vCatsP,track:vTrack,sms:vSms,mail:vMail};
   el.innerHTML=(V[S.tab]||vDash)();
   var hb=el.querySelector(".hb");if(hb){var to=parseFloat(hb.textContent.replace(/[^0-9.]/g,""))||0;if(!S._hbOnce&&to>0&&!window.matchMedia("(prefers-reduced-motion: reduce)").matches){var t0=performance.now(),fr=S._hb>0&&Math.abs(S._hb-to)<to?S._hb:0;(function step(n){var k=Math.min(1,(n-t0)/650),e=1-Math.pow(1-k,3);if(hb.isConnected)hb.textContent=money(Math.round(fr+(to-fr)*e));if(k<1)requestAnimationFrame(step);else if(hb.isConnected)hb.textContent=money(to)})(t0)}if(to>0)S._hbOnce=true;S._hb=to}
   var q=function(i){return document.getElementById(i)};
-  var rp=q("rp");if(rp)rp.onchange=function(){S.rp=rp.value;if(S.rp==="stmt"&&S.imports===null)loadImports().then(render);render()};
+  el.querySelectorAll("[data-dn]").forEach(function(b){b.onclick=function(){var i=b.dataset.dn,l=q("dnl"),a=q("dna");if(!l||!a)return;
+    var on=l.dataset.i===i;l.dataset.i=on?"":i;l.textContent=on?"Total spent":b.dataset.nm;a.textContent=on?a.dataset.t:b.dataset.amt;
+    el.querySelectorAll(".dn-s").forEach(function(c){c.style.opacity=(!l.dataset.i||c.dataset.i===i)?1:.25})}});
+  var rp=q("rp");if(rp)rp.onchange=function(){S.rp=rp.value;render()};
   el.querySelectorAll("[data-cat]").forEach(function(b){b.onclick=function(){var t=S.txns.filter(function(x){return x.id===b.dataset.cat})[0];if(t)pick(t)}});
-  var sb2=q("stbtn2");if(sb2)sb2.onclick=function(){S.rp="stmt";if(S.imports===null)loadImports().then(render);render()};
   var ma=q("msal");if(ma)ma.onclick=function(){var r=salaryDay(),n=q("msn");
     if(!r){n.textContent="No salary credit found yet. Mark your salary payee as Salary / Income in History first.";return}
     q("ms").value=r.day;n.textContent="Found "+money(r.amount)+" credited on "+r.date+". Day "+r.day+" filled in. Press Save."};
@@ -1564,9 +1570,10 @@ function pick(t){
   var sh=document.getElementById("sheet");
   var h='<div class="sheet"><div><div style="position:sticky;top:-18px;z-index:2;background:var(--card);margin:-18px -16px 0;padding:18px 16px 6px;display:flex;align-items:center;justify-content:space-between"><b>Choose a category</b><button id="later" aria-label="Close" style="background:transparent;border:0;color:inherit;font-size:24px;line-height:1;padding:4px 8px;margin:-4px -8px;cursor:pointer">✕</button></div><input id="cq" type="search" placeholder="🔍 Search categories" autocomplete="off" style="margin:8px 0 4px"><div class="mute" style="margin:4px 0 10px">'+esc(t.merchant||"Unknown")+' · '+money(t.amount)+' · '+esc(t.txn_date||"")+'</div><input id="pn" placeholder="Note (optional)" value="'+esc(t.note||"")+'"><input id="pp" list="pl" placeholder="Person name (only for Lend out / Lend in)" value="'+esc(t.merchant||"")+'"><datalist id="pl">'+lendNames()+'</datalist><label class="mute" style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><input type="checkbox" id="po" style="width:auto;margin:0">Only this payment</label><div class="note" style="margin:0">Otherwise the payee is remembered, and its future payments are filed automatically.</div><div class="cats pk">';
   if(t.type!=="in"&&SUBRE.test(t.merchant||""))h+='<button class="wide" data-c="'+CATS.indexOf("Subscriptions")+'" style="border-color:var(--accent,#5fb59a)">⭐ Subscriptions (suggested)</button>';
-  CATS.forEach(function(c,i){if(c===LOUT||c===LIN)return;h+='<button data-c="'+i+'"><i>'+ci(c)+'</i>'+esc(c)+'</button>'});
+  CATS.forEach(function(c,i){if(c===LOUT||c===LIN||CUSTOMC.indexOf(c)>=0)return;h+='<button data-c="'+i+'"><i>'+ci(c)+'</i>'+esc(c)+'</button>'});
   var LB=t.type==="in"?[["Borrowed (they gave me)",LIN,"new","📥"],["Got back (they repaid me)",LOUT,"settle","🤝"]]:[["Lend out (I gave)",LOUT,"new","📤"],["Paid back (I repaid)",LIN,"settle","🤝"]];
   LB.forEach(function(x,i){h+='<button data-l="'+i+'"><i>'+x[3]+'</i>'+x[0]+'</button>'});
+  CUSTOMC.forEach(function(c){var i=CATS.indexOf(c);if(i>=0)h+='<button data-c="'+i+'"><i>'+ci(c)+'</i>'+esc(c)+'</button>'});
   h+='<button data-new="1"><i style="border:1.5px dashed var(--mute);background:none">＋</i>New category</button>';
   h+='</div></div></div>';
   sh.innerHTML=h;
