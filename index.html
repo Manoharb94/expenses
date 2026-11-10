@@ -641,7 +641,7 @@ async function loadPlan(){
       catch(e){S.goals=[];S.goalErr="Goals are not set up yet. Run goals.sql in Supabase."}})(),
     (async function(){try{S.gents=await api("goal_entries?select=*&order=created_at.asc")||[]}catch(e){S.gents=null}})()
   ]);
-  syncLoanCat();
+  syncLoanCat();schedRem();
 }
 function startFetch(){
   var q0="transactions?select=*&order=txn_date.desc,created_at.desc&limit=5000";
@@ -829,6 +829,29 @@ function budBar(a,byp){
   return '<div class="bar" style="display:flex;'+(tot>a?'box-shadow:0 0 0 2px var(--out)':'')+'">'+segs+'</div><div class="note">'+(lg||'No spending yet')+'</div>'+
     '<div class="note">'+(tot>a?'<b class="out">Over by '+money(tot-a)+'</b>':'Left '+money(a-tot))+' of '+money(a)+'</div>';
 }
+
+function remList(){try{return JSON.parse(ls("fxrem")||"[]")}catch(e){return[]}}
+function remOn(id){return remList().indexOf(id)>=0}
+function remSet(id,on){var l=remList().filter(function(x){return x!==id});if(on)l.push(id);ls("fxrem",JSON.stringify(l))}
+function lnPlugin(){try{return nativeApp()&&window.Capacitor&&Capacitor.registerPlugin?Capacitor.registerPlugin("LocalNotifications"):null}catch(e){return null}}
+async function remPermit(ask){var P=lnPlugin();if(!P)return false;try{var r=await P.checkPermissions();if(r.display==="granted")return true;if(!ask)return false;r=await P.requestPermissions();return r.display==="granted"}catch(e){return false}}
+function remDays(){var ids=remList(),out=[],now=new Date();
+  for(var i=0;i<45;i++){var d=new Date(now.getFullYear(),now.getMonth(),now.getDate()+i,8,0,0),m=d.getMonth()+1,last=new Date(d.getFullYear(),m,0).getDate(),items=[];
+    S.fixed.forEach(function(f){if(ids.indexOf(f.id)<0||!occurs(f,m))return;if(Math.min(last,Number(f.day)||1)===d.getDate())items.push(f)});
+    if(items.length&&d.getTime()>now.getTime())out.push({at:d,items:items})}
+  return out}
+var remBusy=false;
+async function schedRem(){var P=lnPlugin();if(!P||remBusy)return;remBusy=true;
+  try{var pend=await P.getPending();if(pend&&pend.notifications&&pend.notifications.length)await P.cancel({notifications:pend.notifications.map(function(n){return{id:n.id}})});
+    if(!remList().length||!(await remPermit(false)))return;
+    var days=remDays();if(!days.length)return;
+    await P.schedule({notifications:days.map(function(x,i){var tot=x.items.reduce(function(a,f){return a+Number(f.amount||0)},0),body=x.items.length===1?x.items[0].name+" · "+money(x.items[0].amount)+" is due today":x.items.length+" bills due today: "+x.items.map(function(f){return f.name+" "+money(f.amount)}).join(", ");
+      return{id:9000+i,title:"Gharwise reminder",body:body,schedule:{at:x.at,allowWhileIdle:true}}})})}
+  catch(e){}finally{remBusy=false}}
+async function toggleRem(id){var on=!remOn(id);
+  if(on){if(!nativeApp()||!lnPlugin()){toast("Reminders work in the Android app");return}
+    if(!(await remPermit(true))){toast("Allow notifications in your phone settings");return}}
+  remSet(id,on);render();toast(on?"Reminder on · 8:00 am on the due day":"Reminder off");schedRem()}
 function occurs(f,m){
   if(f.freq==="yearly")return Number(f.month||1)===m;
   if(f.freq==="quarterly")return (((m-Number(f.month||1))%3)+3)%3===0;
@@ -1166,12 +1189,13 @@ function vPlan(){
   h+='<button class="btn ghost" id="addbud" style="margin-top:6px">＋ Add Budget</button>'+(bl.length?'<button class="btn" id="svb">Save Budget</button>':'<span id="svb" style="display:none"></span>')+'<div class="note">Only payments that have a category count against a budget. Press and hold a budget to delete it.</div></div>';
   h+='<h2>Fixed expenses (home loan, school fees…)</h2><div class="card">';
   if(!S.fixed.length)h+='<span class="mute">None added yet.</span>';
-  S.fixed.forEach(function(f){h+='<div class="swp" style="margin:6px 0"><div class="swa" data-sw="fixed|'+f.id+'|'+encodeURIComponent(f.name)+'">Delete</div><div class="swc"><div class="row" style="padding:4px 0"><span>'+esc(f.name)+'<div class="mute">'+(f.freq==="monthly"?"monthly":f.freq)+', day '+f.day+(f.category?' · '+esc(f.category):'')+'</div></span><span><b>'+money(f.amount)+'</b></span></div></div></div>'});
+  S.fixed.forEach(function(f){h+='<div class="swp" style="margin:6px 0"><div class="swa" data-sw="fixed|'+f.id+'|'+encodeURIComponent(f.name)+'">Delete</div><div class="swc"><div class="row" style="padding:4px 0"><span>'+esc(f.name)+'<div class="mute">'+(f.freq==="monthly"?"monthly":f.freq)+', day '+f.day+(f.category?' · '+esc(f.category):'')+'</div></span><span style="display:flex;align-items:center;gap:8px"><b>'+money(f.amount)+'</b><button class="alink" data-rem="'+f.id+'" aria-label="Reminder" style="font-size:20px;line-height:1;opacity:'+(remOn(f.id)?'1':'.35')+'">'+(remOn(f.id)?'🔔':'🔕')+'</button></span></div></div></div>'});
+  if(S.fixed.length)h+='<div class="note">Tap the bell on an expense to get a reminder at 8:00 am on its due day. You get one notification a day, even if several bills are due.'+(nativeApp()?'':' Reminders work in the Android app.')+'</div>';
   h+='<hr style="border:0;border-top:1px solid var(--line);margin:12px 0"><input id="fn" placeholder="Name (e.g. Home loan EMI)"><input id="fa" type="number" inputmode="decimal" placeholder="Amount"><input id="fd" type="number" inputmode="numeric" placeholder="Day of month (1-31)"><select id="ff"><option value="monthly">Every month</option><option value="quarterly">Every 3 months</option><option value="yearly">Once a year</option></select><div id="fmw" style="display:none"><div class="mute">Month it is due</div><select id="fm">';
   for(var m=1;m<=12;m++)h+='<option value="'+m+'">'+new Date(2026,m-1,1).toLocaleString("en-IN",{month:"long"})+'</option>';
   h+='</select></div><div class="mute">Category</div><select id="fc"><option value="">No category</option>';
   CATS.filter(function(c){return !NOBUD[c]}).forEach(function(c){h+='<option>'+esc(c)+'</option>'});
-  h+='</select><button class="btn" id="fadd">Add fixed expense</button><div class="note">Fixed items feed the forecast. Everyday spending in the same category is left out of the average, so nothing is counted twice.</div></div>';
+  h+='</select><label style="display:flex;align-items:center;gap:8px;margin:2px 0 10px"><input type="checkbox" id="fr" style="width:auto;margin:0"> <span>Remind me on the due day</span></label><button class="btn" id="fadd">Add Fixed Expenses</button><div class="note">Fixed items feed the forecast. Everyday spending in the same category is left out of the average, so nothing is counted twice.</div></div>';
   return h;
 }
 function salaryDay(){
@@ -1659,7 +1683,8 @@ async function saveBudgets(){
 async function addFixed(){
   var n=g("fn").trim(),a=parseFloat(g("fa")),d=parseInt(g("fd"),10)||1,fr=g("ff"),m=parseInt(g("fm"),10)||1,c=g("fc");
   if(!n||!(a>0)){alert("Enter a name and an amount");return}
-  try{await api("fixed_items",{method:"POST",headers:{Prefer:"return=minimal"},body:JSON.stringify({name:n,amount:a,day:Math.min(31,Math.max(1,d)),freq:fr,month:fr==="monthly"?null:m,category:c||null})});await load();
+  try{await api("fixed_items",{method:"POST",headers:{Prefer:"return=minimal"},body:JSON.stringify({name:n,amount:a,day:Math.min(31,Math.max(1,d)),freq:fr,month:fr==="monthly"?null:m,category:c||null})});var wantRem=!!(document.getElementById("fr")&&document.getElementById("fr").checked);await load();
+    if(wantRem){var nf0=(S.fixed||[]).filter(function(x){return x.name===n}).pop();if(nf0){if(await remPermit(true)){remSet(nf0.id,true);schedRem();toast("Added with reminder")}else toast("Added. Allow notifications to get the reminder")}}
     if(/loan|emi/i.test(n+" "+(c||""))&&!(S.loans||[]).some(function(l){return String(l.n).toLowerCase()===n.toLowerCase()})){var nf=(S.fixed||[]).filter(function(x){return x.name===n}).pop();setTimeout(function(){loanSetup(null,n,a,nf&&nf.id||"")},250)}}
   catch(e){alert("Could not save: "+e.message)}
 }
@@ -1965,6 +1990,7 @@ function loanCands(){var L0=S.loans||[],nm=function(x){return String(x||"").toLo
 function loanBudgetCards(){var h="",c=curLoan();
   if(c){var d=loanData(c);
     h+='<div class="dc"><div class="mute" style="margin-bottom:6px">Loan tracker</div>'+loanSelect("lselb")+'<div data-loan="'+c.id+'" data-lp="loan|'+c.id+'|'+encodeURIComponent(c.n)+'" style="cursor:pointer"><div class="trk"><i>🏠</i><div class="m"><b>'+esc(c.n)+'</b><span>'+money(Math.round(d.nw.bal))+' left · '+d.nw.left+' EMIs · ends '+monLabel(d.nw.end)+'</span></div><span style="font-size:22px;color:var(--mute)">›</span></div>'+(d.sv.si>0?'<div class="note" style="margin:8px 0 0"><b class="in">Saved '+money(Math.round(d.sv.si))+'</b> interest with part payments</div>':'')+'</div></div>'}
+  h+='<button class="btn ghost" data-loansetup="" data-amt="0" data-fid="" style="margin:-6px 0 14px">＋ Track a loan</button>';
   var cs=loanCands();if(cs.length){h+='<div class="dc"><div class="mute" style="margin-bottom:6px">Track '+(c?'another ':'your ')+'EMI / loan</div>'+cs.map(function(x){return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line)"><div data-loansetup="'+esc(x.n)+'" data-amt="'+x.a+'" data-fid="'+esc(x.fid||"")+'" style="flex:1;cursor:pointer;min-width:0"><b>'+esc(x.n)+'</b>'+(x.a?'<div class="mute" style="font-size:12px">'+money(x.a)+' / month</div>':'')+'</div><button class="alink" data-loanskip="'+esc(x.n)+'" style="font-size:12px">Not a loan</button><span data-loansetup="'+esc(x.n)+'" data-amt="'+x.a+'" data-fid="'+esc(x.fid||"")+'" style="font-size:22px;color:var(--mute);cursor:pointer">›</span></div>'}).join('')+'</div>'}
   return h}
 function loanBlocks(){var c=curLoan();if(!c)return "";var d=loanData(c);
@@ -2014,6 +2040,7 @@ function loanSheet(id){
   q("lue").onclick=function(){loanSetup(L)}}
 document.addEventListener("click",function(e){var sk=e.target&&e.target.closest&&e.target.closest("[data-loanskip]");if(sk){e.stopPropagation();var l=loanSkipped();l.push(sk.dataset.loanskip);ls("loanskip",JSON.stringify(l));render();return}
   var t=e.target&&e.target.closest&&e.target.closest("[data-loan],[data-loansetup]");if(!t)return;if(t.dataset.loan)loanSheet(t.dataset.loan);else loanSetup(null,t.dataset.loansetup,+t.dataset.amt||0,t.dataset.fid||"")});
+document.addEventListener("click",function(e){var b=e.target&&e.target.closest&&e.target.closest("[data-rem]");if(b){e.stopPropagation();toggleRem(b.dataset.rem)}});
 document.addEventListener("change",function(e){var t=e.target;if(t&&t.dataset&&t.dataset.lsel){S.loanSel=t.value;ls("loansel",t.value);render()}});
 function whichLoan(t,note){var sh=document.getElementById("sheet"),L0=S.loans||[];
   sh.innerHTML='<div class="sheet"><div><b>Which loan is this for?</b><div class="mute" style="margin:6px 0 12px">'+esc(t.merchant||"Payment")+' · '+money(t.amount)+'</div><div style="display:grid;gap:8px">'+L0.map(function(x,i){return '<button class="btn ghost" data-wl="'+i+'">🏠 '+esc(x.n)+'</button>'}).join('')+'<button class="btn ghost" id="wlx">Cancel</button></div></div></div>';
