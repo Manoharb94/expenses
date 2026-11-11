@@ -1465,7 +1465,7 @@ function vSet(){
   h+='<div class="card"><button class="btn ghost" id="tourgo" style="margin:0">▶ Show app tour</button></div><h2>This phone</h2><div class="card"><div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><div class="mute">Your month starts on day (1 = normal calendar month)</div><input id="ms" type="number" inputmode="numeric" min="1" max="31" value="'+(S.ms||1)+'"><button class="btn ghost s" id="msal" style="margin-bottom:10px">Use my salary credit day</button><div class="note" id="msn">Saved on this phone only. Set the same day on the other phone. Reports, budgets and forecasts all follow it.</div><button class="btn" id="sv">Save</button></div>';
   h+=aboutCard();
   return h}
-var WEBVER="2.3 · 12 Nov 2026";
+var WEBVER="2.4 · 12 Nov 2026";
 async function loadAinfo(){if(S._ainb)return;S._ainb=1;var P=smsPlugin();try{S.ainfo=P?await P.appInfo():null}catch(e){S.ainfo=null}S._ainb=0;if(S.tab==="set")render()}
 function aboutCard(){
   var d=remDiag(),rows=[];
@@ -1544,6 +1544,11 @@ function kv(label,val){return '<div class="mute" style="margin-top:10px">'+label
 /* Paste the iCloud link of the shared "Gharwise SMS" shortcut here (see setup notes). Empty = step-by-step instructions instead. */
 var SMS_SHORTCUT_LINK="";
 var SMS_SHORTCUT_NAME="Gharwise SMS";
+var SMS_HIST_NAME="Gharwise past SMS", SMS_HIST_LINK="";   /* iCloud link of the "Gharwise past SMS" shortcut */
+/* iPhone app: hand the personal key to the app's "Add SMS to Gharwise" action (stored by the Capacitor Preferences plugin) */
+function iosLinkKey(key){try{if(!key||!nativeApp()||Capacitor.getPlatform()!=="ios"||S._kl===key)return;
+  var P=(Capacitor.Plugins&&Capacitor.Plugins.Preferences)||(Capacitor.registerPlugin&&Capacitor.registerPlugin("Preferences"));
+  if(P&&P.set){S._kl=key;P.set({key:"gharwise_key",value:key})}}catch(e){}}
 function phoneOS(){var u=navigator.userAgent||"";if(nativeApp()&&window.Capacitor.getPlatform)return Capacitor.getPlatform()==="ios"?"ios":"and";
   if(/iPhone|iPad|iPod/i.test(u)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1))return "ios";
   if(/Android/i.test(u))return "and";return "desk"}
@@ -1612,9 +1617,15 @@ function vSms(){
       '<li>Then <b>Get Contents of URL</b>:</li></ol>'+kv("URL",jb)+'<ol start="5"><li>Method <b>POST</b>. Header <b>apikey</b>:</li></ol>'+kv("apikey value",KEY)+
       '<ol start="6"><li>Request Body <b>JSON</b>: Text <b>p_key</b> = your key. <b>p_items</b> = <b>Array</b> with one <b>Dictionary</b> inside: Text <b>t</b> = <b>Repeat Item → Content</b>, Text <b>d</b> = <b>Formatted Date</b>.</li><li>After the repeat, add <b>Show Notification</b>: “Gharwise: past SMS sent”.</li></ol>'+
       '<p>Run it once. Allow access to Messages when iPhone asks. 200 messages take about 2 minutes. Run it again any time; messages already in the app are skipped.</p><div class="note">If “Find Messages” is missing in your Shortcuts app, tell us your iOS version in feedback.</div>'];
+    iosLinkKey(key);
     var run="shortcuts://run-shortcut?name="+encodeURIComponent(SMS_SHORTCUT_NAME)+"&input=text&text="+encodeURIComponent("OEKEY:"+key);
     var runHist="shortcuts://run-shortcut?name="+encodeURIComponent(SMS_SHORTCUT_NAME)+"&input=text&text=HISTORY";
-    if(SMS_SHORTCUT_LINK)steps=[
+    if(nativeApp()&&SMS_SHORTCUT_LINK&&SMS_HIST_LINK)steps=[
+      ['Add the live shortcut','<p>This shortcut sends each new bank SMS to Gharwise. Tap the button, then <b>Add Shortcut</b>, and come back here.</p><a class="btn" style="display:block;text-align:center;text-decoration:none" href="'+esc(SMS_SHORTCUT_LINK)+'" target="_blank" rel="noopener">Add shortcut</a><p class="note">Your account is linked automatically. Nothing to copy.</p>'],
+      ['Read your past SMS','<p>Add this shortcut, then run it once. It asks how many days to read (180 = 6 months) and sends your bank SMS with their dates.</p><a class="btn" style="display:block;text-align:center;text-decoration:none" href="'+esc(SMS_HIST_LINK)+'" target="_blank" rel="noopener">Add shortcut</a><a class="btn ghost" style="display:block;text-align:center;text-decoration:none;margin-top:8px" href="'+esc("shortcuts://run-shortcut?name="+encodeURIComponent(SMS_HIST_NAME))+'">Run it now</a><p class="note">Tap <b>Allow</b> when iPhone asks for access to Messages. Safe to run again; duplicates are skipped.</p>'],
+      ['Turn on live tracking','<p>Apple only lets you switch on message automations yourself. 30 seconds:</p><ol><li>Open <b>Shortcuts</b> → <b>Automation</b> → <b>+</b> → <b>Message</b>.</li><li><b>Message Contains</b>: type <b>Rs</b>.</li><li>Choose <b>Run Immediately</b> → <b>Next</b>.</li><li>Pick <b>'+esc(SMS_SHORTCUT_NAME)+'</b>.</li></ol><a class="btn ghost" style="display:block;text-align:center;text-decoration:none" href="shortcuts://">Open Shortcuts</a><div class="note">Bank writes INR or debited? Repeat with <b>INR</b> or <b>debited</b>. Duplicates are ignored.</div>'],
+      ['All set','<p>The next bank SMS reaches the app within seconds and shows up in <b>List</b>.</p>'+trackStat()]];
+    else if(SMS_SHORTCUT_LINK)steps=[
       ['Add the shortcut','<p>Tap the button, then tap <b>Add Shortcut</b> in the Shortcuts app and come back here.</p><a class="btn" style="display:block;text-align:center;text-decoration:none" href="'+esc(SMS_SHORTCUT_LINK)+'" target="_blank" rel="noopener">Add shortcut</a>'],
       ['Link it to your account','<p>One tap. This hands your personal key to the shortcut, so the SMS it sends are saved as yours. You will see “Linked to Gharwise”.</p><a class="btn" style="display:block;text-align:center;text-decoration:none" href="'+esc(run)+'">Link my account</a><p class="note">If iPhone asks to allow the shortcut to save a file, tap <b>Always Allow</b>.</p>'],
       ['Turn it on for bank SMS','<p>Apple only lets you switch on message automations yourself. It takes about 30 seconds:</p><ol><li>Open <b>Shortcuts</b> → <b>Automation</b> → <b>+</b> → <b>Message</b>.</li><li><b>Message Contains</b>: type <b>Rs</b>.</li><li>Choose <b>Run Immediately</b> → <b>Next</b>.</li><li>Pick <b>'+esc(SMS_SHORTCUT_NAME)+'</b>.</li></ol><a class="btn ghost" style="display:block;text-align:center;text-decoration:none" href="shortcuts://">Open Shortcuts</a><div class="note">Bank writes INR (Axis) or no currency (SBI)? Repeat with <b>INR</b> or <b>debited</b>. Duplicates are ignored.</div>'],
