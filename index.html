@@ -1332,7 +1332,7 @@ function personChips(){
   ns.forEach(function(n){h+='<button data-pf="'+esc(n)+'" class="'+(cur===n?'on':'')+'">'+esc(n===S.name?'Me':n)+'</button>'});
   return h+'<button data-pf="__both" class="'+(cur==="__both"?'on':'')+'">Family</button></div>'}
 function go(t){
-  S.tab=t;if(t==="sms"){S.smsStep=0;if(nativeSmsOK())S.nsms=null}if(t==="mail"){S.mailStep=0;S._mailInit=0}
+  S.tab=t;if(t==="sms"){S.smsStep=0;if(nativeSmsOK())S.nsms=null}if(t==="mail"){S.mailStep=0;S._mailInit=0}if(t==="set")S.ainfo=undefined;
   render();window.scrollTo(0,0);
   if(t==="plan"||t==="goals")quiet(loadPlan());
   if(t==="fam"||t==="set"||t==="menu")quiet(loadMembers());if(t==="fam")quiet(loadFam());
@@ -1463,7 +1463,21 @@ function vMenu(){
 function vSet(){
   var h=topbar("Settings","menu")+lookCard();
   h+='<div class="card"><button class="btn ghost" id="tourgo" style="margin:0">▶ Show app tour</button></div><h2>This phone</h2><div class="card"><div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><div class="mute">Your month starts on day (1 = normal calendar month)</div><input id="ms" type="number" inputmode="numeric" min="1" max="31" value="'+(S.ms||1)+'"><button class="btn ghost s" id="msal" style="margin-bottom:10px">Use my salary credit day</button><div class="note" id="msn">Saved on this phone only. Set the same day on the other phone. Reports, budgets and forecasts all follow it.</div><button class="btn" id="sv">Save</button></div>';
+  h+=aboutCard();
   return h}
+var WEBVER="2.2 · 11 Nov 2026";
+async function loadAinfo(){if(S._ainb)return;S._ainb=1;var P=smsPlugin();try{S.ainfo=P?await P.appInfo():null}catch(e){S.ainfo=null}S._ainb=0;if(S.tab==="set")render()}
+function aboutCard(){
+  var d=remDiag(),rows=[];
+  if(!d.app){rows.push(["App","Web app in your browser"]);rows.push(["Web version",WEBVER])}
+  else{var a=S.ainfo;
+    rows.push(["App","Gharwise for "+(d.plat==="ios"?"iPhone":"Android")]);
+    if(a===undefined){loadAinfo();rows.push(["App version","Checking…"])}
+    else if(a===null)rows.push(["App version","Older than 2.2 — please update from the Play Store"]);
+    else{rows.push(["App version",String(a.versionName||"?")]);rows.push(["Version code",String(a.versionCode)]);if(a.sdk)rows.push(["Android",String(a.sdk)])}
+    rows.push(["Web version",WEBVER]);
+    if(d.reg)rows.push(["Reminders built in",d.reg.indexOf("LocalNotifications")>=0?"✓ yes":"✗ no — install the latest version"])}
+  return '<h2>About this app</h2><div class="card">'+rows.map(function(r){return '<div class="row" style="padding:5px 0"><span class="mute">'+esc(r[0])+'</span><b style="text-align:right">'+esc(r[1])+'</b></div>'}).join('')+'<div class="note" style="margin:8px 0 0">Share these details if something does not work for you.</div></div>'}
 function incFam(){return ls("incfam")!=="0"}
 function canEditT(t){return !S.profile||S.profile.can_edit!==false||t.person===S.name}
 function vFam(){
