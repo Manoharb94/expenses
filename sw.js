@@ -1,14 +1,14 @@
 /* Gharwise service worker: opens the app instantly from the phone's own copy,
    then quietly checks for a newer version. Never touches login or data requests. */
-var CACHE="gharwise-v1";
+var CACHE="gharwise-v2";
 var SHELL=["./","index.html","manifest.json","icon-192.png","icon.png","apple-touch-icon.png","favicon-32.png","logo.svg"];
 self.addEventListener("install",function(e){
-  e.waitUntil(caches.open(CACHE).then(function(c){return Promise.all(SHELL.map(function(u){return c.add(u).catch(function(){})}))}).then(function(){return self.skipWaiting()}))});
+  e.waitUntil(caches.open(CACHE).then(function(c){return Promise.all(SHELL.map(function(u){return c.add(new Request(u,{cache:"reload"})).catch(function(){})}))}).then(function(){return self.skipWaiting()}))});
 self.addEventListener("activate",function(e){
   e.waitUntil(caches.keys().then(function(ks){return Promise.all(ks.filter(function(k){return k!==CACHE}).map(function(k){return caches.delete(k)}))}).then(function(){return self.clients.claim()}))});
 function tell(msg){self.clients.matchAll({type:"window"}).then(function(cs){cs.forEach(function(c){c.postMessage(msg)})})}
 function revalidate(req,cache,key,notify){
-  return fetch(req).then(function(res){
+  return fetch(req,{cache:"no-cache"}).then(function(res){
     if(res&&res.ok&&res.type!=="opaque"){
       var copy=res.clone();
       return cache.match(key,{ignoreSearch:true}).then(function(old){
