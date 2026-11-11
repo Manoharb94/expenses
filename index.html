@@ -851,12 +851,17 @@ function remOn(id){return remList().indexOf(id)>=0}
 function remSet(id,on){var l=remList().filter(function(x){return x!==id});if(on)l.push(id);ls("fxrem",JSON.stringify(l))}
 function lnPlugin(){try{return nativeApp()&&window.Capacitor&&Capacitor.registerPlugin?Capacitor.registerPlugin("LocalNotifications"):null}catch(e){return null}}
 async function remPermit(ask){S.remErr="";var P=lnPlugin();if(!P)return false;try{var r=await P.checkPermissions();if(r.display==="granted")return true;if(!ask)return false;r=await P.requestPermissions();return r.display==="granted"}catch(e){var m=String(e&&e.message||e);S.remErr=/not implemented|unimplemented|not available|web implementation|does not have/i.test(m)?"old":m;return false}}
-function remDiag(){var o={app:nativeApp(),plugin:!!lnPlugin(),plat:"web"};try{o.plat=(window.Capacitor&&Capacitor.getPlatform&&Capacitor.getPlatform())||"web"}catch(e){}return o}
+function remDiag(){var o={app:nativeApp(),plugin:!!lnPlugin(),plat:"web",reg:null};try{o.plat=(window.Capacitor&&Capacitor.getPlatform&&Capacitor.getPlatform())||"web"}catch(e){}
+  try{var H=window.Capacitor&&Capacitor.PluginHeaders;if(H&&H.length!==undefined)o.reg=Array.prototype.map.call(H,function(h){return h.name})}catch(e){}return o}
 async function remCheck(){var d=remDiag(),perm="n/a",pend="n/a",sh=document.getElementById("sheet");
-  if(d.app&&d.plugin){try{perm=(await lnPlugin().checkPermissions()).display}catch(e){perm="plugin error"}
+  var perr="";
+  if(d.app&&d.plugin){try{perm=(await lnPlugin().checkPermissions()).display}catch(e){perm="plugin error";perr=String(e&&e.message||e)}
     try{var pp=await lnPlugin().getPending();pend=String(pp&&pp.notifications?pp.notifications.length:0)}catch(e){}}
-  var adv=!d.app?"You are not inside the Gharwise Android app. Open Gharwise from your phone's app list (the Play Store version), not from the browser.":!d.plugin?"This version of the app cannot send reminders. Update Gharwise in the Play Store, then open it again.":perm!=="granted"?"Allow notifications: Settings → Apps → Gharwise → Notifications → turn on.":"Everything is ready. Tap the button for a test notification in 5 seconds, then leave the app or lock the screen.";
+  var noLN=d.app&&d.reg&&d.reg.indexOf("LocalNotifications")<0;
+  var adv=noLN?"This installed copy of Gharwise was built without reminder support. Install the latest version from the Play Store (uninstall first if it does not update).":!d.app?"You are not inside the Gharwise Android app. Open Gharwise from your phone's app list (the Play Store version), not from the browser.":!d.plugin?"This version of the app cannot send reminders. Update Gharwise in the Play Store, then open it again.":perm!=="granted"?"Allow notifications: Settings → Apps → Gharwise → Notifications → turn on.":"Everything is ready. Tap the button for a test notification in 5 seconds, then leave the app or lock the screen.";
   var rows=[["Gharwise Android app",d.app?"✓ yes":"✗ not detected ("+d.plat+")"],["Notification support",d.plugin?"✓ found":"✗ missing"],["Permission",perm==="granted"?"✓ allowed":perm],["Reminders set on this phone",remList().length+" bills · "+pend+" scheduled"]];
+  if(d.reg)rows.push(["Parts built into this app",d.reg.length?d.reg.join(", "):"none"]);
+  if(perr)rows.push(["Error",perr.slice(0,120)]);
   sh.innerHTML='<div class="sheet"><div><b>Reminder check</b><div style="margin:10px 0">'+rows.map(function(x){return '<div class="row" style="padding:4px 0"><span class="mute">'+esc(x[0])+'</span><b>'+esc(x[1])+'</b></div>'}).join('')+'</div><div class="note" style="margin:0 0 12px">'+esc(adv)+'</div>'+(d.app&&d.plugin?'<button class="btn" id="rctest">Send test notification</button>':'')+'<div class="note">If reminders come late: Settings → Apps → Gharwise → Battery → Unrestricted.</div><button class="btn ghost" style="margin-top:8px" id="rcx">Close</button></div></div>';
   document.getElementById("rcx").onclick=function(){sh.innerHTML=""};
   var t=document.getElementById("rctest");if(t)t.onclick=async function(){sh.innerHTML="";
