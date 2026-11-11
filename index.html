@@ -1544,7 +1544,8 @@ function kv(label,val){return '<div class="mute" style="margin-top:10px">'+label
 /* Paste the iCloud link of the shared "Gharwise SMS" shortcut here (see setup notes). Empty = step-by-step instructions instead. */
 var SMS_SHORTCUT_LINK="https://www.icloud.com/shortcuts/a44c558699264941b90b382078392d3f";
 var SMS_SHORTCUT_NAME="Gharwise SMS";
-var SMS_PAST=true;   /* true once the shared shortcut also reads past SMS */
+var SMS_PAST=true;
+var SMS_MONTHS_IN_URL=false;  /* true once the shortcut reads 'HISTORY <months>' (no question asked) */   /* true once the shared shortcut also reads past SMS */
 var SMS_HIST_NAME="Gharwise past SMS", SMS_HIST_LINK="";   /* iCloud link of the "Gharwise past SMS" shortcut */
 /* iPhone app: hand the personal key to the app's "Add SMS to Gharwise" action (stored by the Capacitor Preferences plugin) */
 function iosLinkKey(key){try{if(!key||!nativeApp()||Capacitor.getPlatform()!=="ios"||S._kl===key)return;
@@ -1637,7 +1638,10 @@ function vSms(){
       ['Add the “send” action','<ol><li>Add <b>Get Contents of URL</b> with this URL:</li></ol>'+kv("URL",j)+'<ol start="2"><li>Method <b>POST</b>. Header <b>apikey</b>:</li></ol>'+kv("apikey value",KEY)+'<ol start="3"><li>Request Body <b>JSON</b>: Text field <b>p_key</b> = your key; Text field <b>p_text</b> = Shortcut Input → <b>Content</b>.</li></ol>'],
       histStep,
       ['All set','<p>The next bank SMS reaches the app within seconds.</p>'+trackStat()]];
-    if(SMS_PAST&&nativeApp()&&SMS_SHORTCUT_LINK)steps.splice(1,0,['Read your past SMS','<p>One tap. The shortcut asks how many months to read (1, 2, 3 or 6), then sends your bank SMS to the app.</p><a class="btn" style="display:block;text-align:center;text-decoration:none" href="'+esc("shortcuts://run-shortcut?name="+encodeURIComponent(SMS_SHORTCUT_NAME)+"&input=text&text=HISTORY")+'">Read past SMS</a><p class="note">Tap <b>Allow</b> when iPhone asks for access to Messages. It can take a couple of minutes. Safe to run again; duplicates are skipped.</p>']);
+    if(SMS_PAST&&nativeApp()&&SMS_SHORTCUT_LINK){
+      var hrun=function(m){return "shortcuts://run-shortcut?name="+encodeURIComponent(SMS_SHORTCUT_NAME)+"&input=text&text="+encodeURIComponent(SMS_MONTHS_IN_URL?("HISTORY "+m):"HISTORY")};
+      var hsel=SMS_MONTHS_IN_URL?'<div class="mute" style="margin:6px 0 4px">How far back?</div><select id="smsmo" style="width:100%;padding:10px;border-radius:10px;margin-bottom:10px" onchange="document.getElementById(\'smsrun\').href=\''+"shortcuts://run-shortcut?name="+encodeURIComponent(SMS_SHORTCUT_NAME)+"&input=text&text="+'\'+encodeURIComponent(\'HISTORY \'+this.value)"><option value="1">Last 1 month</option><option value="2">Last 2 months</option><option value="3">Last 3 months</option><option value="6" selected>Last 6 months</option></select>':'';
+      steps.splice(1,0,['Read your past SMS','<p>Choose how far back to read, then tap the button. The shortcut reads your bank SMS from that period and sends them to the app.</p>'+hsel+'<a id="smsrun" class="btn" style="display:block;text-align:center;text-decoration:none" href="'+esc(hrun(6))+'">Read past SMS</a><p class="note">Tap <b>Allow</b> when iPhone asks for access to Messages. It can take a couple of minutes. Safe to run again; duplicates are skipped.</p>'])}
   }else steps=[
     ['Copy your personal key','This key tells the app the SMS is yours. Keep it private.'+kv("Your key",key)],
     ['Install an SMS forwarder','<p>Until the app is on the Play Store, a free helper app forwards bank SMS. These steps use <b>MacroDroid</b>.</p><a class="btn" style="display:block;text-align:center;text-decoration:none" target="_blank" rel="noopener" href="https://play.google.com/store/apps/details?id=com.arlosoft.macrodroid">Get MacroDroid</a><p class="note">Allow SMS access when it asks.</p>'],
