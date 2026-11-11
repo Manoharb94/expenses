@@ -850,7 +850,11 @@ function remList(){try{return JSON.parse(ls("fxrem")||"[]")}catch(e){return[]}}
 function remOn(id){return remList().indexOf(id)>=0}
 function remSet(id,on){var l=remList().filter(function(x){return x!==id});if(on)l.push(id);ls("fxrem",JSON.stringify(l))}
 function lnPlugin(){try{return nativeApp()&&window.Capacitor&&Capacitor.registerPlugin?Capacitor.registerPlugin("LocalNotifications"):null}catch(e){return null}}
-async function remPermit(ask){S.remErr="";var P=lnPlugin();if(!P)return false;try{var r=await P.checkPermissions();if(r.display==="granted")return true;if(!ask)return false;r=await P.requestPermissions();return r.display==="granted"}catch(e){var m=String(e&&e.message||e);S.remErr=/not implemented|unimplemented|not available|web implementation|does not have/i.test(m)?"old":m;return false}}
+function remMsg(){var e=S.remErr||"",ios=false;try{ios=Capacitor.getPlatform()==="ios"}catch(x){}
+  if(e.indexOf("old:")===0)return ios?"Reminders are not built into this iPhone build ("+e.slice(4,70)+")":"Please update the Gharwise app from the Play Store";
+  if(e&&e!=="denied")return "Reminder error: "+e.slice(0,90);
+  return ios?"Allow notifications: iPhone Settings → Notifications → Gharwise":"Allow notifications: Settings → Apps → Gharwise → Notifications"}
+async function remPermit(ask){S.remErr="";var P=lnPlugin();if(!P)return false;try{var r=await P.checkPermissions();if(r.display==="granted")return true;if(!ask)return false;r=await P.requestPermissions();return r.display==="granted"}catch(e){var m=String(e&&e.message||e);S.remErr=/not implemented|unimplemented|not available|web implementation|does not have/i.test(m)?"old:"+m:m;return false}}
 function remDiag(){var o={app:nativeApp(),plugin:!!lnPlugin(),plat:"web",reg:null};try{o.plat=(window.Capacitor&&Capacitor.getPlatform&&Capacitor.getPlatform())||"web"}catch(e){}
   try{var H=window.Capacitor&&Capacitor.PluginHeaders;if(H&&H.length!==undefined)o.reg=Array.prototype.map.call(H,function(h){return h.name})}catch(e){}return o}
 async function remCheck(){var d=remDiag(),perm="n/a",pend="n/a",sh=document.getElementById("sheet");
@@ -865,7 +869,7 @@ async function remCheck(){var d=remDiag(),perm="n/a",pend="n/a",sh=document.getE
   sh.innerHTML='<div class="sheet"><div><b>Reminder check</b><div style="margin:10px 0">'+rows.map(function(x){return '<div class="row" style="padding:4px 0"><span class="mute">'+esc(x[0])+'</span><b>'+esc(x[1])+'</b></div>'}).join('')+'</div><div class="note" style="margin:0 0 12px">'+esc(adv)+'</div>'+(d.app&&d.plugin?'<button class="btn" id="rctest">Send test notification</button>':'')+'<div class="note">If reminders come late: Settings → Apps → Gharwise → Battery → Unrestricted.</div><button class="btn ghost" style="margin-top:8px" id="rcx">Close</button></div></div>';
   document.getElementById("rcx").onclick=function(){sh.innerHTML=""};
   var t=document.getElementById("rctest");if(t)t.onclick=async function(){sh.innerHTML="";
-    if(!(await remPermit(true))){toast(S.remErr==="old"?"Please update the Gharwise app from the Play Store":"Allow notifications for Gharwise in your phone settings");return}
+    if(!(await remPermit(true))){toast(remMsg());return}
     try{await lnPlugin().schedule({notifications:[{id:8999,title:"Gharwise reminder",body:"This is a test. Reminders are working.",schedule:{at:new Date(Date.now()+5000),allowWhileIdle:true}}]});toast("Test notification in 5 seconds. Leave the app or lock the screen.")}catch(e){toast("Could not send: "+String(e&&e.message||e))}}}
 function remDays(){var ids=remList(),out=[],now=new Date();
   for(var i=0;i<45;i++){var d=new Date(now.getFullYear(),now.getMonth(),now.getDate()+i,8,0,0),m=d.getMonth()+1,last=new Date(d.getFullYear(),m,0).getDate(),items=[];
@@ -882,8 +886,8 @@ async function schedRem(){var P=lnPlugin();if(!P||remBusy)return;remBusy=true;
   catch(e){}finally{remBusy=false}}
 async function toggleRem(id){var on=!remOn(id);
   if(on){var dg=remDiag();
-    if(!dg.app||!dg.plugin){toast(dg.app?"Please update the Gharwise app from the Play Store, then try again":"This page is not running inside the Gharwise app ("+dg.plat+"). Open the Gharwise app on your phone.");return}
-    if(!(await remPermit(true))){toast(S.remErr==="old"?"Please update the Gharwise app from the Play Store, then try again":"Allow notifications: Settings → Apps → Gharwise → Notifications");return}}
+    if(!dg.app||!dg.plugin){toast(dg.app?(dg.plat==="ios"?"Reminders are not available in this iPhone build yet":"Please update the Gharwise app from the Play Store, then try again"):"This page is not running inside the Gharwise app ("+dg.plat+"). Open the Gharwise app on your phone.");return}
+    if(!(await remPermit(true))){toast(remMsg());return}}
   remSet(id,on);render();toast(on?"Reminder on · 8:00 am on the due day":"Reminder off");schedRem()}
 function occurs(f,m){
   if(f.freq==="yearly")return Number(f.month||1)===m;
@@ -1465,7 +1469,7 @@ function vSet(){
   h+='<div class="card"><button class="btn ghost" id="tourgo" style="margin:0">▶ Show app tour</button></div><h2>This phone</h2><div class="card"><div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><div class="mute">Your month starts on day (1 = normal calendar month)</div><input id="ms" type="number" inputmode="numeric" min="1" max="31" value="'+(S.ms||1)+'"><button class="btn ghost s" id="msal" style="margin-bottom:10px">Use my salary credit day</button><div class="note" id="msn">Saved on this phone only. Set the same day on the other phone. Reports, budgets and forecasts all follow it.</div><button class="btn" id="sv">Save</button></div>';
   h+=aboutCard();
   return h}
-var WEBVER="2.8 · 12 Nov 2026";
+var WEBVER="2.9 · 12 Nov 2026";
 async function loadAinfo(){if(S._ainb)return;S._ainb=1;var P=smsPlugin();try{S.ainfo=P?await P.appInfo():null}catch(e){S.ainfo=null}S._ainb=0;if(S.tab==="set")render()}
 function aboutCard(){
   var d=remDiag(),rows=[];
