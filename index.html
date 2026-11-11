@@ -1465,7 +1465,7 @@ function vSet(){
   h+='<div class="card"><button class="btn ghost" id="tourgo" style="margin:0">▶ Show app tour</button></div><h2>This phone</h2><div class="card"><div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><div class="mute">Your month starts on day (1 = normal calendar month)</div><input id="ms" type="number" inputmode="numeric" min="1" max="31" value="'+(S.ms||1)+'"><button class="btn ghost s" id="msal" style="margin-bottom:10px">Use my salary credit day</button><div class="note" id="msn">Saved on this phone only. Set the same day on the other phone. Reports, budgets and forecasts all follow it.</div><button class="btn" id="sv">Save</button></div>';
   h+=aboutCard();
   return h}
-var WEBVER="2.6 · 12 Nov 2026";
+var WEBVER="2.7 · 12 Nov 2026";
 async function loadAinfo(){if(S._ainb)return;S._ainb=1;var P=smsPlugin();try{S.ainfo=P?await P.appInfo():null}catch(e){S.ainfo=null}S._ainb=0;if(S.tab==="set")render()}
 function aboutCard(){
   var d=remDiag(),rows=[];
@@ -1542,9 +1542,9 @@ function wz(title,steps,cur,doneTo){
   return h}
 function kv(label,val){return '<div class="mute" style="margin-top:10px">'+label+'</div><div class="kv"><span>'+esc(val)+'</span><button class="btn ghost s" data-copy="'+esc(val)+'">Copy</button></div>'}
 /* Paste the iCloud link of the shared "Gharwise SMS" shortcut here (see setup notes). Empty = step-by-step instructions instead. */
-var SMS_SHORTCUT_LINK="https://www.icloud.com/shortcuts/1b426d990506498e9fd5f897d720302c";
+var SMS_SHORTCUT_LINK="https://www.icloud.com/shortcuts/a44c558699264941b90b382078392d3f";
 var SMS_SHORTCUT_NAME="Gharwise SMS";
-var SMS_PAST=false;   /* true once the shared shortcut also reads past SMS */
+var SMS_PAST=true;   /* true once the shared shortcut also reads past SMS */
 var SMS_HIST_NAME="Gharwise past SMS", SMS_HIST_LINK="";   /* iCloud link of the "Gharwise past SMS" shortcut */
 /* iPhone app: hand the personal key to the app's "Add SMS to Gharwise" action (stored by the Capacitor Preferences plugin) */
 function iosLinkKey(key){try{if(!key||!nativeApp()||Capacitor.getPlatform()!=="ios"||S._kl===key)return;
@@ -1624,7 +1624,7 @@ function vSms(){
     if(nativeApp()&&SMS_SHORTCUT_LINK)steps=[
       ['Add the live shortcut','<p>This shortcut sends each new bank SMS to Gharwise. Tap the button, then <b>Add Shortcut</b>, and come back here.</p><a class="btn" style="display:block;text-align:center;text-decoration:none" href="'+esc(SMS_SHORTCUT_LINK)+'" target="_blank" rel="noopener">Add shortcut</a><p class="note">Your account is linked automatically. Nothing to copy.</p>'],
       ['Turn on live tracking','<p>Apple only lets you switch on message automations yourself. 30 seconds:</p><ol><li>Open <b>Shortcuts</b> → <b>Automation</b> → <b>+</b> → <b>Message</b>.</li><li><b>Message Contains</b>: type <b>Rs</b>.</li><li>Choose <b>Run Immediately</b> → <b>Next</b>.</li><li>Pick <b>'+esc(SMS_SHORTCUT_NAME)+'</b>.</li></ol><a class="btn ghost" style="display:block;text-align:center;text-decoration:none" href="shortcuts://">Open Shortcuts</a><div class="note">Bank writes INR or debited? Repeat with <b>INR</b> or <b>debited</b>. Duplicates are ignored.</div>'],
-      ['All set','<p>The next bank SMS reaches the app within seconds and shows up in <b>List</b>.</p><p class="note">For older payments, use <b>Menu → Import</b> (bank statement file) or Email tracking, which reads your past emails.</p>'+trackStat()]];
+      ['All set','<p>The next bank SMS reaches the app within seconds and shows up in <b>List</b>.</p>'+trackStat()]];
     else if(SMS_SHORTCUT_LINK)steps=[
       ['Add the shortcut','<p>Tap the button, then tap <b>Add Shortcut</b> in the Shortcuts app and come back here.</p><a class="btn" style="display:block;text-align:center;text-decoration:none" href="'+esc(SMS_SHORTCUT_LINK)+'" target="_blank" rel="noopener">Add shortcut</a>'],
       ['Link it to your account','<p>One tap. This hands your personal key to the shortcut, so the SMS it sends are saved as yours. You will see “Linked to Gharwise”.</p><a class="btn" style="display:block;text-align:center;text-decoration:none" href="'+esc(run)+'">Link my account</a><p class="note">If iPhone asks to allow the shortcut to save a file, tap <b>Always Allow</b>.</p>'],
@@ -1637,7 +1637,7 @@ function vSms(){
       ['Add the “send” action','<ol><li>Add <b>Get Contents of URL</b> with this URL:</li></ol>'+kv("URL",j)+'<ol start="2"><li>Method <b>POST</b>. Header <b>apikey</b>:</li></ol>'+kv("apikey value",KEY)+'<ol start="3"><li>Request Body <b>JSON</b>: Text field <b>p_key</b> = your key; Text field <b>p_text</b> = Shortcut Input → <b>Content</b>.</li></ol>'],
       histStep,
       ['All set','<p>The next bank SMS reaches the app within seconds.</p>'+trackStat()]];
-    if(SMS_PAST&&nativeApp()&&SMS_SHORTCUT_LINK)steps.splice(1,0,['Read your past SMS','<p>One tap. The shortcut asks how many days to read (180 = 6 months), then sends your bank SMS to the app with their dates.</p><a class="btn" style="display:block;text-align:center;text-decoration:none" href="'+esc("shortcuts://run-shortcut?name="+encodeURIComponent(SMS_SHORTCUT_NAME)+"&input=text&text=HISTORY")+'">Read past SMS</a><p class="note">Tap <b>Allow</b> when iPhone asks for access to Messages. It can take a couple of minutes. Safe to run again; duplicates are skipped.</p>']);
+    if(SMS_PAST&&nativeApp()&&SMS_SHORTCUT_LINK)steps.splice(1,0,['Read your past SMS','<p>One tap. The shortcut asks how many months to read (1, 2, 3 or 6), then sends your bank SMS to the app.</p><a class="btn" style="display:block;text-align:center;text-decoration:none" href="'+esc("shortcuts://run-shortcut?name="+encodeURIComponent(SMS_SHORTCUT_NAME)+"&input=text&text=HISTORY")+'">Read past SMS</a><p class="note">Tap <b>Allow</b> when iPhone asks for access to Messages. It can take a couple of minutes. Safe to run again; duplicates are skipped.</p>']);
   }else steps=[
     ['Copy your personal key','This key tells the app the SMS is yours. Keep it private.'+kv("Your key",key)],
     ['Install an SMS forwarder','<p>Until the app is on the Play Store, a free helper app forwards bank SMS. These steps use <b>MacroDroid</b>.</p><a class="btn" style="display:block;text-align:center;text-decoration:none" target="_blank" rel="noopener" href="https://play.google.com/store/apps/details?id=com.arlosoft.macrodroid">Get MacroDroid</a><p class="note">Allow SMS access when it asks.</p>'],
