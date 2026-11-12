@@ -774,9 +774,20 @@ function cmSeries(k,M,ev){var f=pdate(k),t=pend(k),n=Math.round((t-f)/864e5)+1,d
   (M.outs||[]).forEach(function(x){if(ev&&M.ids&&M.ids[x.id])return;if(!x.txn_date)return;var d=Math.round((new Date(x.txn_date+"T00:00:00")-f)/864e5);if(d<0||d>=n)return;var o=days[d],v=+x.amount||0,c=x.category||UNC;o.t+=v;o.by[c]=(o.by[c]||0)+v;o.it.push([x.merchant||"",v,c])});
   var cum=[],run=0;days.forEach(function(d){run+=d.t;cum.push(run)});
   var cap=n;if(k===0){cap=Math.min(n,Math.max(1,Math.round((new Date(iso(new Date())+"T00:00:00")-f)/864e5)+1))}
-  return {f:f.getTime(),n:n,cap:cap,days:days,cum:cum,lab:f.toLocaleString("en-IN",{month:"short",year:"2-digit"})}}
+  var dt=[];for(i=0;i<n;i++){dt.push(new Date(f.getFullYear(),f.getMonth(),f.getDate()+i))}
+  return {f:f.getTime(),n:n,cap:cap,days:days,cum:cum,dt:dt,lab:f.toLocaleString("en-IN",{month:"short",year:"2-digit"})}}
 function cmChart(a,b,A,B){
-  var ev=!!S.cmEv,sa=cmSeries(a,A,ev),sb=cmSeries(b,B,ev),N=Math.max(sa.n,sb.n),C=N;
+  var ev=!!S.cmEv,sa=cmSeries(a,A,ev),sb=cmSeries(b,B,ev);
+  var Lt=sa.f>=sb.f?sa:sb,Er=Lt===sa?sb:sa;
+  /* line the earlier month up by calendar date: 11 Nov is compared with 11 Oct */
+  var dim=function(y,m){return new Date(y,m+1,0).getDate()},al={cum:[],days:[],dt:[]},last=0;
+  for(var i=0;i<Lt.n;i++){var d=Lt.dt[i],ty=d.getFullYear(),tm=d.getMonth()-1,src=new Date(ty,tm,Math.min(d.getDate(),dim(ty,tm))),ix=Math.round((src-Er.f)/864e5);
+    al.dt.push(src);
+    if(ix<0){al.days.push(null);al.cum.push(0)}
+    else if(ix>=Er.n){al.days.push(null);al.cum.push(Er.cum[Er.n-1]||0)}
+    else{al.days.push(Er.days[ix]);al.cum.push(Er.cum[ix])}}
+  Er.n=Lt.n;Er.cap=Lt.n;Er.days=al.days;Er.cum=al.cum;Er.dt=al.dt;
+  var N=Math.max(sa.n,sb.n),C=N;
   if(sa.cap<sa.n||sb.cap<sb.n)C=Math.min(sa.cap<sa.n?sa.cap:N,sb.cap<sb.n?sb.cap:N);
   CM={a:sa,b:sb,N:N,C:C};
   var W=340,H=196,pl=40,pr=10,pt=14,pb=24,w=W-pl-pr,h=H-pt-pb,mx=1;
@@ -786,6 +797,7 @@ function cmChart(a,b,A,B){
   CM.g={W:W,pl:pl,w:w,pt:pt,h:h,N:N,mx:mx};
   var pts=function(s,from,to){var r=[];for(var i=from;i<to&&i<s.n;i++)r.push(X(i).toFixed(1)+","+Y(s.cum[i]).toFixed(1));return r.join(" ")};
   var o='<div class="cmchart" style="margin:16px 0 4px"><div style="font-weight:600;margin-bottom:6px" class="mute">Spending day by day</div><div class="seg2" style="margin-bottom:8px"><button type="button" class="'+(ev?'':'on')+'" data-cmev="0">All spending</button><button type="button" class="'+(ev?'on':'')+'" data-cmev="1">Everyday only</button></div>'
+   +'<div class="note" style="margin:0 0 8px">'+(ev?'<b>Everyday only</b> leaves out fixed bills such as EMIs and rent, so you see normal day-to-day spending.':'<b>All spending</b> is every payment, including fixed bills such as EMIs and rent.')+' The same date is compared, for example 11 Nov with 11 Oct.</div>'
    +'<div class="cmtip" style="min-height:64px;font-size:13px;margin-bottom:4px"><span class="mute">Touch the graph to see what was spent that day, by category</span></div>'
    +'<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="display:block;touch-action:pan-y;user-select:none;-webkit-user-select:none">';
   [0,.5,1].forEach(function(k){var y=Y(mx*k);o+='<line x1="'+pl+'" y1="'+y+'" x2="'+(W-pr)+'" y2="'+y+'" style="stroke:var(--line)" stroke-width="1"/><text x="'+(pl-5)+'" y="'+(y+3)+'" text-anchor="end" font-size="9" style="fill:var(--mute)">'+shortN(mx*k)+'</text>'});
@@ -802,8 +814,8 @@ function cmShow(box,cx){if(!CM)return;var svg=box.querySelector("svg"),r=svg.get
   var m=svg.querySelector(".cmm");if(!m){svg.insertAdjacentHTML("beforeend",'<g class="cmm" pointer-events="none"><line stroke="#64748b" stroke-width="1" stroke-dasharray="3 3"/><circle r="5" fill="#f59e0b" stroke="#fff" stroke-width="1.5" class="cma1"/><circle r="5" fill="#7c5cff" stroke="#fff" stroke-width="1.5" class="cmb1"/></g>');m=svg.querySelector(".cmm")}
   var ln=m.querySelector("line");ln.setAttribute("x1",x);ln.setAttribute("x2",x);ln.setAttribute("y1",g.pt);ln.setAttribute("y2",g.pt+g.h);
   var blk=function(s,col,cl){var c=m.querySelector(cl),ok=i<s.n&&i<s.cap;if(!ok){c.setAttribute("display","none");return '<div style="flex:1;min-width:0"><b style="color:'+col+'">'+esc(s.lab)+'</b><div class="mute" style="font-size:12px">'+(i<s.n?'No data yet':'No such day')+'</div></div>'}
-    c.removeAttribute("display");c.setAttribute("cx",x);c.setAttribute("cy",Y(s.cum[i]));var d=s.days[i],ks=Object.keys(d.by).sort(function(p,q){return d.by[q]-d.by[p]});
-    var dt=new Date(s.f);dt.setDate(dt.getDate()+i);
+    c.removeAttribute("display");c.setAttribute("cx",x);c.setAttribute("cy",Y(s.cum[i]));var d=s.days[i]||{t:0,by:{},it:[]},ks=Object.keys(d.by).sort(function(p,q){return d.by[q]-d.by[p]});
+    var dt=s.dt[i];
     return '<div style="flex:1;min-width:0"><b style="color:'+col+'">'+esc(dt.toLocaleString("en-IN",{day:"numeric",month:"short"}))+'</b> · '+money(Math.round(d.t))+'<div class="mute" style="font-size:12px">Total so far '+money(Math.round(s.cum[i]))+'</div>'
      +(ks.length?ks.slice(0,5).map(function(k){return '<div style="display:flex;justify-content:space-between;gap:6px;font-size:12px;margin-top:3px"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(k===UNC?"No category yet":k)+'</span><b>'+money(Math.round(d.by[k]))+'</b></div>'}).join('')+(ks.length>5?'<div class="mute" style="font-size:11px">+'+(ks.length-5)+' more</div>':''):'<div class="mute" style="font-size:12px;margin-top:3px">Nothing spent</div>')+'</div>'};
   box.querySelector(".cmtip").innerHTML='<div style="display:flex;gap:12px;align-items:flex-start">'+blk(CM.a,"#d97706",".cma1")+blk(CM.b,"#7c5cff",".cmb1")+'</div>'}
@@ -1516,7 +1528,7 @@ function vSet(){
   h+='<div class="card"><button class="btn ghost" id="tourgo" style="margin:0">▶ Show app tour</button></div><h2>This phone</h2><div class="card"><div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><div class="mute">Your month starts on day (1 = normal calendar month)</div><input id="ms" type="number" inputmode="numeric" min="1" max="31" value="'+(S.ms||1)+'"><button class="btn ghost s" id="msal" style="margin-bottom:10px">Use my salary credit day</button><div class="note" id="msn">Saved on this phone only. Set the same day on the other phone. Reports, budgets and forecasts all follow it.</div><button class="btn" id="sv">Save</button></div>';
   h+=aboutCard();
   return h}
-var WEBVER="4.1 · 12 Nov 2026";
+var WEBVER="4.2 · 12 Nov 2026";
 async function loadAinfo(){if(S._ainb)return;S._ainb=1;var P=smsPlugin();try{S.ainfo=P?await P.appInfo():null}catch(e){S.ainfo=null}S._ainb=0;if(S.tab==="set")render()}
 function aboutCard(){
   var d=remDiag(),rows=[];
