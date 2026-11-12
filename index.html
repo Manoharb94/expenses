@@ -1469,7 +1469,7 @@ function vSet(){
   h+='<div class="card"><button class="btn ghost" id="tourgo" style="margin:0">▶ Show app tour</button></div><h2>This phone</h2><div class="card"><div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><div class="mute">Your month starts on day (1 = normal calendar month)</div><input id="ms" type="number" inputmode="numeric" min="1" max="31" value="'+(S.ms||1)+'"><button class="btn ghost s" id="msal" style="margin-bottom:10px">Use my salary credit day</button><div class="note" id="msn">Saved on this phone only. Set the same day on the other phone. Reports, budgets and forecasts all follow it.</div><button class="btn" id="sv">Save</button></div>';
   h+=aboutCard();
   return h}
-var WEBVER="3.3 · 12 Nov 2026";
+var WEBVER="3.4 · 12 Nov 2026";
 async function loadAinfo(){if(S._ainb)return;S._ainb=1;var P=smsPlugin();try{S.ainfo=P?await P.appInfo():null}catch(e){S.ainfo=null}S._ainb=0;if(S.tab==="set")render()}
 function aboutCard(){
   var d=remDiag(),rows=[];
@@ -1628,7 +1628,7 @@ function vSms(){
     var runHist="shortcuts://run-shortcut?name="+encodeURIComponent(SMS_SHORTCUT_NAME)+"&input=text&text=HISTORY";
     if(nativeApp()&&SMS_SHORTCUT_LINK)steps=[
       ['Add the live shortcut','<p>This shortcut sends each new bank SMS to Gharwise. Tap the button, then <b>Add Shortcut</b>, and come back here.</p><a class="btn" style="display:block;text-align:center;text-decoration:none" href="'+esc(SMS_SHORTCUT_LINK)+'" target="_blank" rel="noopener">Add shortcut</a><p class="note">Your account is linked automatically. Nothing to copy.</p>'],
-      ['Turn on live tracking','<p>Apple does not let any app create this automation for you. Tap the button, then do these 3 things:</p><ol><li><b>Automation</b> tab → <b>+</b> → <b>Message</b> → Message Contains <b>Rs</b></li><li><b>Run Immediately</b> → Next</li><li>Choose <b>'+esc(SMS_SHORTCUT_NAME)+'</b> → Done</li></ol><a class="btn" style="display:block;text-align:center;text-decoration:none" href="shortcuts://">Open Shortcuts</a><div class="note">Bank writes INR? Repeat once with <b>INR</b>. Duplicates are ignored.</div>'],
+      ['Turn on live tracking','<video src="sms-live-iphone.mp4" autoplay muted loop playsinline controls style="width:100%;max-width:270px;display:block;margin:0 auto 10px;border-radius:14px"></video><p>Apple does not let any app create this automation for you. Watch the video, then tap the button:</p><ol><li><b>Automation</b> tab → <b>+</b> → <b>Message</b> → Message Contains <b>Rs</b></li><li><b>Run Immediately</b> → Next</li><li>Choose <b>'+esc(SMS_SHORTCUT_NAME)+'</b> → Done</li></ol><a class="btn" style="display:block;text-align:center;text-decoration:none" href="shortcuts://">Open Shortcuts</a><div class="note">Bank writes INR? Repeat once with <b>INR</b>. Duplicates are ignored.</div>'],
       ['All set','<p>The next bank SMS reaches the app within seconds and shows up in <b>List</b>.</p>'+trackStat()]];
     else if(SMS_SHORTCUT_LINK)steps=[
       ['Add the shortcut','<p>Tap the button, then tap <b>Add Shortcut</b> in the Shortcuts app and come back here.</p><a class="btn" style="display:block;text-align:center;text-decoration:none" href="'+esc(SMS_SHORTCUT_LINK)+'" target="_blank" rel="noopener">Add shortcut</a>'],
