@@ -769,6 +769,7 @@ function catBars(){
     h+='<button class="cbb" data-cb="'+i+'" data-d="'+esc(fd(t.txn_date)+' · '+(t.merchant||"Unknown"))+'" data-a="'+esc(money(t.amount))+'" aria-label="'+esc(fd(t.txn_date)+' '+money(t.amount))+'" style="flex:none;width:16px;height:'+hh+'px;border:0;border-radius:6px 6px 2px 2px;background:'+(t.type==="in"?'var(--in)':'var(--acc)')+';opacity:.75;padding:0;cursor:pointer"></button>'});
   return h+'</div></div></div>'}
 var CM=null;
+function cmD(t){return new Date(t).toLocaleString("en-IN",{day:"numeric",month:"short"})}
 function cmSeries(k,M,ev){var f=pdate(k),t=pend(k),n=Math.round((t-f)/864e5)+1,days=[],i;for(i=0;i<n;i++)days.push({t:0,by:{},it:[]});
   (M.outs||[]).forEach(function(x){if(ev&&M.ids&&M.ids[x.id])return;if(!x.txn_date)return;var d=Math.round((new Date(x.txn_date+"T00:00:00")-f)/864e5);if(d<0||d>=n)return;var o=days[d],v=+x.amount||0,c=x.category||UNC;o.t+=v;o.by[c]=(o.by[c]||0)+v;o.it.push([x.merchant||"",v,c])});
   var cum=[],run=0;days.forEach(function(d){run+=d.t;cum.push(run)});
@@ -792,7 +793,7 @@ function cmChart(a,b,A,B){
   [[sa,"#f59e0b"],[sb,"#7c5cff"]].forEach(function(z){var s=z[0],c=z[1],solid=Math.min(s.cap,C);
     if(s.cap>C)o+='<polyline fill="none" stroke="'+c+'" stroke-opacity=".4" stroke-width="2" stroke-dasharray="4 4" points="'+pts(s,C-1,s.cap)+'"/>';
     o+='<polyline fill="none" stroke="'+c+'" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round" points="'+pts(s,0,solid)+'"/>'});
-  o+='</svg><div class="row" style="justify-content:flex-start;gap:14px;font-size:12px;margin-top:4px"><span><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#f59e0b;margin-right:5px"></i>'+esc(sa.lab)+'</span><span><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#7c5cff;margin-right:5px"></i>'+esc(sb.lab)+'</span><span class="mute">Day of the month across the bottom'+(C<N?' · faded = after today':'')+'</span></div></div>';
+  o+='</svg><div class="row" style="justify-content:flex-start;gap:14px;font-size:12px;margin-top:4px"><span><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#f59e0b;margin-right:5px"></i>'+esc(sa.lab)+' from '+cmD(sa.f)+'</span><span><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#7c5cff;margin-right:5px"></i>'+esc(sb.lab)+' from '+cmD(sb.f)+'</span></div><div class="mute" style="font-size:12px;margin-top:2px">Numbers across the bottom are days since the month started'+(C<N?' · faded = after today':'')+'</div></div>';
   return o}
 var cmOn=false;
 function cmShow(box,cx){if(!CM)return;var svg=box.querySelector("svg"),r=svg.getBoundingClientRect(),g=CM.g;if(!r.width)return;
@@ -810,6 +811,7 @@ document.addEventListener("pointerdown",function(e){var b=e.target&&e.target.clo
 document.addEventListener("pointermove",function(e){if(cmOn&&(e.buttons||e.pointerType==="touch"))cmShow(cmOn,e.clientX)});
 ["pointerup","pointercancel"].forEach(function(k){document.addEventListener(k,function(){cmOn=false})});
 document.addEventListener("click",function(e){var b=e.target&&e.target.closest&&e.target.closest("[data-cmev]");if(!b)return;S.cmEv=b.getAttribute("data-cmev")==="1";render()});
+function sm(n){return n<0?'−'+money(Math.abs(n)):money(n)}
 function compareMonths(){
   var avail=[];
   for(var k=0;k>=-5;k--){(function(k){var f=iso(pdate(k)),t=iso(pend(k));if(S.txns.some(function(x){return personOK(x)&&x.type==="out"&&isCount(x)&&x.txn_date&&x.txn_date>=f&&x.txn_date<=t}))avail.push(k)})(k)}
@@ -824,8 +826,8 @@ function compareMonths(){
   var opt=function(sel){return avail.map(function(k){return '<option value="'+k+'"'+(k===sel?' selected':'')+'>'+esc(pdate(k).toLocaleString("en-IN",{month:"long",year:"numeric"}))+'</option>'}).join('')};
   var h='<h2>Compare months</h2><div class="card"><div class="row" style="gap:10px;margin:0 0 6px"><select id="cma" style="flex:1;min-width:0;margin:0">'+opt(a)+'</select><select id="cmb" style="flex:1;min-width:0;margin:0">'+opt(b)+'</select></div>';
   var spend=function(lbl,x,y){return '<div style="margin:12px 0 0"><div class="mute" style="font-size:12px">'+lbl+'</div><div class="row"><span class="mute">'+money(x)+'</span><span class="mute">→</span><b>'+money(y)+'</b>'+arrow(y,x)+'</div></div>'};
-  var gain=function(lbl,x,y){var d=y-x;return '<div style="margin:12px 0 0"><div class="mute" style="font-size:12px">'+lbl+'</div><div class="row"><span class="mute">'+money(x)+'</span><span class="mute">→</span><b>'+money(y)+'</b><span class="chip '+(d>=0?'down':'up')+'">'+(d>=0?'+':'−')+money(Math.abs(d))+'</span></div></div>'};
-  h+=spend("Total spent",A.sp,B.sp)+spend("Everyday spending",A.ev,B.ev)+spend("Fixed bills",A.fx,B.fx)+gain("Money received",A.rec,B.rec)+gain("Left over",A.rec-A.sp,B.rec-B.sp);
+  var gain=function(lbl,x,y){var d=y-x;return '<div style="margin:12px 0 0"><div class="mute" style="font-size:12px">'+lbl+'</div><div class="row"><span class="mute">'+sm(x)+'</span><span class="mute">→</span><b>'+sm(y)+'</b><span class="chip '+(d>=0?'down':'up')+'">'+(d>=0?'+':'−')+money(Math.abs(d))+'</span></div></div>'};
+  h+=gain("Money received",A.rec,B.rec)+gain("Left over",A.rec-A.sp,B.rec-B.sp);
   var keys={};Object.keys(A.by).concat(Object.keys(B.by)).forEach(function(k){keys[k]=1});
   var ch=Object.keys(keys).map(function(k){return {k:k,a:A.by[k]||0,b:B.by[k]||0,d:(B.by[k]||0)-(A.by[k]||0)}});
   var up=ch.filter(function(x){return x.d>0}).sort(function(x,y){return y.d-x.d}).slice(0,3),dn=ch.filter(function(x){return x.d<0}).sort(function(x,y){return x.d-y.d}).slice(0,3);
@@ -1514,7 +1516,7 @@ function vSet(){
   h+='<div class="card"><button class="btn ghost" id="tourgo" style="margin:0">▶ Show app tour</button></div><h2>This phone</h2><div class="card"><div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><div class="mute">Your month starts on day (1 = normal calendar month)</div><input id="ms" type="number" inputmode="numeric" min="1" max="31" value="'+(S.ms||1)+'"><button class="btn ghost s" id="msal" style="margin-bottom:10px">Use my salary credit day</button><div class="note" id="msn">Saved on this phone only. Set the same day on the other phone. Reports, budgets and forecasts all follow it.</div><button class="btn" id="sv">Save</button></div>';
   h+=aboutCard();
   return h}
-var WEBVER="4.0 · 12 Nov 2026";
+var WEBVER="4.1 · 12 Nov 2026";
 async function loadAinfo(){if(S._ainb)return;S._ainb=1;var P=smsPlugin();try{S.ainfo=P?await P.appInfo():null}catch(e){S.ainfo=null}S._ainb=0;if(S.tab==="set")render()}
 function aboutCard(){
   var d=remDiag(),rows=[];
