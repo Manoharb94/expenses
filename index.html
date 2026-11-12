@@ -204,13 +204,46 @@ function pad(n){return String(n).padStart(2,"0")}
 function ym(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)}
 function iso(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())}
 function mk(n){return String(n).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"unknown"}
+/* ---------- offline mode: saved data to read, entries kept on the phone until the internet is back ---------- */
+function isNet(e){return !!e&&(e.name==="TypeError"||/Failed to fetch|Load failed|NetworkError|network connection|Could not reach/i.test(String(e.message||e)))}
+function obRead(){try{var q=JSON.parse(ls("ob")||"[]");return Array.isArray(q)?q:[]}catch(e){return []}}
+function obWrite(q){ls("ob",JSON.stringify(q))}
+function pendRows(){return obRead().map(function(q){var r={};for(var k in q.body)r[k]=q.body[k];r.id=q.lid;r.created_at=q.t;r.hidden=false;r.source="manual";r._pend=1;return r})}
+function withPending(rows){var p=pendRows();return p.length?p.concat(rows||[]):(rows||[])}
+function offBar(){var b=document.getElementById("offbar"),n=obRead().length,on=!!S.offline;
+  if(!on&&!n){if(b)b.style.display="none";return}
+  if(!b){b=document.createElement("div");b.id="offbar";b.style.cssText="position:fixed;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top) + 6px);z-index:70;background:#1f1f23;color:#fff;border-radius:16px;padding:5px 12px;font-size:12px;box-shadow:0 2px 10px rgba(0,0,0,.25);max-width:92%;white-space:nowrap";document.body.appendChild(b)}
+  b.textContent=(on?"Offline · showing saved data":"Syncing")+(n?" · "+n+" waiting to sync":"");b.style.display="block"}
+function setOffline(v){v=!!v;if(S.offline===v){offBar();return}S.offline=v;offBar();if(!v)flushOutbox()}
+var _fl=0;
+async function flushOutbox(){if(_fl||!S.auth||!S.code)return;var q=obRead();if(!q.length)return;_fl=1;var keep=[],done=0;
+  try{for(var i=0;i<q.length;i++){
+    try{await api("transactions",{method:"POST",headers:{Prefer:"return=minimal"},body:JSON.stringify(q[i].body)});done++}
+    catch(e){if(isNet(e)){keep=q.slice(i);break}try{toast("Could not sync one entry: "+errText(e))}catch(x){}}}
+  }finally{obWrite(keep);_fl=0;offBar()}
+  if(done){S.txns=(S.txns||[]).filter(function(t){return !t._pend});try{toast("Synced "+done+" saved "+(done===1?"entry":"entries"))}catch(e){}if(typeof load==="function")load()}}
+function localEdit(lid,path,opt){var q=obRead(),i,m=(opt&&opt.method)||"GET";
+  for(i=0;i<q.length;i++)if(q[i].lid===lid)break;
+  if(i<q.length){if(m==="DELETE")q.splice(i,1);else if(m==="PATCH"){try{var b=JSON.parse(opt.body||"{}");for(var k in b)q[i].body[k]=b[k]}catch(e){}}obWrite(q)}
+  if(m==="DELETE")S.txns=(S.txns||[]).filter(function(t){return t.id!==lid});
+  else if(m==="PATCH"){try{var b2=JSON.parse(opt.body||"{}");(S.txns||[]).forEach(function(t){if(t.id===lid)for(var k2 in b2)t[k2]=b2[k2]})}catch(e){}}
+  offBar();return Promise.resolve(null)}
+async function queueTxn(body){var q=obRead(),t=new Date().toISOString(),lid="loc-"+Date.now()+Math.floor(Math.random()*1000);
+  q.push({lid:lid,t:t,body:body});obWrite(q);setOffline(true);S._q2=Date.now();
+  var row=pendRows().filter(function(r){return r.id===lid})[0];S.txns=[row].concat(S.txns||[]);
+  try{saveCache()}catch(e){}return row}
+window.addEventListener("online",function(){try{flushOutbox();if(S.code&&S.offline&&typeof enter==="function")enter()}catch(e){}});
+window.addEventListener("offline",function(){setOffline(true)});
+setInterval(function(){if(S.offline&&navigator.onLine!==false&&S.auth&&typeof enter==="function")enter()},15000);
 async function api(path,opt){
-  opt=opt||{};await ensureToken();
+  opt=opt||{};var lm=/id=eq\.(loc-[0-9]+)/.exec(path);if(lm)return localEdit(lm[1],path,opt);
+  try{await ensureToken()}catch(e0){if(isNet(e0))setOffline(true);throw e0}
   var ch=opt.headers||{},h={apikey:KEY,"x-household":S.code,"Content-Type":"application/json"};
   if(S.auth)h.Authorization="Bearer "+S.auth.access;
   for(var k in ch)h[k]=ch[k];
   var o2={};for(var k2 in opt)o2[k2]=opt[k2];o2.headers=h;
-  var r=await fetch(URLB+path,o2),t=await r.text();
+  var r,t;try{r=await fetch(URLB+path,o2);t=await r.text()}catch(e1){if(isNet(e1))setOffline(true);throw e1}
+  if(S.offline)setOffline(false);
   if(r.status===401&&S.auth&&!opt._retry){try{await refreshSess()}catch(e){throw e}var o3={};for(var k3 in opt)o3[k3]=opt[k3];o3.headers=ch;o3._retry=1;return api(path,o3)}
   if(r.status===401&&S.auth){logoutLocal("Please log in again.");throw new Error("Please log in again.")}
   if(!r.ok)throw new Error(r.status+" "+t);return t?JSON.parse(t):null;
@@ -243,13 +276,13 @@ function refreshSess(){
     saveSess(await r.json())}finally{S.refreshing=null}})();
   return S.refreshing}
 async function ensureToken(){if(S.auth&&S.auth.exp-60<Date.now()/1000)await refreshSess()}
-function logoutLocal(msg){try{if(typeof nativeSmsOK==="function"&&nativeSmsOK()){smsPlugin().disable();S.nsms=null}}catch(e){}S.auth=null;ls("sb","");ls("xc","");S.profile=null;S.code="";S.name="";S.txns=[];S.budgets=[];S.fixed=[];S.goals=[];S.loans=[];S.gents=[];S.members=null;S.loaded=false;S.tab="home";S.view="login";S.amsg=msg||"";S.aok=false;if(typeof render==="function")render()}
+function logoutLocal(msg){try{if(typeof nativeSmsOK==="function"&&nativeSmsOK()){smsPlugin().disable();S.nsms=null}}catch(e){}S.auth=null;ls("sb","");ls("xc","");ls("ob","");S.profile=null;S.code="";S.name="";S.txns=[];S.budgets=[];S.fixed=[];S.goals=[];S.loans=[];S.gents=[];S.members=null;S.loaded=false;S.tab="home";S.view="login";S.amsg=msg||"";S.aok=false;if(typeof render==="function")render()}
 async function loadMembers(){try{S.members=await api("members?select=user_id,display_name,role&order=created_at.asc")||[]}catch(e){S.members=[]}}
 async function enter(){
   S.view="";
   var pre=S.auth?startFetch():null;
   try{S.profile=await api("rpc/my_profile",{method:"POST",body:"{}"})}
-  catch(e){if(!S.auth)return;S.view="err";S.amsg=errText(e);render();return}
+  catch(e){if(!S.auth)return;if(isNet(e)&&S.profile&&S.loaded){S.view="";offBar();return}S.view="err";S.amsg=errText(e);render();return}
   if(!S.profile){var ps=null;try{ps=JSON.parse(ls("pends")||"null")}catch(e){}
     if(ps&&ps.n&&S.auth&&(!S.auth.email||String(S.auth.email).toLowerCase()===ps.e)){
       try{if(ps.c)await api("rpc/join_household",{method:"POST",body:JSON.stringify({p_code:ps.c,p_display:ps.n})});
@@ -663,9 +696,9 @@ function startFetch(){
   var q0="transactions?select=*&order=txn_date.desc,created_at.desc&limit=5000";
   var side=Promise.all([loadPlan(),loadMembers(),loadImports()]);
   var tx=(async function(){
-    if(!S._noRpc){try{var rr=await api("rpc/app_txns",{method:"POST",body:'{"p_limit":5000}'});if(Array.isArray(rr)){S.txns=rr;S.err="";S.loaded=true;return}}catch(e){if(/PGRST202|Could not find the function|404|schema cache/.test(String(e&&e.message)))S._noRpc=1}}
-    try{S.txns=await api(q0+"&hidden=eq.false")||[];S.err="";S.loaded=true}
-    catch(e){try{S.txns=await api(q0)||[];S.err="";S.loaded=true}catch(e2){S.err="Could not load: "+e2.message}}})();
+    if(!S._noRpc){try{var rr=await api("rpc/app_txns",{method:"POST",body:'{"p_limit":5000}'});if(Array.isArray(rr)){S.txns=withPending(rr);S.err="";S.loaded=true;return}}catch(e){if(isNet(e)&&S.loaded)return;if(/PGRST202|Could not find the function|404|schema cache/.test(String(e&&e.message)))S._noRpc=1}}
+    try{S.txns=withPending(await api(q0+"&hidden=eq.false")||[]);S.err="";S.loaded=true}
+    catch(e){if(isNet(e)&&S.loaded)return;try{S.txns=withPending(await api(q0)||[]);S.err="";S.loaded=true}catch(e2){if(isNet(e2)&&S.loaded)return;S.err="Could not load: "+e2.message}}})();
   return Promise.all([tx,side])}
 async function load(quiet,pre){
   await (pre||startFetch());S._full=Date.now();try{postLoad()}catch(e){}
@@ -1352,10 +1385,11 @@ function vGoals(){
   h+='<h2>New goal</h2><div class="card"><input id="gn" placeholder="Goal name (e.g. Car, Goa trip)"><input id="gt" type="number" inputmode="decimal" placeholder="Target amount"><input id="gs" type="number" inputmode="decimal" placeholder="Already saved (optional)"><div class="mute">Target date (optional)</div><input id="gdt" type="date"><button class="btn" id="gadd">Add goal</button><div class="note">Goals are shared. You both see them and can add money. Add money when you set savings aside; the app does not move any real money.</div></div>';
   return h;
 }
-function toast(m){var b=document.getElementById("toast");if(!b){b=document.createElement("div");b.id="toast";b.style.cssText="position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#1c1c1a;color:#fff;padding:10px 16px;border-radius:20px;font-size:14px;z-index:99;max-width:90%";document.body.appendChild(b)}
+function toast(m){if(S._q2&&Date.now()-S._q2<2500)m="Saved on this phone · will sync when you are online";var b=document.getElementById("toast");if(!b){b=document.createElement("div");b.id="toast";b.style.cssText="position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#1c1c1a;color:#fff;padding:10px 16px;border-radius:20px;font-size:14px;z-index:99;max-width:90%";document.body.appendChild(b)}
   b.textContent=m;b.style.display="block";clearTimeout(toast.t);toast.t=setTimeout(function(){b.style.display="none"},3500)}
 async function saveTxn(body){
-  var r=await api("transactions",{method:"POST",headers:{Prefer:"return=representation"},body:JSON.stringify(body)});
+  if(navigator.onLine===false)return queueTxn(body);
+  var r;try{r=await api("transactions",{method:"POST",headers:{Prefer:"return=representation"},body:JSON.stringify(body)})}catch(e){if(isNet(e))return queueTxn(body);throw e}
   if(!r||!r.length)throw new Error("The database did not keep this entry. A database rule may be rejecting it.");
   return r[0]}
 async function addGoal(){
@@ -1528,7 +1562,7 @@ function vSet(){
   h+='<div class="card"><button class="btn ghost" id="tourgo" style="margin:0">▶ Show app tour</button></div><h2>This phone</h2><div class="card"><div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><div class="mute">Your month starts on day (1 = normal calendar month)</div><input id="ms" type="number" inputmode="numeric" min="1" max="31" value="'+(S.ms||1)+'"><button class="btn ghost s" id="msal" style="margin-bottom:10px">Use my salary credit day</button><div class="note" id="msn">Saved on this phone only. Set the same day on the other phone. Reports, budgets and forecasts all follow it.</div><button class="btn" id="sv">Save</button></div>';
   h+=aboutCard();
   return h}
-var WEBVER="4.2 · 12 Nov 2026";
+var WEBVER="5.0 · 12 Nov 2026";
 async function loadAinfo(){if(S._ainb)return;S._ainb=1;var P=smsPlugin();try{S.ainfo=P?await P.appInfo():null}catch(e){S.ainfo=null}S._ainb=0;if(S.tab==="set")render()}
 function aboutCard(){
   var d=remDiag(),rows=[];
@@ -2280,7 +2314,7 @@ document.addEventListener("click",function(e){
   if(b.hasAttribute("data-theme"))ls("theme",b.getAttribute("data-theme"));else ls("accent",b.getAttribute("data-accent"));
   applyLook();render()});
 applyLook();preset("month");boot();
-if("serviceWorker" in navigator&&!nativeApp()&&(location.protocol==="https:"||location.hostname==="localhost")){
+if("serviceWorker" in navigator&&(location.protocol==="https:"||location.hostname==="localhost")){
   window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})});
   navigator.serviceWorker.addEventListener("message",function(e){if(e.data&&e.data.t==="update"&&!document.getElementById("updbar")){
     var b=document.createElement("div");b.id="updbar";b.style.cssText="position:fixed;left:12px;right:12px;bottom:calc(86px + env(safe-area-inset-bottom));z-index:60;background:#1f1f23;color:#fff;border-radius:14px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;box-shadow:0 6px 24px rgba(0,0,0,.3);font-size:14px";

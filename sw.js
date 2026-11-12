@@ -1,6 +1,6 @@
 /* Gharwise service worker: opens the app instantly from the phone's own copy,
    then quietly checks for a newer version. Never touches login or data requests. */
-var CACHE="gharwise-v2";
+var CACHE="gharwise-v3";
 var SHELL=["./","index.html","manifest.json","icon-192.png","icon.png","apple-touch-icon.png","favicon-32.png","logo.svg"];
 self.addEventListener("install",function(e){
   e.waitUntil(caches.open(CACHE).then(function(c){return Promise.all(SHELL.map(function(u){return c.add(new Request(u,{cache:"reload"})).catch(function(){})}))}).then(function(){return self.skipWaiting()}))});
