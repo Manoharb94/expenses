@@ -169,7 +169,8 @@ nav button{padding:8px 2px;gap:3px;border-radius:22px}nav button svg{width:22px;
 .pill2{font-size:12px;font-weight:600;border-radius:20px;padding:3px 9px;background:var(--chip);color:var(--ink2,var(--mute));white-space:nowrap}
 .sk{background:linear-gradient(90deg,var(--chip) 25%,var(--line) 50%,var(--chip) 75%);background-size:200% 100%;animation:skm 1.3s ease-in-out infinite;border-radius:8px}@keyframes skm{0%{background-position:200% 0}100%{background-position:-200% 0}}@media (prefers-reduced-motion:reduce){.sk{animation:none}}.skc{background:var(--card);border-radius:16px;padding:16px;margin:12px 0}.skr{display:flex;align-items:center;gap:12px;margin:12px 0}.skr .sk:first-child{width:40px;height:40px;border-radius:50%;flex:none}.skr div{flex:1}.skl{height:12px;margin:6px 0}
 </style>
-<style id="splashcss">#splash{position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(120% 90% at 30% 15%,#8b5cf6 0%,#6d28d9 45%,#4c1d95 100%);color:#fff;transition:opacity .45s ease,visibility .45s;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}#splash.out{opacity:0;visibility:hidden}#splash svg{width:150px;height:136px;animation:spPop .7s cubic-bezier(.2,.9,.3,1.2) both}#splash b{font-size:34px;letter-spacing:-.5px;margin-top:18px;animation:spUp .6s .25s both}#splash small{font-size:14px;opacity:.78;margin-top:6px;animation:spUp .6s .4s both}#splash .sb{animation:spBar .9s .35s both;transform-origin:bottom}@keyframes spPop{from{transform:scale(.55);opacity:0}to{transform:none;opacity:1}}@keyframes spUp{from{transform:translateY(12px);opacity:0}to{transform:none;opacity:1}}@keyframes spBar{from{transform:scaleY(.1)}to{transform:none}}#splash .sb{animation:spBar .9s .35s both,spDance 1s 1.3s ease-in-out infinite alternate}#splash .sb:nth-of-type(2){animation-delay:.35s,1.45s}#splash .sb:nth-of-type(3){animation-delay:.35s,1.6s}#splash svg path{animation:spBob 1.2s 1.2s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:50% 100%}#splash small{min-height:20px;transition:opacity .3s;padding:0 28px;text-align:center}#splash small.q{opacity:0}@keyframes spDance{from{transform:scaleY(.6)}to{transform:scaleY(1.08)}}@keyframes spBob{from{transform:translateY(0)}to{transform:translateY(-9px)}}@media(prefers-reduced-motion:reduce){#splash *{animation:none!important}}</style>
+<style id="splashcss">#splash{position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(120% 90% at 30% 15%,#8b5cf6 0%,#6d28d9 45%,#4c1d95 100%);color:#fff;transition:opacity .45s ease,visibility .45s;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}#splash.out{opacity:0;visibility:hidden}#splash svg{width:150px;height:136px;animation:spPop .7s cubic-bezier(.2,.9,.3,1.2) both}#splash b{font-size:34px;letter-spacing:-.5px;margin-top:18px;animation:spUp .6s .25s both}#splash small{font-size:14px;opacity:.78;margin-top:6px;animation:spUp .6s .4s both}#splash .sb{animation:spBar .9s .35s both;transform-origin:bottom}@keyframes spPop{from{transform:scale(.55);opacity:0}to{transform:none;opacity:1}}@keyframes spUp{from{transform:translateY(12px);opacity:0}to{transform:none;opacity:1}}@keyframes spBar{from{transform:scaleY(.1)}to{transform:none}}#splash .sb{animation:spBar .9s .35s both,spDance 1s 1.3s ease-in-out infinite alternate}#splash .sb:nth-of-type(2){animation-delay:.35s,1.45s}#splash .sb:nth-of-type(3){animation-delay:.35s,1.6s}#splash svg path{animation:spBob 1.2s 1.2s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:50% 100%}#splash small{min-height:20px;transition:opacity .3s;padding:0 28px;text-align:center}#splash small.q{opacity:0}@keyframes spDance{from{transform:scaleY(.6)}to{transform:scaleY(1.08)}}@keyframes spBob{from{transform:translateY(0)}to{transform:translateY(-9px)}}@media(prefers-reduced-motion:reduce){#splash *{animation:none!important}}#nbar.nind{width:35%!important;animation:nind 1.1s ease-in-out infinite alternate}@keyframes nind{from{margin-left:0}to{margin-left:65%}}@media (prefers-reduced-motion:reduce){#nbar.nind{animation:none;margin-left:0}}
+</style>
 <style id="blcss">#bl{position:fixed;inset:0;z-index:99998;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fff;transition:opacity .35s ease,visibility .35s;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:0 28px;text-align:center}#bl.out{opacity:0;visibility:hidden}#bl .bo{width:132px;height:132px;position:relative}#bl .bo svg{position:absolute;inset:0;width:100%;height:100%;opacity:0;transform:scale(.4) rotate(-14deg)}#bl .bo svg.on{opacity:1;animation:blIn .5s cubic-bezier(.2,.9,.3,1.3) both,blSway 1.3s .5s ease-in-out infinite alternate}#bl .bo svg.off{opacity:0;transform:scale(.5) rotate(14deg);transition:opacity .2s,transform .2s}#bl .bc{margin-top:26px;font-size:20px;font-weight:650;color:#8a91a6;height:28px;width:100%;position:relative}#bl .bc span{position:absolute;left:0;right:0;top:0;opacity:0;transition:opacity .3s;white-space:nowrap}#bl .bc span.on{opacity:1}#bl .bs{margin-top:10px;font-size:14px;color:#a9aec0;min-height:20px}@keyframes blIn{from{opacity:0;transform:scale(.4) rotate(-14deg)}to{opacity:1;transform:none}}@keyframes blSway{from{transform:rotate(-5deg) translateY(2px)}to{transform:rotate(5deg) translateY(-6px)}}@media (prefers-reduced-motion:reduce){#bl .bo svg.on{animation:none;transform:none}}</style>
 </head>
 <body>
@@ -1115,12 +1116,12 @@ function lendBlock(){
     any=true;var k=t.merchant||"Unknown",o=by[k]=by[k]||{lent:0,back:0,took:0,paid:0,e:[]},a=Number(t.amount);
     if(t.category===LOUT){if(t.type==="out"){o.lent+=a;o.e.push([t.txn_date,"lent",a,t.note])}else{o.back+=a;o.e.push([t.txn_date,"got back",a,t.note])}}
     else{if(t.type==="in"){o.took+=a;o.e.push([t.txn_date,"borrowed",a,t.note])}else{o.paid+=a;o.e.push([t.txn_date,"paid back",a,t.note])}}});
-  if(!any)return '';
+  if(!any){if(ls("lenddis"))return '';return '<h2>Lending <span class="mute" style="font-weight:400;font-size:12px">🔒 only you see this</span></h2><div class="card" id="lendcard"><div style="font-weight:700">Lent or borrowed money?</div><div class="note" style="margin:4px 0 10px">Track who owes you and who you owe. It is never counted as spending or income.</div><button class="btn ghost s" data-lnew="1">+ Add new lender</button> <button class="btn ghost s" data-ldis="1" style="opacity:.7">Hide</button></div>'}
   var rows=Object.keys(by).map(function(k){var o=by[k],r1=Math.max(0,Math.round((o.lent-o.back)*100)/100),r2=Math.max(0,Math.round((o.took-o.paid)*100)/100);return {k:k,o:o,r1:r1,r2:r2,net:Math.round((r1-r2)*100)/100,open:Math.abs(r1)+Math.abs(r2)}});
   rows.sort(function(a,b){return (a.open===0)-(b.open===0)||b.open-a.open});
   var get=0,owe=0;rows.forEach(function(r){if(r.net>0)get+=r.net;else if(r.net<0)owe-=r.net});
   S.lrows={};
-  var h='<h2>Lending <span class="mute" style="font-weight:400;font-size:12px">🔒 only you see this</span></h2><div class="card"><button class="btn ghost s" style="margin-bottom:10px" data-lnew="1">+ Add new lender</button><div class="grid" style="margin-bottom:8px"><div><div class="mute">You will get</div><b class="in">'+money(get)+'</b></div><div><div class="mute">You have to pay</div><b class="out">'+money(owe)+'</b></div></div>';
+  var h='<h2>Lending <span class="mute" style="font-weight:400;font-size:12px">🔒 only you see this</span></h2><div class="card" id="lendcard"><button class="btn ghost s" style="margin-bottom:10px" data-lnew="1">+ Add new lender</button><div class="grid" style="margin-bottom:8px"><div><div class="mute">You will get</div><b class="in">'+money(get)+'</b></div><div><div class="mute">You have to pay</div><b class="out">'+money(owe)+'</b></div></div>';
   function line(label,total,done,rem,who){
     if(total===0&&done>0)return '<div style="margin:6px 0"><div class="row"><span class="mute">'+(who==="still to get"?'Got back ':'Paid back ')+money(done)+'</span><span class="in"><b>Settled ✓</b></span></div><div class="note">No earlier '+(who==="still to get"?'lend':'borrowing')+' was recorded, so nothing is pending.</div></div>';
     var pct=total>0?Math.min(100,Math.round(done/total*100)):0;
@@ -1595,14 +1596,14 @@ function vMenu(){
   var em=(S.profile&&S.profile.email)||(S.auth&&S.auth.email)||"";
   var row=function(t,i,a,b){return '<button class="mr" data-go="'+t+'"><i>'+i+'</i><span><b>'+a+'</b>'+(b?'<span>'+b+'</span>':'')+'</span><span class="go">›</span></button>'};
   return topbar("Menu","home")+'<div class="sec">App settings</div><div class="card" style="padding:0 12px">'+row("set","⚙️","Settings","Theme, colour, currency, month start")+row("cats","🗂️","Categories","What each category has this month")+'</div>'+
-    '<div class="sec">Automation & sharing</div><div class="card" style="padding:0 12px">'+row("track","💬","Automated tracking","SMS & Email")+row("fam","👥","Family Sync","Share expenses with family")+row("goals","🎯","Goals","Save for things together")+'</div>'+
+    '<div class="sec">Automation & sharing</div><div class="card" style="padding:0 12px">'+row("track","💬","Automated tracking","SMS & Email")+row("fam","👥","Family Sync","Share expenses with family")+row("goals","🎯","Goals","Save for things together")+'<button class="mr" data-go="home" data-lend="1"><i>🤝</i><span><b>Lending</b><span>Money you lent or borrowed</span></span><span class="go">›</span></button>'+'</div>'+
     '<div class="sec">Account</div><div class="card" style="padding:0 12px"><a class="mr" href="privacy.html" target="_blank" rel="noopener" style="text-decoration:none"><i>🔒</i><span><b>Privacy policy</b><span>What the app stores and why</span></span><span class="go">›</span></a><button class="mr" id="chpw"><i>🔑</i><span><b>Change password</b><span>Choose a new password for '+esc(em)+'</span></span></button><button class="mr" id="lo"><i>⏻</i><span><b>Log out</b><span>'+esc(em)+'</span></span></button><button class="mr" id="delacc"><i>🗑️</i><span><b class="out">Delete my account</b><span>Removes your login and your payments</span></span></button></div><div class="note" style="text-align:center;margin:14px 0">Gharwise version 2.0 (build 44)</div>'}
 function vSet(){
   var h=topbar("Settings","menu")+lookCard();
   h+='<div class="card"><button class="btn ghost" id="tourgo" style="margin:0">▶ Show app tour</button></div><h2>This phone</h2><div class="card"><div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><div class="mute">Your month starts on day (1 = normal calendar month)</div><input id="ms" type="number" inputmode="numeric" min="1" max="31" value="'+(S.ms||1)+'"><button class="btn ghost s" id="msal" style="margin-bottom:10px">Use my salary credit day</button><div class="note" id="msn">Saved on this phone only. Set the same day on the other phone. Reports, budgets and forecasts all follow it.</div><button class="btn" id="sv">Save</button></div>';
   h+=aboutCard();
   return h}
-var WEBVER="5.16 · 13 Nov 2026";
+var WEBVER="5.17 · 13 Nov 2026";
 async function loadAinfo(){if(S._ainb)return;S._ainb=1;var P=smsPlugin();try{S.ainfo=P?await P.appInfo():null}catch(e){S.ainfo=null}S._ainb=0;if(S.tab==="set")render()}
 function aboutCard(){
   var d=remDiag(),rows=[];
@@ -1705,10 +1706,10 @@ function vSmsNative(){
     '<div class="card" style="background:var(--chip);box-shadow:none;font-size:14px;line-height:1.55;margin:0"><b>What happens when you allow SMS access</b><ul style="margin:6px 0 0;padding-left:18px"><li>Gharwise reads SMS on this phone to find <b>bank payment alerts</b> (debited, credited, spent).</li><li>Only those alerts are sent to your account. OTPs, personal messages and offers are checked on the phone and never leave it.</li><li>The alerts are used only to show your spending, and only you and your family can see them.</li><li>You can turn this off any time here, or in Android Settings.</li></ul></div>'+
     (c&&c.key?'<div class="mute" style="margin:16px 0 6px">How far back should we read your bank SMS?</div>'+nmoSel()+'<button class="btn" id="non">Allow SMS access and turn on</button>':'<div class="note" style="margin-top:14px">Loading your account…</div>')+
     (st.err?'<div class="note out" style="margin-top:8px">'+esc(st.err)+'</div>':'')+'<div class="note" style="text-align:center;margin-top:10px">You can also use <a href="#" data-go="mail" style="color:var(--acc)">email tracking</a> instead, or as well.</div></div>'}
-function nimpUI(){var n=S.nimp;
-  if(n)return '<div class="card" id="nprog" style="margin:0 0 16px"><div class="row" style="padding:0"><b id="ntxt">'+esc(n.txt||"Reading your messages…")+'</b><span class="mute" id="npct">'+Math.round(n.pct||0)+'%</span></div><div style="height:12px;border-radius:7px;background:var(--chip);overflow:hidden;margin-top:8px"><div id="nbar" style="height:100%;width:'+Math.round(n.pct||0)+'%;background:var(--acc);transition:width .25s"></div></div><div class="note" style="margin:8px 0 0">Please keep the app open. Six months can take a minute.</div></div>';
+function nimpUI(){var n=S.nimp;if(n&&Date.now()-(n.last||n.t0||0)>180000){S.nimp=null;n=null}
+  if(n)return '<div class="card" id="nprog" style="margin:0 0 16px"><div class="row" style="padding:0"><b id="ntxt">'+esc(n.txt||"Reading your messages…")+'</b><span class="mute" id="npct">'+Math.round(n.pct||0)+'%</span></div><div style="height:12px;border-radius:7px;background:var(--chip);overflow:hidden;margin-top:8px"><div id="nbar" class="'+(n.got?'':'nind')+'" style="height:100%;width:'+Math.round(n.pct||0)+'%;background:var(--acc);transition:width .25s"></div></div><div class="note" style="margin:8px 0 0">Please keep the app open. '+esc(n.lab||"Your messages")+' '+((n.mo||1)<=1?"can take a few seconds":"can take a minute")+'.</div></div>';
   return '<div class="mute" style="margin:0 0 6px">How far back should we read?</div>'+nmoSel()+'<button class="btn" id="nimp">Add bank SMS from the past '+nmoLab()+'</button><div class="note" style="margin:6px 0 16px">Payments already in the app are skipped, so this is safe to run again.</div>'}
-function nimpTick(e){var n=S.nimp;if(!n||!e)return;var t=e.total||0,f=e.done||0,p;
+function nimpTick(e){var n=S.nimp;if(!n||!e)return;n.got=1;n.last=Date.now();var nb0=document.getElementById("nbar");if(nb0)nb0.classList.remove("nind");var t=e.total||0,f=e.done||0,p;
   if(e.phase==="read"){p=t?30*f/t:30;n.txt="Reading your messages…"}
   else if(e.phase==="send"){p=30+(t?70*f/t:70);n.txt="Adding payments… "+f+" of "+t}
   else{p=100;n.txt="Done"}
@@ -1716,10 +1717,10 @@ function nimpTick(e){var n=S.nimp;if(!n||!e)return;var t=e.total||0,f=e.done||0,
   var b=document.getElementById("nbar");if(b)b.style.width=n.pct+"%";
   var x=document.getElementById("npct");if(x)x.textContent=Math.round(n.pct)+"%";
   var y=document.getElementById("ntxt");if(y)y.textContent=n.txt}
-function nmoLab(){var m=S.nmo||1;return m===1?"1 month":m+" months"}
-function nmoSel(){return '<select id="nmo" style="margin-bottom:12px">'+[1,2,3,6].map(function(m){return '<option value="'+m+'"'+((S.nmo||1)===m?' selected':'')+'>Past '+(m===1?'1 month':m+' months')+'</option>'}).join('')+'</select>'}
+function nmoLab(){var m=Math.min(3,S.nmo||1);return m===1?"1 month":m+" months"}
+function nmoSel(){return '<select id="nmo" style="margin-bottom:12px">'+[1,2,3].map(function(m){return '<option value="'+m+'"'+((Math.min(3,S.nmo||1))===m?' selected':'')+'>Past '+(m===1?'1 month':m+' months')+'</option>'}).join('')+'</select>'}
 function bindNativeSms(){
-  var nm=document.getElementById("nmo");if(nm){nm.onchange=function(){S.nmo=+nm.value;var b=document.getElementById("nimp");if(b)b.textContent="Add bank SMS from the past "+nmoLab()}}
+  var nm=document.getElementById("nmo");if(nm){nm.onchange=function(){S.nmo=Math.min(3,+nm.value);var b=document.getElementById("nimp");if(b)b.textContent="Add bank SMS from the past "+nmoLab()}}
   var on=document.getElementById("non");if(on)on.onclick=async function(){this.disabled=true;this.textContent="Waiting for permission…";
     try{S.nsms=await smsPlugin().enable({key:S.sc.key,url:URLB+"rpc/ingest_sms",apikey:KEY});render();if(S.nsms.enabled&&confirm("SMS tracking is on. Add your bank SMS from the past "+nmoLab()+" now?"))importNativeSms()}
     catch(e){S.nsms={enabled:false,err:/denied|not given/i.test(e.message||"")?"SMS access was not allowed. Tap the button again, or allow SMS for Gharwise in Android Settings → Apps → Permissions.":e.message};render()}};
@@ -1727,10 +1728,10 @@ function bindNativeSms(){
   var off=document.getElementById("noff");if(off)off.onclick=async function(){if(!confirm("Turn off SMS tracking on this phone?"))return;try{S.nsms=await smsPlugin().disable()}catch(e){}render()}}
 async function importNativeSms(){
   if(S.nimp)return;
-  var mo=S.nmo||1,lab=nmoLab(),h=null,r=null;
-  S.nimp={pct:0,txt:"Reading your messages…"};if(S.tab==="sms")render();
+  var mo=Math.min(3,S.nmo||1),lab=mo===1?"1 month":mo+" months",h=null,r=null;
+  S.nimp={pct:0,txt:"Reading your messages…",mo:mo,lab:lab,t0:Date.now(),last:Date.now()};setTimeout(function(){var n=S.nimp;if(n&&!n.got){n.txt="Still reading, please keep the app open…";var y=document.getElementById("ntxt");if(y)y.textContent=n.txt}},20000);if(S.tab==="sms")render();
   try{h=await smsPlugin().addListener("smsImport",nimpTick)}catch(e){}
-  try{r=await smsPlugin().importRecent({days:Math.min(190,mo*31)})}
+  try{r=await smsPlugin().importRecent({days:Math.min(95,mo*31)})}
   catch(e){S.nimp=null;try{h&&h.remove()}catch(x){}if(S.tab==="sms")render();showErr("Could not read SMS: "+(e.message||e));return}
   try{h&&h.remove()}catch(x){}
   nimpTick({phase:"done"});
@@ -1803,11 +1804,13 @@ function bindV2(el){
     if(b.dataset.ltab){S.lt=b.dataset.ltab;S.lm=0}
     if(b.dataset.srch){S.lsrch=true}
     if(b.dataset.rp)S.rp=b.dataset.rp;
+    if(b.dataset.lend){ls("lenddis","")}
     var bf=b.dataset.bfocus,t=b.dataset.go;
     if(t==="acct"){var a=document.getElementById("acct");if(a){a.scrollIntoView({behavior:"smooth"});return}t="home"}
     e.stopPropagation();go(t);
     if(bf){var i=document.querySelector(bf);if(i){i.scrollIntoView({block:"center"});i.focus()}}
-    if(t==="list"&&S.lsrch){var q=document.getElementById("lq");if(q)q.focus()}})});
+    if(t==="list"&&S.lsrch){var q=document.getElementById("lq");if(q)q.focus()}
+    if(b.dataset.lend)setTimeout(function(){var c=document.getElementById("lendcard");if(c)c.scrollIntoView({behavior:"smooth",block:"center"})},350)})});
   el.querySelectorAll("[data-pf]").forEach(function(b){b.onclick=function(){S.pf=b.dataset.pf;ls("pf",S.pf);render()}});
   el.querySelectorAll("[data-ltab]:not([data-go])").forEach(function(b){b.onclick=function(){S.lt=b.dataset.ltab;render()}});
   el.querySelectorAll("[data-lm]").forEach(function(b){b.onclick=function(){S.lm=Math.min(0,S.lm+Number(b.dataset.lm));render()}});
@@ -2083,7 +2086,7 @@ function addSheet(){
   var sh=document.getElementById("sheet");
   var h='<div class="sheet"><div><b>Add cash or other expense</b><div class="mute" style="margin:4px 0 10px">For money that did not come as a bank alert.</div><div class="mute">For</div><select id="xp">'+persons().map(function(n){return '<option value="'+esc(n)+'"'+(n===((S.pf&&S.pf!=="__both")?S.pf:S.name)?" selected":"")+'>'+esc(n)+'</option>'}).join("")+'</select><select id="xt"><option value="out">Money spent</option><option value="in">Money received</option></select><input id="xa" type="number" inputmode="decimal" placeholder="Amount"><input id="xm" placeholder="Payee or description (e.g. Cash – vegetables)"><input id="xd" type="date" value="'+iso(new Date())+'"><select id="xc"><option value="">No category yet</option>';
   CATS.forEach(function(c){h+='<option>'+esc(c)+'</option>'});
-  h+='</select><button class="btn" id="xs">Save</button><button class="btn ghost" style="margin-top:8px" id="xx">Cancel</button></div></div>';
+  h+='</select><div class="note" style="margin:6px 0 10px">Lent money to someone, or borrowed? Choose <b>Lend out</b> or <b>Lend in</b> to track it under Lending.</div><button class="btn" id="xs">Save</button><button class="btn ghost" style="margin-top:8px" id="xx">Cancel</button></div></div>';
   sh.innerHTML=h;
   document.getElementById("xx").onclick=function(){sh.innerHTML=""};
   document.getElementById("xs").onclick=async function(){
@@ -2097,6 +2100,7 @@ function addSheet(){
 
 document.addEventListener("change",function(e){if(e.target&&e.target.id==="lflt"){S.lf=e.target.value;render()}});
 document.addEventListener("click",function(e){
+  var dz=e.target&&e.target.closest?e.target.closest("[data-ldis]"):null;if(dz){ls("lenddis","1");render();toast("Hidden. Find Lending again in Menu.");return}
   var t=e.target&&e.target.closest?e.target.closest("#addx,[data-lnew],[data-lt]"):null;if(!t)return;
   try{if(t.id==="addx")addSheet();else if(t.hasAttribute("data-lnew"))lendSheet("");else lendSheet(decodeURIComponent(t.getAttribute("data-lt")),t.getAttribute("data-ldef")||undefined)}
   catch(x){showErr(x.message)}
@@ -2307,7 +2311,7 @@ var TOUR=[
  {tab:"",sel:'#addx',t:"Add a cash payment",d:"Paid in cash? Tap + to add it in seconds. You can also split any payment between categories or people."},
  {tab:"list",sel:'#nav [data-t="list"]',t:"Every payment in one list",d:"Search and filter, tap a payment to change its category, and press and hold to delete it."},
  {tab:"plan",sel:'#nav [data-t="plan"]',t:"Set your monthly limits",d:"Add a budget for Groceries, Food or Shopping and watch the bars fill up."},
- {tab:"home",sel:'.tb [data-go="menu"]',top:1,t:"Everything else is in Menu",d:"Set up what you need, whenever you’re ready:",list:[["💬","Automated Tracking (SMS & Email)"],["📥","Import bank statements"],["👥","Family Sync: share expenses together with your spouse"]]}];
+ {tab:"home",sel:'.tb [data-go="menu"]',top:1,t:"Everything else is in Menu",d:"Set up what you need, whenever you’re ready:",list:[["💬","Automated Tracking (SMS & Email)"],["📥","Import bank statements"],["👥","Family Sync: share expenses together with your spouse"],["🤝","Lending: track money you lent or borrowed"]]}];
 function endTour(){var e=document.getElementById("tour");if(e)e.remove();ls("tour6","1");ls("tournew","");ls("tourjoin","")}
 function tourSteps(){if(!ls("tourjoin"))return TOUR;var a=TOUR.slice();a[0]={tab:"home",sel:TOUR[0].sel,t:"Your family’s spending shows here",d:"Payments from everyone in your family appear together, so you can see the whole month at a glance."};return a}
 function startTour(i){
