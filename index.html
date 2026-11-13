@@ -170,18 +170,40 @@ nav button{padding:8px 2px;gap:3px;border-radius:22px}nav button svg{width:22px;
 .sk{background:linear-gradient(90deg,var(--chip) 25%,var(--line) 50%,var(--chip) 75%);background-size:200% 100%;animation:skm 1.3s ease-in-out infinite;border-radius:8px}@keyframes skm{0%{background-position:200% 0}100%{background-position:-200% 0}}@media (prefers-reduced-motion:reduce){.sk{animation:none}}.skc{background:var(--card);border-radius:16px;padding:16px;margin:12px 0}.skr{display:flex;align-items:center;gap:12px;margin:12px 0}.skr .sk:first-child{width:40px;height:40px;border-radius:50%;flex:none}.skr div{flex:1}.skl{height:12px;margin:6px 0}
 </style>
 <style id="splashcss">#splash{position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(120% 90% at 30% 15%,#8b5cf6 0%,#6d28d9 45%,#4c1d95 100%);color:#fff;transition:opacity .45s ease,visibility .45s;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}#splash.out{opacity:0;visibility:hidden}#splash svg{width:150px;height:136px;animation:spPop .7s cubic-bezier(.2,.9,.3,1.2) both}#splash b{font-size:34px;letter-spacing:-.5px;margin-top:18px;animation:spUp .6s .25s both}#splash small{font-size:14px;opacity:.78;margin-top:6px;animation:spUp .6s .4s both}#splash .sb{animation:spBar .9s .35s both;transform-origin:bottom}@keyframes spPop{from{transform:scale(.55);opacity:0}to{transform:none;opacity:1}}@keyframes spUp{from{transform:translateY(12px);opacity:0}to{transform:none;opacity:1}}@keyframes spBar{from{transform:scaleY(.1)}to{transform:none}}#splash .sb{animation:spBar .9s .35s both,spDance 1s 1.3s ease-in-out infinite alternate}#splash .sb:nth-of-type(2){animation-delay:.35s,1.45s}#splash .sb:nth-of-type(3){animation-delay:.35s,1.6s}#splash svg path{animation:spBob 1.2s 1.2s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:50% 100%}#splash small{min-height:20px;transition:opacity .3s;padding:0 28px;text-align:center}#splash small.q{opacity:0}@keyframes spDance{from{transform:scaleY(.6)}to{transform:scaleY(1.08)}}@keyframes spBob{from{transform:translateY(0)}to{transform:translateY(-9px)}}@media(prefers-reduced-motion:reduce){#splash *{animation:none!important}}</style>
+<style id="blcss">#bl{position:fixed;inset:0;z-index:99998;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fff;transition:opacity .35s ease,visibility .35s;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:0 28px;text-align:center}#bl.out{opacity:0;visibility:hidden}#bl .bo{width:132px;height:132px;position:relative}#bl .bo svg{position:absolute;inset:0;width:100%;height:100%;opacity:0;transform:scale(.4) rotate(-14deg)}#bl .bo svg.on{opacity:1;animation:blIn .5s cubic-bezier(.2,.9,.3,1.3) both,blSway 1.3s .5s ease-in-out infinite alternate}#bl .bo svg.off{opacity:0;transform:scale(.5) rotate(14deg);transition:opacity .2s,transform .2s}#bl .bc{margin-top:26px;font-size:20px;font-weight:650;color:#8a91a6;min-height:28px;transition:opacity .25s}#bl .bc.q{opacity:0}#bl .bs{margin-top:10px;font-size:14px;color:#a9aec0;min-height:20px}@keyframes blIn{from{opacity:0;transform:scale(.4) rotate(-14deg)}to{opacity:1;transform:none}}@keyframes blSway{from{transform:rotate(-5deg) translateY(2px)}to{transform:rotate(5deg) translateY(-6px)}}@media (prefers-reduced-motion:reduce){#bl .bo svg.on{animation:none;transform:none}}</style>
 </head>
 <body>
 <div id="splash" aria-hidden="true"><svg viewBox="96 110 320 290"><path d="M126 244 256 134 386 244" fill="none" stroke="#fff" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/><rect class="sb" x="178" y="326" width="40" height="60" rx="20" fill="#e0d7f5"/><rect class="sb" x="236" y="290" width="40" height="96" rx="20" fill="#fff"/><rect class="sb" x="292" y="256" width="40" height="130" rx="20" fill="#5eead4"/></svg><b>Gharwise</b><small id="splq">Family money, made clear</small></div>
 <script>(function(){var t=Date.now(),s=document.getElementById("splash");function hide(){var e=s;if(!e)return;s=null;e.classList.add("out");setTimeout(function(){e.remove()},600)}window.hideSplash=function(){var w=Math.max(0,1300-(Date.now()-t));setTimeout(hide,w)};setTimeout(hide,3500);window.addEventListener("load",function(){window.hideSplash()})})();
-(function(){var el0=document.getElementById("splash"),H=el0?el0.innerHTML:"",made=0;
-var Q=["Counting every rupee…","Sorting your UPI payments…","Teaching Gharwise your chai habit…","Spotting that extra Swiggy order…","Making month-end less scary…","Finding where the salary went…","Keeping the family budget friendly…","Almost there. Money is shy today…"];
-var qi=Math.floor(Math.random()*Q.length);function quote(){var q=document.getElementById("splq");if(!q){return}q.classList.add("q");setTimeout(function(){q.textContent=Q[qi=(qi+1)%Q.length];q.classList.remove("q")},300)}
-setInterval(function(){if(document.getElementById("splash"))quote()},2000);
-setTimeout(function(){var q=document.getElementById("splq");if(q)q.textContent=Q[qi]},60);
-  window.brandLoader=function(on){var e=document.getElementById("splash");
-  if(on){if(e&&!e.classList.contains("out"))return;if(e)e.remove();e=document.createElement("div");e.id="splash";e.setAttribute("aria-hidden","true");e.innerHTML=H;document.body.appendChild(e);var q0=document.getElementById("splq");if(q0)q0.textContent=Q[qi=(qi+1)%Q.length];made=Date.now();clearTimeout(window._blt);window._blt=setTimeout(function(){window.brandLoader(false)},12000);return}
-  if(!made||!e)return;var w=Math.max(0,900-(Date.now()-made));clearTimeout(window._blt);made=0;setTimeout(function(){e.classList.add("out");setTimeout(function(){e.remove()},600)},w)}})()</script>
+(function(){
+var G='<defs><linearGradient id="bg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#a78bfa"/><stop offset="1" stop-color="#6d28d9"/></linearGradient></defs>';
+var O=[
+['Welcome to Gharwise','<rect x="8" y="8" width="104" height="104" rx="28" fill="url(#bg1)"/><path d="M28 62 60 34 92 62" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><rect x="40" y="76" width="10" height="16" rx="5" fill="#ddd6fe"/><rect x="55" y="68" width="10" height="24" rx="5" fill="#fff"/><rect x="70" y="60" width="10" height="32" rx="5" fill="#5eead4"/>'],
+['Every rupee has a story','<circle cx="60" cy="62" r="42" fill="#4c1d95"/><circle cx="60" cy="58" r="42" fill="url(#bg1)"/><circle cx="60" cy="58" r="31" fill="none" stroke="#ddd6fe" stroke-width="3"/><text x="60" y="73" text-anchor="middle" font-size="42" font-weight="800" fill="#fff" font-family="system-ui,sans-serif">₹</text>'],
+['Money talks. We listen','<rect x="14" y="30" width="92" height="66" rx="14" fill="#4c1d95"/><rect x="14" y="24" width="92" height="66" rx="14" fill="url(#bg1)"/><rect x="62" y="46" width="44" height="24" rx="12" fill="#ddd6fe"/><circle cx="76" cy="58" r="5" fill="#6d28d9"/><path d="M26 24c10-12 40-14 56-6" fill="none" stroke="#c4b5fd" stroke-width="5" stroke-linecap="round"/>'],
+['Small savings, big dreams','<ellipse cx="58" cy="68" rx="40" ry="30" fill="url(#bg1)"/><circle cx="96" cy="62" r="12" fill="#8b5cf6"/><circle cx="100" cy="58" r="3" fill="#fff"/><path d="M34 44 40 30 52 40Z" fill="#6d28d9"/><rect x="34" y="92" width="10" height="16" rx="5" fill="#4c1d95"/><rect x="68" y="92" width="10" height="16" rx="5" fill="#4c1d95"/><rect x="44" y="40" width="26" height="6" rx="3" fill="#ddd6fe"/><circle cx="58" cy="22" r="10" fill="#5eead4"/><text x="58" y="27" text-anchor="middle" font-size="13" font-weight="800" fill="#4c1d95" font-family="system-ui,sans-serif">₹</text>'],
+['Swipe now, see it clearly','<rect x="10" y="26" width="100" height="68" rx="12" fill="url(#bg1)"/><rect x="10" y="40" width="100" height="14" fill="#4c1d95"/><rect x="22" y="68" width="30" height="8" rx="4" fill="#ddd6fe"/><rect x="22" y="80" width="46" height="6" rx="3" fill="#c4b5fd"/><circle cx="90" cy="76" r="9" fill="#5eead4" opacity=".9"/><circle cx="80" cy="76" r="9" fill="#ddd6fe" opacity=".9"/>'],
+['Reading your bank SMS…','<rect x="32" y="8" width="56" height="104" rx="12" fill="url(#bg1)"/><rect x="38" y="20" width="44" height="74" rx="5" fill="#f5f3ff"/><rect x="52" y="12" width="16" height="4" rx="2" fill="#4c1d95"/><rect x="42" y="28" width="30" height="14" rx="7" fill="#a78bfa"/><rect x="48" y="48" width="30" height="14" rx="7" fill="#c4b5fd"/><rect x="42" y="68" width="24" height="14" rx="7" fill="#a78bfa"/>'],
+['Making sense of the receipts','<path d="M26 10h68v100l-9-7-9 7-8-7-8 7-8-7-8 7-9-7-9 7z" fill="url(#bg1)"/><rect x="38" y="26" width="44" height="6" rx="3" fill="#ddd6fe"/><rect x="38" y="42" width="30" height="5" rx="2.5" fill="#c4b5fd"/><rect x="38" y="54" width="36" height="5" rx="2.5" fill="#c4b5fd"/><rect x="38" y="70" width="44" height="8" rx="4" fill="#5eead4"/>'],
+['Family money, made clear','<path d="M14 60 60 18l46 42" fill="none" stroke="#6d28d9" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M26 56v50h68V56L60 28z" fill="url(#bg1)"/><rect x="50" y="72" width="20" height="34" rx="6" fill="#ddd6fe"/><circle cx="60" cy="52" r="6" fill="#5eead4"/>']];
+var i=0,tm=null,made=0,step="",slow=null;
+function el(){return document.getElementById("bl")}
+function show(n){var e=el();if(!e)return;var old=e.querySelector("svg.on");if(old){old.classList.remove("on");old.classList.add("off")}
+ var o=e.querySelector("svg[data-i='"+n+"']");if(o){o.classList.remove("off");void o.getBoundingClientRect();o.classList.add("on")}
+ var c=e.querySelector(".bc");if(c){c.classList.add("q");setTimeout(function(){c.textContent=O[n][0];c.classList.remove("q")},220)}}
+function tick(){i=(i+1)%O.length;show(i)}
+window.brandStep=function(t){step=t;var e=el();if(!e)return;var s=e.querySelector(".bs");if(s)s.textContent=t||""};
+window.brandLoader=function(on,t){var e=el();
+ if(on){if(typeof t==="string")step=t;if(e&&!e.classList.contains("out")){if(typeof t==="string")window.brandStep(t);return}
+  if(e)e.remove();e=document.createElement("div");e.id="bl";e.setAttribute("role","status");e.setAttribute("aria-label","Loading");
+  var sv="";O.forEach(function(x,k){sv+='<svg viewBox="0 0 120 120" data-i="'+k+'" aria-hidden="true">'+G+x[1]+'</svg>'});
+  e.innerHTML='<div class="bo">'+sv+'</div><div class="bc"></div><div class="bs"></div>';document.body.appendChild(e);
+  i=0;show(0);window.brandStep(step);made=Date.now();clearInterval(tm);tm=setInterval(tick,1500);
+  clearTimeout(slow);slow=setTimeout(function(){var s=el&&el()&&el().querySelector(".bs");if(s&&el()&&!el().classList.contains("out"))s.textContent="Still working, almost there…"},6000);
+  clearTimeout(window._blt);window._blt=setTimeout(function(){window.brandLoader(false)},12000);return}
+ if(!made||!e)return;var w=Math.max(0,900-(Date.now()-made));clearTimeout(window._blt);clearTimeout(slow);made=0;step="";
+ setTimeout(function(){i=0;show(0);setTimeout(function(){e.classList.add("out");clearInterval(tm);setTimeout(function(){e.remove()},400)},450)},w)}
+})()</script>
 
 <main id="app"></main>
 <nav id="nav" class="hide"><button data-t="home" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 11l8-7 8 7v9a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1z"/></svg>Home</button><button data-t="rep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/></svg>Analytics</button><button id="addx" class="navadd" aria-label="Add a cash payment">+</button><button data-t="list"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>List</button><button data-t="plan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4.5 17a8 8 0 1 1 15 0"/><path d="m12 13 4-4"/></svg>Budget</button></nav>
@@ -302,7 +324,7 @@ async function enter0(){
         S.profile=await api("rpc/my_profile",{method:"POST",body:"{}"});if(ps.c)toast("Welcome to the family!")}
       catch(e2){ls("pends","");S._fprefill={c:ps.c,n:ps.n};S._fm=1;S.fmode=ps.c?"join":"create";try{S.invites=await api("rpc/my_invites",{method:"POST",body:"{}"})||[]}catch(e){S.invites=[]}S.view="family";S.amsg=errText(e2);render();return}}
     if(!S.profile){try{S.invites=await api("rpc/my_invites",{method:"POST",body:"{}"})||[]}catch(e){S.invites=[]}S.view="family";S.amsg="";render();return}}
-  S.code=S.profile.household_id;S.name=S.profile.display_name;ls("name","");ls("code","");S.view="";S.pf=ls("pf")||S.name;var qq=!!(S._cached&&S.loaded);S._cached=false;Promise.resolve(load(qq,pre)).then(function(){touch(true)},function(){touch(true)});api("rpc/my_invites",{method:"POST",body:"{}"}).then(function(r){S.invites=r||[];if(S.invites.length&&S.tab==="home")render()}).catch(function(){})}
+  try{window.brandStep("Getting your money ready…")}catch(e){}S.code=S.profile.household_id;S.name=S.profile.display_name;ls("name","");ls("code","");S.view="";S.pf=ls("pf")||S.name;var qq=!!(S._cached&&S.loaded);S._cached=false;Promise.resolve(load(qq,pre)).then(function(){touch(true)},function(){touch(true)});api("rpc/my_invites",{method:"POST",body:"{}"}).then(function(r){S.invites=r||[];if(S.invites.length&&S.tab==="home")render()}).catch(function(){})}
 function touch(first){if(!S.auth||Date.now()-(S._tt||0)<30*60000)return;S._tt=Date.now();var pwa=false;try{pwa=nativeApp()||window.matchMedia("(display-mode: standalone)").matches||navigator.standalone===true}catch(e){}
   api("rpc/touch",{method:"POST",body:JSON.stringify({p_os:phoneOS(),p_pwa:pwa,p_ms:first&&!S._ttm?Math.round(performance.now()):null})}).catch(function(){});S._ttm=1}
 document.addEventListener("visibilitychange",function(){if(!document.hidden&&S.code)touch()});
@@ -371,7 +393,8 @@ async function authAction(a){
   if(a==="copy"){toast(await copyText(S.newCode)?"Code copied":"Press and hold the code to copy");return}
   if(a==="cont"||a==="retry"){S.view="";render();return enter()}
   var btn=document.querySelector("[data-a='"+a+"']"),old=btn?btn.textContent:"";
-  var busy=function(on){if(btn){btn.disabled=on;btn.textContent=on?"Please wait…":old}};
+  var BS={login:"Signing you in…",signup:"Creating your account…",vcode:"Confirming your email…",rcode:"Saving your new password…",newpw:"Saving your new password…",fcreate:"Setting up your family…",fjoin:"Joining your family…"};
+  var busy=function(on){if(btn){btn.disabled=on;btn.textContent=on?"Please wait…":old}try{if(on)window.brandLoader(true,a.indexOf("iacc:")===0?"Setting up your family…":(BS[a]||""));else window.brandLoader(false)}catch(e){}};
   m("");
   try{
     if(a==="login"){var e1=em(),pw=g("a_pw");if(!e1||!pw)return m("Enter your email and password.");busy(true);
@@ -1440,7 +1463,7 @@ function personChips(){
   ns.forEach(function(n){h+='<button data-pf="'+esc(n)+'" class="'+(cur===n?'on':'')+'">'+esc(n===S.name?'Me':n)+'</button>'});
   return h+'<button data-pf="__both" class="'+(cur==="__both"?'on':'')+'">Family</button></div>'}
 var _pop=0;
-function go(t){
+function go(t){try{window.brandLoader(false)}catch(e){}
   try{if(t!=="home"){if(!(history.state&&history.state.g))history.pushState({g:1},"")}else if(history.state&&history.state.g&&!_pop)history.back()}catch(e){}
   S.tab=t;if(t==="sms"){S.smsStep=0;if(nativeSmsOK())S.nsms=null}if(t==="mail"){S.mailStep=0;S._mailInit=0}if(t==="set")S.ainfo=undefined;
   render();window.scrollTo(0,0);
@@ -1578,7 +1601,7 @@ function vSet(){
   h+='<div class="card"><button class="btn ghost" id="tourgo" style="margin:0">▶ Show app tour</button></div><h2>This phone</h2><div class="card"><div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><div class="mute">Your month starts on day (1 = normal calendar month)</div><input id="ms" type="number" inputmode="numeric" min="1" max="31" value="'+(S.ms||1)+'"><button class="btn ghost s" id="msal" style="margin-bottom:10px">Use my salary credit day</button><div class="note" id="msn">Saved on this phone only. Set the same day on the other phone. Reports, budgets and forecasts all follow it.</div><button class="btn" id="sv">Save</button></div>';
   h+=aboutCard();
   return h}
-var WEBVER="5.13 · 13 Nov 2026";
+var WEBVER="5.14 · 13 Nov 2026";
 async function loadAinfo(){if(S._ainb)return;S._ainb=1;var P=smsPlugin();try{S.ainfo=P?await P.appInfo():null}catch(e){S.ainfo=null}S._ainb=0;if(S.tab==="set")render()}
 function aboutCard(){
   var d=remDiag(),rows=[];
