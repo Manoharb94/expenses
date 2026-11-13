@@ -169,20 +169,28 @@ nav button{padding:8px 2px;gap:3px;border-radius:22px}nav button svg{width:22px;
 .pill2{font-size:12px;font-weight:600;border-radius:20px;padding:3px 9px;background:var(--chip);color:var(--ink2,var(--mute));white-space:nowrap}
 .sk{background:linear-gradient(90deg,var(--chip) 25%,var(--line) 50%,var(--chip) 75%);background-size:200% 100%;animation:skm 1.3s ease-in-out infinite;border-radius:8px}@keyframes skm{0%{background-position:200% 0}100%{background-position:-200% 0}}@media (prefers-reduced-motion:reduce){.sk{animation:none}}.skc{background:var(--card);border-radius:16px;padding:16px;margin:12px 0}.skr{display:flex;align-items:center;gap:12px;margin:12px 0}.skr .sk:first-child{width:40px;height:40px;border-radius:50%;flex:none}.skr div{flex:1}.skl{height:12px;margin:6px 0}
 </style>
-<style id="splashcss">#splash{position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(120% 90% at 30% 15%,#8b5cf6 0%,#6d28d9 45%,#4c1d95 100%);color:#fff;transition:opacity .45s ease,visibility .45s;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}#splash.out{opacity:0;visibility:hidden}#splash svg{width:150px;height:136px;animation:spPop .7s cubic-bezier(.2,.9,.3,1.2) both}#splash b{font-size:34px;letter-spacing:-.5px;margin-top:18px;animation:spUp .6s .25s both}#splash small{font-size:14px;opacity:.78;margin-top:6px;animation:spUp .6s .4s both}#splash .sb{animation:spBar .9s .35s both;transform-origin:bottom}@keyframes spPop{from{transform:scale(.55);opacity:0}to{transform:none;opacity:1}}@keyframes spUp{from{transform:translateY(12px);opacity:0}to{transform:none;opacity:1}}@keyframes spBar{from{transform:scaleY(.1)}to{transform:none}}@media(prefers-reduced-motion:reduce){#splash *{animation:none!important}}</style>
+<style id="splashcss">#splash{position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(120% 90% at 30% 15%,#8b5cf6 0%,#6d28d9 45%,#4c1d95 100%);color:#fff;transition:opacity .45s ease,visibility .45s;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}#splash.out{opacity:0;visibility:hidden}#splash svg{width:150px;height:136px;animation:spPop .7s cubic-bezier(.2,.9,.3,1.2) both}#splash b{font-size:34px;letter-spacing:-.5px;margin-top:18px;animation:spUp .6s .25s both}#splash small{font-size:14px;opacity:.78;margin-top:6px;animation:spUp .6s .4s both}#splash .sb{animation:spBar .9s .35s both;transform-origin:bottom}@keyframes spPop{from{transform:scale(.55);opacity:0}to{transform:none;opacity:1}}@keyframes spUp{from{transform:translateY(12px);opacity:0}to{transform:none;opacity:1}}@keyframes spBar{from{transform:scaleY(.1)}to{transform:none}}#splash .sb{animation:spBar .9s .35s both,spDance 1s 1.3s ease-in-out infinite alternate}#splash .sb:nth-of-type(2){animation-delay:.35s,1.45s}#splash .sb:nth-of-type(3){animation-delay:.35s,1.6s}#splash svg path{animation:spBob 1.2s 1.2s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:50% 100%}#splash small{min-height:20px;transition:opacity .3s;padding:0 28px;text-align:center}#splash small.q{opacity:0}@keyframes spDance{from{transform:scaleY(.6)}to{transform:scaleY(1.08)}}@keyframes spBob{from{transform:translateY(0)}to{transform:translateY(-9px)}}@media(prefers-reduced-motion:reduce){#splash *{animation:none!important}}</style>
 </head>
 <body>
-<div id="splash" aria-hidden="true"><svg viewBox="96 110 320 290"><path d="M126 244 256 134 386 244" fill="none" stroke="#fff" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/><rect class="sb" x="178" y="326" width="40" height="60" rx="20" fill="#e0d7f5"/><rect class="sb" x="236" y="290" width="40" height="96" rx="20" fill="#fff"/><rect class="sb" x="292" y="256" width="40" height="130" rx="20" fill="#5eead4"/></svg><b>Gharwise</b><small>Family money, made clear</small></div>
-<script>(function(){var t=Date.now(),s=document.getElementById("splash");function hide(){var e=s;if(!e)return;s=null;e.classList.add("out");setTimeout(function(){e.remove()},600)}window.hideSplash=function(){var w=Math.max(0,1300-(Date.now()-t));setTimeout(hide,w)};setTimeout(hide,3500);window.addEventListener("load",function(){window.hideSplash()})})()</script>
+<div id="splash" aria-hidden="true"><svg viewBox="96 110 320 290"><path d="M126 244 256 134 386 244" fill="none" stroke="#fff" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/><rect class="sb" x="178" y="326" width="40" height="60" rx="20" fill="#e0d7f5"/><rect class="sb" x="236" y="290" width="40" height="96" rx="20" fill="#fff"/><rect class="sb" x="292" y="256" width="40" height="130" rx="20" fill="#5eead4"/></svg><b>Gharwise</b><small id="splq">Family money, made clear</small></div>
+<script>(function(){var t=Date.now(),s=document.getElementById("splash");function hide(){var e=s;if(!e)return;s=null;e.classList.add("out");setTimeout(function(){e.remove()},600)}window.hideSplash=function(){var w=Math.max(0,1300-(Date.now()-t));setTimeout(hide,w)};setTimeout(hide,3500);window.addEventListener("load",function(){window.hideSplash()})})();
+(function(){var el0=document.getElementById("splash"),H=el0?el0.innerHTML:"",made=0;
+var Q=["Counting every rupee…","Sorting your UPI payments…","Teaching Gharwise your chai habit…","Spotting that extra Swiggy order…","Making month-end less scary…","Finding where the salary went…","Keeping the family budget friendly…","Almost there. Money is shy today…"];
+var qi=Math.floor(Math.random()*Q.length);function quote(){var q=document.getElementById("splq");if(!q){return}q.classList.add("q");setTimeout(function(){q.textContent=Q[qi=(qi+1)%Q.length];q.classList.remove("q")},300)}
+setInterval(function(){if(document.getElementById("splash"))quote()},2000);
+setTimeout(function(){var q=document.getElementById("splq");if(q)q.textContent=Q[qi]},60);
+  window.brandLoader=function(on){var e=document.getElementById("splash");
+  if(on){if(e&&!e.classList.contains("out"))return;if(e)e.remove();e=document.createElement("div");e.id="splash";e.setAttribute("aria-hidden","true");e.innerHTML=H;document.body.appendChild(e);var q0=document.getElementById("splq");if(q0)q0.textContent=Q[qi=(qi+1)%Q.length];made=Date.now();clearTimeout(window._blt);window._blt=setTimeout(function(){window.brandLoader(false)},12000);return}
+  if(!made||!e)return;var w=Math.max(0,900-(Date.now()-made));clearTimeout(window._blt);made=0;setTimeout(function(){e.classList.add("out");setTimeout(function(){e.remove()},600)},w)}})()</script>
 
 <main id="app"></main>
 <nav id="nav" class="hide"><button data-t="home" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 11l8-7 8 7v9a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1z"/></svg>Home</button><button data-t="rep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/></svg>Analytics</button><button id="addx" class="navadd" aria-label="Add a cash payment">+</button><button data-t="list"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>List</button><button data-t="plan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4.5 17a8 8 0 1 1 15 0"/><path d="m12 13 4-4"/></svg>Budget</button></nav>
 <div id="sheet"></div>
 <script>
 var URLB="https://fwxhclagrwlzxvsmaekt.supabase.co/rest/v1/",KEY="sb_publishable_PiCUzSknFyCfGfEVzTiQbg_qEkBYwL_";
-var TRF="Transfer between us",IGN="Ignore (don't count)",UNC="Others (no category yet)",CCB="Credit card bill (paid)",LOUT="Lend out",LIN="Lend in",UNPL="Unplanned expense",RENT="Rental income",PASS="Pass-through (received & sent on)";
-var CATS=["Groceries","Food","Shopping","Transport","Fuel","Bills & Utilities","House Rent","EMI","Health","Education","Entertainment","Leisure","Subscriptions","Travel","Beauty / Salon","Gadgets","Investment","Family & Friends","Kids","Home Services",UNPL,"Salary / Income",RENT,"Other",LOUT,LIN,TRF,PASS,CCB,IGN];
-var NOBUD={"Salary / Income":1};NOBUD[TRF]=1;NOBUD[IGN]=1;NOBUD[CCB]=1;NOBUD[LOUT]=1;NOBUD[LIN]=1;NOBUD[UNPL]=1;NOBUD[RENT]=1;NOBUD[PASS]=1;
+var SELF="Self transfer",TRF="Transfer between us",IGN="Ignore (don't count)",UNC="Others (no category yet)",CCB="Credit card bill (paid)",LOUT="Lend out",LIN="Lend in",UNPL="Unplanned expense",RENT="Rental income",PASS="Pass-through (received & sent on)";
+var CATS=["Groceries","Food","Shopping","Transport","Fuel","Bills & Utilities","House Rent","EMI","Health","Education","Entertainment","Leisure","Subscriptions","Travel","Beauty / Salon","Gadgets","Investment","Family & Friends","Kids","Home Services",UNPL,"Salary / Income",RENT,"Other",LOUT,LIN,TRF,PASS,SELF,CCB,IGN];
+var NOBUD={"Salary / Income":1};NOBUD[TRF]=1;NOBUD[SELF]=1;NOBUD[IGN]=1;NOBUD[CCB]=1;NOBUD[LOUT]=1;NOBUD[LIN]=1;NOBUD[UNPL]=1;NOBUD[RENT]=1;NOBUD[PASS]=1;
 var NOBUDGET={};for(var k in NOBUD)NOBUDGET[k]=1;["Rent / EMI","Education","Home loan EMI","Kid education","Kid day care","Maid","Cook","Car cleaning","Electricity bill","Gas bill","Family donation","Family & Friends","House Rent","EMI"].forEach(function(c){NOBUDGET[c]=1});
 var S={tab:"home",range:"month",from:"",to:"",rp:"this",hf:"all",pf:"",txns:[],budgets:[],fixed:[],planErr:"",goals:[],gents:[],lrows:{},goalErr:"",cur:"₹",code:"",name:"",err:"",loaded:false};
 var ACC={emerald:["Emerald","#1f6f5c"],ocean:["Ocean","#2563eb"],violet:["Violet","#7c3aed"],sunset:["Sunset","#d9622b"],rose:["Rose","#be3a6a"],graphite:["Graphite","#334155"]};
@@ -277,8 +285,11 @@ function refreshSess(){
   return S.refreshing}
 async function ensureToken(){if(S.auth&&S.auth.exp-60<Date.now()/1000)await refreshSess()}
 function logoutLocal(msg){try{if(typeof nativeSmsOK==="function"&&nativeSmsOK()){smsPlugin().disable();S.nsms=null}}catch(e){}S.auth=null;ls("sb","");ls("xc","");ls("ob","");S.profile=null;S.code="";S.name="";S.txns=[];S.budgets=[];S.fixed=[];S.goals=[];S.loans=[];S.gents=[];S.members=null;S.loaded=false;S.tab="home";S.view="login";S.amsg=msg||"";S.aok=false;if(typeof render==="function")render()}
-async function loadMembers(){try{S.members=await api("members?select=user_id,display_name,role&order=created_at.asc")||[]}catch(e){S.members=[]}}
+async function loadMembers(){try{S.members=await api("members?select=user_id,display_name,role,created_at&order=created_at.asc")||[]}catch(e){S.members=[]}}
 async function enter(){
+  var fresh=!S.loaded&&!S.offline;if(fresh)try{window.brandLoader(true)}catch(e){}
+  try{await enter0()}finally{if(fresh&&S.view)try{window.brandLoader(false)}catch(e){}}}
+async function enter0(){
   S.view="";
   var pre=S.auth?startFetch():null;
   try{S.profile=await api("rpc/my_profile",{method:"POST",body:"{}"})}
@@ -702,6 +713,7 @@ function startFetch(){
   return Promise.all([tx,side])}
 async function load(quiet,pre){
   await (pre||startFetch());S._full=Date.now();try{postLoad()}catch(e){}
+  try{window.brandLoader(false)}catch(e){}
   if(S.loaded&&!S.pf)S.pf=S.name;
   var sig=dataSig();
   if(quiet&&sig===S._sig)return;
@@ -750,7 +762,7 @@ function preset(r){var n=new Date();S.range=r;
   if(r==="month"){S.from=iso(pdate(0));S.to=iso(n)}
   else if(r==="last"){S.from=iso(pdate(-1));S.to=iso(pend(-1))}
   else if(r==="all"){S.from="";S.to=""}}
-function isCount(t){return t.category!==HLP&&t.category!==HLPO&&t.category!==TRF&&t.category!==IGN&&t.category!==CCB&&t.category!==LOUT&&t.category!==LIN&&t.category!==PASS}
+function isCount(t){return t.category!==HLP&&t.category!==HLPO&&t.category!==TRF&&t.category!==SELF&&t.category!==IGN&&t.category!==CCB&&t.category!==LOUT&&t.category!==LIN&&t.category!==PASS}
 function personOK(t){return !S.pf||S.pf==="__both"||t.person===S.pf}
 function inRange(t){var d=t.txn_date||"";return personOK(t)&&(!S.from||d>=S.from)&&(!S.to||d<=S.to)}
 function sum(l,ty){return l.filter(function(t){return t.type===ty}).reduce(function(a,t){return a+Number(t.amount)},0)}
@@ -1144,7 +1156,7 @@ function periodDates(){
   if(!to)to=iso(new Date());
   return {from:from,to:to}}
 var CATI={"Groceries – Offline":"🛒","Groceries – Online":"🥬","Shopping – Offline":"🛍️","Shopping – Online":"📦","Food – Dining out":"🍽️","Food – Online delivery":"🛵","Transport":"🚌","Fuel":"⛽","Bills & Utilities":"💡","Rent / EMI":"🏠","Health":"💊","Beauty / Salon":"💇","Entertainment":"🎬","Subscriptions":"🔁","Travel":"✈️","Education":"🎓","Home loan EMI":"🏦","Kid education":"📚","Kid day care":"🧸","Kid expense":"👶","Maid":"🧹","Cook":"🍳","Car cleaning":"🚗","Electricity bill":"⚡","Gas bill":"🔥","Family donation":"🙏","Unplanned expense":"⚠️","Family & Friends":"👪","Salary / Income":"💼","Rental income":"🏘️","Other":"📌","Lend out":"🤝","Lend in":"🤝","Mandatory":"📌"};
-CATI[TRF]="🔁";CATI[PASS]="🔀";CATI["GPay wallet"]="👛";CATI["Trips"]="🧳";CATI["Pet expenses"]="🐾";CATI["Car Expenses"]="🚗";CATI["Bike Expenses"]="🏍️";CATI["Refunds"]="↩️";CATI[CCB]="💳";CATI[IGN]="🚫";CATI[UNC]="❔";CATI["Groceries"]="🛒";CATI["Food"]="🍽️";CATI["Shopping"]="🛍️";CATI["House Rent"]="🏠";CATI["EMI"]="🏦";CATI["Leisure"]="🎯";CATI["Gadgets"]="📱";CATI["Investment"]="📈";CATI["Kids"]="🧸";CATI["Home Services"]="🧹";
+CATI[TRF]="🔁";CATI[SELF]="🔄";CATI[PASS]="🔀";CATI["GPay wallet"]="👛";CATI["Trips"]="🧳";CATI["Pet expenses"]="🐾";CATI["Car Expenses"]="🚗";CATI["Bike Expenses"]="🏍️";CATI["Refunds"]="↩️";CATI[CCB]="💳";CATI[IGN]="🚫";CATI[UNC]="❔";CATI["Groceries"]="🛒";CATI["Food"]="🍽️";CATI["Shopping"]="🛍️";CATI["House Rent"]="🏠";CATI["EMI"]="🏦";CATI["Leisure"]="🎯";CATI["Gadgets"]="📱";CATI["Investment"]="📈";CATI["Kids"]="🧸";CATI["Home Services"]="🧹";
 var CICON=(function(){try{return JSON.parse(ls("cicons")||"{}")}catch(e){return {}}})();
 var KW=[[/liquor|beer|wine|whisk|vodka|\brum\b|brew|alcohol|\bbar\b|\bpub\b|spirits/i,"🍺"],[/cracker|firework|diwali|sparkler/i,"🎆"],[/netflix|hotstar|prime video|\bott\b|movie|cinema|theatre|theater|show/i,"🎬"],[/spotify|music|gaana|wynk|song/i,"🎵"],[/amazon|flipkart|myntra|meesho|ajio|nykaa/i,"🛒"],[/swiggy|zomato|restaurant|cafe|coffee|tea|dining|pizza|burger|biryani|snack|sweet|bakery/i,"🍽️"],[/grocer|vegetable|fruit|milk|kirana|supermarket|bigbasket|blinkit|zepto|instamart|dmart/i,"🛒"],[/petrol|diesel|\bfuel\b|\bgas\b|cng/i,"⛽"],[/uber|ola|rapido|cab|taxi|auto|metro|bus|train|irctc|flight|ticket/i,"🚕"],[/rent/i,"🏠"],[/emi|loan|mortgage/i,"🏦"],[/electric|power|bescom|water|wifi|broadband|internet|recharge|mobile|phone|jio|airtel|\bvi\b|bill/i,"💡"],[/doctor|hospital|medic|pharma|clinic|dental|health|lab|test|gym|fitness|yoga/i,"💊"],[/school|college|tuition|course|fee|class|education|book|stationery/i,"🎓"],[/kid|child|baby|toy|daycare/i,"🧸"],[/pet|dog|cat\b|vet/i,"🐾"],[/salon|beauty|spa|haircut|parlou?r|makeup|grooming/i,"💇"],[/gadget|mobile|laptop|phone|tv\b|electronic|camera|headphone|earbud/i,"📱"],[/invest|mutual|sip\b|stock|share|gold|fd\b|ppf|nps|crypto|insurance|lic\b/i,"📈"],[/travel|trip|holiday|vacation|hotel|resort|goa/i,"✈️"],[/gift|donat|charity|temple|puja|festival/i,"🎁"],[/cloth|apparel|fashion|shoe|dress|shirt|jeans/i,"👕"],[/furniture|home|house|decor|kitchen|appliance|repair|maintenance/i,"🛋️"],[/maid|cook|clean|laundry|driver|servant/i,"🧹"],[/car\b|bike|vehicle|service|wash|tyre|parking/i,"🚗"],[/game|sport|leisure|hobby|fun|party|club/i,"🎯"],[/subscription|member|renew/i,"🔁"],[/tax|fine|penalty|challan/i,"🧾"]];
 var BR=[[/netflix/i,"netflix.com"],[/hotstar|disney/i,"hotstar.com"],[/prime video|amazon prime/i,"primevideo.com"],[/amazon/i,"amazon.in"],[/flipkart/i,"flipkart.com"],[/myntra/i,"myntra.com"],[/meesho/i,"meesho.com"],[/ajio/i,"ajio.com"],[/nykaa/i,"nykaa.com"],[/swiggy/i,"swiggy.com"],[/zomato/i,"zomato.com"],[/blinkit/i,"blinkit.com"],[/zepto/i,"zeptonow.com"],[/bigbasket/i,"bigbasket.com"],[/dmart/i,"dmart.in"],[/instamart/i,"swiggy.com"],[/spotify/i,"spotify.com"],[/youtube/i,"youtube.com"],[/google|gpay|g pay/i,"google.com"],[/phonepe/i,"phonepe.com"],[/paytm/i,"paytm.com"],[/uber/i,"uber.com"],[/\bola\b/i,"olacabs.com"],[/rapido/i,"rapido.bike"],[/irctc/i,"irctc.co.in"],[/makemytrip/i,"makemytrip.com"],[/goibibo/i,"goibibo.com"],[/cleartrip/i,"cleartrip.com"],[/indigo/i,"goindigo.in"],[/air india/i,"airindia.com"],[/airtel/i,"airtel.in"],[/\bjio\b/i,"jio.com"],[/vodafone|\bvi\b/i,"myvi.in"],[/bsnl/i,"bsnl.co.in"],[/tata ?play|tata sky/i,"tataplay.com"],[/bescom/i,"bescom.co.in"],[/hdfc/i,"hdfcbank.com"],[/icici/i,"icicibank.com"],[/\bsbi\b|state bank/i,"sbi.co.in"],[/axis/i,"axisbank.com"],[/kotak/i,"kotak.com"],[/zerodha/i,"zerodha.com"],[/groww/i,"groww.in"],[/lic\b/i,"licindia.in"],[/policybazaar/i,"policybazaar.com"],[/apollo/i,"apollopharmacy.in"],[/pharmeasy/i,"pharmeasy.in"],[/1mg/i,"1mg.com"],[/practo/i,"practo.com"],[/cult\.?fit|cultfit/i,"cult.fit"],[/dominos|domino/i,"dominos.co.in"],[/mcdonald/i,"mcdonaldsindia.com"],[/kfc/i,"kfc.co.in"],[/starbucks/i,"starbucks.in"],[/pizza hut/i,"pizzahut.co.in"],[/burger king/i,"burgerking.in"],[/bookmyshow/i,"bookmyshow.com"],[/pvr/i,"pvrcinemas.com"],[/apple/i,"apple.com"],[/microsoft/i,"microsoft.com"],[/linkedin/i,"linkedin.com"],[/jiosaavn|saavn/i,"jiosaavn.com"],[/gaana/i,"gaana.com"],[/zee5/i,"zee5.com"],[/sonyliv|sony liv/i,"sonyliv.com"],[/ikea/i,"ikea.com"],[/decathlon/i,"decathlon.in"],[/reliance/i,"relianceretail.com"],[/tata/i,"tata.com"],[/swiggy one/i,"swiggy.com"],[/dunzo/i,"dunzo.com"],[/lenskart/i,"lenskart.com"],[/urban ?company/i,"urbancompany.com"],[/bluedart/i,"bluedart.com"],[/shell/i,"shell.in"],[/indian ?oil/i,"iocl.com"],[/bharat ?petroleum|\bbpcl\b/i,"bharatpetroleum.in"],[/fastag/i,"npci.org.in"]];
@@ -1160,7 +1172,7 @@ function ci(c){
   else{var e=ciEmoji(c),d=ciBrand(c);
     r=d?'<img class="bl" src="https://www.google.com/s2/favicons?domain='+d+'&sz=64" alt="" loading="lazy" data-e="'+e+'" onerror="this.replaceWith(document.createTextNode(this.dataset.e))">':e}
   _ciC[c]=r;return r}
-var SYSC={};[UNPL,"Salary / Income",RENT,"Other",LOUT,LIN,TRF,PASS,CCB,IGN].forEach(function(c){SYSC[c]=1});
+var SYSC={};[UNPL,"Salary / Income",RENT,"Other",LOUT,LIN,TRF,SELF,PASS,CCB,IGN].forEach(function(c){SYSC[c]=1});
 var HLP="Loan Part Payment",HLPO="Home Loan Part Payment";NOBUD[HLP]=1;NOBUD[HLPO]=1;NOBUDGET[HLP]=1;NOBUDGET[HLPO]=1;SYSC[HLP]=1;CATI[HLP]="🏠";CATI[HLPO]="🏠";
 function syncLoanCat(){var has=(S.loans||[]).length>0,i=CATS.indexOf(HLP);if(has&&i<0){var k=CATS.indexOf("Investment");CATS.splice(k<0?CATS.length:k+1,0,HLP)}else if(!has&&i>=0&&!(S.txns||[]).some(function(t){return t.category===HLP}))CATS.splice(i,1)}
 var HIDDEN={};
@@ -1565,7 +1577,7 @@ function vSet(){
   h+='<div class="card"><button class="btn ghost" id="tourgo" style="margin:0">▶ Show app tour</button></div><h2>This phone</h2><div class="card"><div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><div class="mute">Your month starts on day (1 = normal calendar month)</div><input id="ms" type="number" inputmode="numeric" min="1" max="31" value="'+(S.ms||1)+'"><button class="btn ghost s" id="msal" style="margin-bottom:10px">Use my salary credit day</button><div class="note" id="msn">Saved on this phone only. Set the same day on the other phone. Reports, budgets and forecasts all follow it.</div><button class="btn" id="sv">Save</button></div>';
   h+=aboutCard();
   return h}
-var WEBVER="5.8 · 13 Nov 2026";
+var WEBVER="5.10 · 13 Nov 2026";
 async function loadAinfo(){if(S._ainb)return;S._ainb=1;var P=smsPlugin();try{S.ainfo=P?await P.appInfo():null}catch(e){S.ainfo=null}S._ainb=0;if(S.tab==="set")render()}
 function aboutCard(){
   var d=remDiag(),rows=[];
@@ -1999,7 +2011,7 @@ function pick(t){
 
 function splitSheet(t){
   var A=Number(t.amount),st={blocks:[{cat:"",rows:[{p:"",a:""}]}]},sh=document.getElementById("sheet");
-  var cats=CATS.filter(function(c){return c!==UNC&&c!==IGN&&c!==TRF&&c!==PASS&&c!==CCB&&c!==LIN&&c!==RENT&&c!=="Salary / Income"});
+  var cats=CATS.filter(function(c){return c!==UNC&&c!==IGN&&c!==TRF&&c!==SELF&&c!==PASS&&c!==CCB&&c!==LIN&&c!==RENT&&c!=="Salary / Income"});
   function tot(){var x=0;st.blocks.forEach(function(b){b.rows.forEach(function(r){x+=parseFloat(r.a)||0})});return Math.round(x*100)/100}
   function left(){return Math.round((A-tot())*100)/100}
   function line(){var l=left(),e=document.getElementById("sleft");if(!e)return;e.className="note"+(l<0?" out":"");e.style.fontWeight="700";e.textContent=money(A)+" − "+money(tot())+" = "+money(Math.abs(l))+(l<0?" too much":" left");var b=document.getElementById("sok");if(b)b.disabled=l!==0}
@@ -2288,7 +2300,8 @@ function startTour(i){
 function maybeTour(){
   if(S._tourChk||!S.loaded)return;S._tourChk=1;
   if(ls("tour6"))return;
-  if(ls("tournew")){setTimeout(function(){if(!ls("tour6"))startTour(0)},1700);return}
+  var m0=(S.members||[])[0],fresh=m0&&m0.created_at&&(Date.now()-Date.parse(m0.created_at))<3*864e5;
+  if(ls("tournew")||fresh){setTimeout(function(){if(!ls("tour6"))startTour(0)},1700);return}
   if((S.txns||[]).length===0&&(S.budgets||[]).length===0)setTimeout(function(){if(!ls("tour6"))startTour(0)},1700);else ls("tour6","1")}
 document.addEventListener("click",function(e){var b=e.target&&e.target.closest&&e.target.closest("#tourgo");if(b){ls("tour6","");S._tourChk=1;go("home");startTour(0)}});
 function showErr(m){var b=document.getElementById("errbar");if(!b){b=document.createElement("div");b.id="errbar";b.style.cssText="position:fixed;top:0;left:0;right:0;background:#b4432f;color:#fff;padding:8px 12px;font-size:13px;z-index:99";b.onclick=function(){b.remove()};document.body.appendChild(b)}b.textContent="Problem: "+m+" (tap to close, and send me this message)"}
