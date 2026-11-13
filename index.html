@@ -1562,7 +1562,7 @@ function vSet(){
   h+='<div class="card"><button class="btn ghost" id="tourgo" style="margin:0">▶ Show app tour</button></div><h2>This phone</h2><div class="card"><div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><div class="mute">Your month starts on day (1 = normal calendar month)</div><input id="ms" type="number" inputmode="numeric" min="1" max="31" value="'+(S.ms||1)+'"><button class="btn ghost s" id="msal" style="margin-bottom:10px">Use my salary credit day</button><div class="note" id="msn">Saved on this phone only. Set the same day on the other phone. Reports, budgets and forecasts all follow it.</div><button class="btn" id="sv">Save</button></div>';
   h+=aboutCard();
   return h}
-var WEBVER="5.0 · 12 Nov 2026";
+var WEBVER="5.1 · 13 Nov 2026";
 async function loadAinfo(){if(S._ainb)return;S._ainb=1;var P=smsPlugin();try{S.ainfo=P?await P.appInfo():null}catch(e){S.ainfo=null}S._ainb=0;if(S.tab==="set")render()}
 function aboutCard(){
   var d=remDiag(),rows=[];
@@ -1639,7 +1639,7 @@ function wz(title,steps,cur,doneTo){
   return h}
 function kv(label,val){return '<div class="mute" style="margin-top:10px">'+label+'</div><div class="kv"><span>'+esc(val)+'</span><button class="btn ghost s" data-copy="'+esc(val)+'">Copy</button></div>'}
 /* Paste the iCloud link of the shared "Gharwise SMS" shortcut here (see setup notes). Empty = step-by-step instructions instead. */
-var SMS_SHORTCUT_LINK="https://www.icloud.com/shortcuts/55cd3eafc5174ae1a4b0376f7eae8e14";
+var SMS_SHORTCUT_LINK="https://www.icloud.com/shortcuts/cde22634aae948989c1257b7e3b74a4a";
 var SMS_SHORTCUT_NAME="Gharwise SMS";
 var SMS_PAST=true;
 var SMS_MONTHS_IN_URL=true;  /* true once the shortcut reads 'HISTORY <months>' (no question asked) */   /* true once the shared shortcut also reads past SMS */
@@ -1727,7 +1727,7 @@ function vSms(){
       ['Add the shortcut','<p>Tap the button, then tap <b>Add Shortcut</b> in the Shortcuts app and come back here.</p><a class="btn" style="display:block;text-align:center;text-decoration:none" href="'+esc(SMS_SHORTCUT_LINK)+'" target="_blank" rel="noopener">Add shortcut</a>'],
       ['Link it to your account','<p>One tap. This hands your personal key to the shortcut, so the SMS it sends are saved as yours. You will see “Linked to Gharwise”.</p><a class="btn" style="display:block;text-align:center;text-decoration:none" href="'+esc(run)+'">Link my account</a><p class="note">If iPhone asks to allow the shortcut to save a file, tap <b>Always Allow</b>.</p>'],
       ['Turn it on for bank SMS','<p>Apple only lets you switch on message automations yourself. It takes about 30 seconds:</p><ol><li>Open <b>Shortcuts</b> → <b>Automation</b> → <b>+</b> → <b>Message</b>.</li><li><b>Message Contains</b>: type <b>Rs</b>.</li><li>Choose <b>Run Immediately</b> → <b>Next</b>.</li><li>Pick <b>'+esc(SMS_SHORTCUT_NAME)+'</b>.</li></ol><a class="btn ghost" style="display:block;text-align:center;text-decoration:none" href="shortcuts://">Open Shortcuts</a><div class="note">Bank writes INR (Axis) or no currency (SBI)? Repeat with <b>INR</b> or <b>debited</b>. Duplicates are ignored.</div>'],
-      ['Read your past messages','<p>One tap. The shortcut reads your bank SMS from the last 6 months and sends them to the app, each with its date.</p><a class="btn" style="display:block;text-align:center;text-decoration:none" href="'+esc(runHist)+'">Read past SMS</a><p class="note">Tap <b>Allow</b> when iPhone asks for access to Messages. About 2 minutes for 200 messages. Safe to run again; duplicates are skipped.</p>'],
+      ['Read your past messages','<p>One tap. The shortcut reads your bank SMS from the last 1 to 3 months and sends them to the app, each with its date.</p><a class="btn" style="display:block;text-align:center;text-decoration:none" href="'+esc(runHist)+'">Read past SMS</a><p class="note">Tap <b>Allow</b> when iPhone asks for access to Messages. About 2 minutes for 200 messages. Safe to run again; duplicates are skipped.</p>'],
       ['All set','<p>The next bank SMS reaches the app within seconds and shows up in <b>List</b>.</p>'+trackStat()]];
     else steps=[
       ['Copy your personal key','This key tells the app the SMS is yours. Keep it private.'+kv("Your key",key)],
@@ -1737,7 +1737,7 @@ function vSms(){
       ['All set','<p>The next bank SMS reaches the app within seconds.</p>'+trackStat()]];
     if(SMS_PAST&&nativeApp()&&SMS_SHORTCUT_LINK){
       var hrun=function(m){return "shortcuts://run-shortcut?name="+encodeURIComponent(SMS_SHORTCUT_NAME)+"&input=text&text="+encodeURIComponent(SMS_MONTHS_IN_URL?("HISTORY "+m):"HISTORY")};
-      var hsel=SMS_MONTHS_IN_URL?'<div class="mute" style="margin:6px 0 4px">How far back?</div><select id="smsmo" style="width:100%;padding:10px;border-radius:10px;margin-bottom:10px" onchange="document.getElementById(\'smsrun\').href=\''+"shortcuts://run-shortcut?name="+encodeURIComponent(SMS_SHORTCUT_NAME)+"&input=text&text="+'\'+encodeURIComponent(\'HISTORY \'+this.value)"><option value="1">Last 1 month</option><option value="2">Last 2 months</option><option value="3">Last 3 months</option><option value="6" selected>Last 6 months</option></select>':'';
+      var hsel=SMS_MONTHS_IN_URL?'<div class="mute" style="margin:6px 0 4px">How far back?</div><select id="smsmo" style="width:100%;padding:10px;border-radius:10px;margin-bottom:10px" onchange="document.getElementById(\'smsrun\').href=\''+"shortcuts://run-shortcut?name="+encodeURIComponent(SMS_SHORTCUT_NAME)+"&input=text&text="+'\'+encodeURIComponent(\'HISTORY \'+this.value)"><option value="1">Last 1 month</option><option value="2">Last 2 months</option><option value="3" selected>Last 3 months</option></select>':'';
       steps.splice(1,0,['Read your past SMS','<p>Choose how far back to read, then tap the button. The shortcut reads your bank SMS from that period and sends them to the app.</p>'+hsel+'<a id="smsrun" class="btn" style="display:block;text-align:center;text-decoration:none" href="'+esc(hrun(6))+'">Read past SMS</a><p class="note">Tap <b>Allow</b> when iPhone asks for access to Messages. It can take a couple of minutes. Safe to run again; duplicates are skipped.</p>'])}
   }else steps=[
     ['Copy your personal key','This key tells the app the SMS is yours. Keep it private.'+kv("Your key",key)],
