@@ -1082,7 +1082,7 @@ function cardSums(L){
 function evRange(){
   var sel=S.ev,ms=monthsWithData();if(sel!=="6m"&&sel!=="m0"&&ms.indexOf(Number(sel.slice(1)))<0)sel="m0";
   if(sel==="6m"){var o=[];for(var k=-5;k<=0;k++)o=o.concat(txIn(monthKey(k)));return {L:o,label:"Last 6 months"}}
-  var k2=Number(sel.slice(1));return {L:k2===0?S.txns.filter(inRange):txIn(monthKey(k2)),label:k2===0?"This month":pdate(k2).toLocaleString("en-IN",{month:"long",year:"numeric"})}}
+  var k2=Number(sel.slice(1));return {L:k2===0?S.txns.filter(inRange):txIn(monthKey(k2)),label:k2===0?"This month":pnameDate(pdate(k2)).toLocaleString("en-IN",{month:"long",year:"numeric"})}}
 function cardBlock(L,label){
   var c=cardSums(L),cr=L.some(function(t){return t.category===CCB&&t.kind==="card"&&t.type==="in"});
   var rows=L.filter(function(t){return t.kind==="card"}).map(function(t){return {t:t,ty:t.type,bill:t.category===CCB}});
@@ -1494,7 +1494,7 @@ function balLine(){
   return '<div class="balr" data-go="acct"><span>🏦 Bank balance'+(rows.length>1?' · '+rows.length+' accounts':'')+'<small>Statement closing on '+new Date(as+"T00:00:00").toLocaleString("en-IN",{day:"numeric",month:"short"})+(n?' + '+n+' payment'+(n>1?'s':'')+' since':'')+'</small></span><b class="'+(tot<0?'out':'')+'">'+S.cur+Number(tot).toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2})+'</b></div>'}
 function expCard(X,P,F){
   var ms=monthsWithData(),sel=S.ev;if(sel!=="6m"&&sel!=="m0"&&ms.indexOf(Number(sel.slice(1)))<0)sel="m0";
-  var opt='<select class="evs" id="evs" aria-label="Choose period"><option value="m0">This month</option>'+ms.map(function(k){return '<option value="m'+k+'"'+(sel==="m"+k?' selected':'')+'>'+esc(pdate(k).toLocaleString("en-IN",{month:"long",year:"numeric"}))+'</option>'}).join('')+(ms.length?'<option value="6m"'+(sel==="6m"?' selected':'')+'>Last 6 months</option>':'')+'</select>';
+  var opt='<select class="evs" id="evs" aria-label="Choose period"><option value="m0">This month</option>'+ms.map(function(k){return '<option value="m'+k+'"'+(sel==="m"+k?' selected':'')+'>'+esc(pnameDate(pdate(k)).toLocaleString("en-IN",{month:"long",year:"numeric"}))+'</option>'}).join('')+(ms.length?'<option value="6m"'+(sel==="6m"?' selected':'')+'>Last 6 months</option>':'')+'</select>';
   if(sel==="m0")opt=opt.replace('<option value="m0">','<option value="m0" selected>');
   var h='<div class="dc"><div class="dch"><b data-go="rep" style="cursor:pointer">Expenses</b>'+opt+'</div>';
   if(sel==="6m"){var r=sixMonths(),tot=r.reduce(function(a,x){return a+x.v},0),nz=r.filter(function(x){return x.v>0});
@@ -1603,7 +1603,7 @@ function vSet(){
   h+='<div class="card"><button class="btn ghost" id="tourgo" style="margin:0">▶ Show app tour</button></div><h2>This phone</h2><div class="card"><div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><div class="mute">Your month starts on day (1 = normal calendar month)</div><input id="ms" type="number" inputmode="numeric" min="1" max="31" value="'+(S.ms||1)+'"><button class="btn ghost s" id="msal" style="margin-bottom:10px">Use my salary credit day</button><div class="note" id="msn">Saved on this phone only. Set the same day on the other phone. Reports, budgets and forecasts all follow it.</div><button class="btn" id="sv">Save</button></div>';
   h+=aboutCard();
   return h}
-var WEBVER="5.17 · 13 Nov 2026";
+var WEBVER="5.18 · 13 Nov 2026";
 async function loadAinfo(){if(S._ainb)return;S._ainb=1;var P=smsPlugin();try{S.ainfo=P?await P.appInfo():null}catch(e){S.ainfo=null}S._ainb=0;if(S.tab==="set")render()}
 function aboutCard(){
   var d=remDiag(),rows=[];
