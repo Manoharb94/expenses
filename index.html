@@ -661,7 +661,7 @@ function vStmtAnalysis(x){
   if(big.length){h+='<h2>Biggest payments out</h2><div class="card">';big.forEach(function(t){h+='<div class="row" style="margin:6px 0"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(t.merchant||"Unknown")+' <span class="mute">'+esc(t.txn_date)+'</span></span><b class="out">'+money(t.amount)+'</b></div>'});h+='</div>'}
   h+='<div class="card"><button class="btn ghost s" data-undo="'+esc(x.id)+'">Remove this import</button><div class="note">Removing it brings back the email-alert payments for these dates.</div></div>';
   return h}
-function plabelFor(k){var p=k.split("-"),d=new Date(+p[0],+p[1]-1,1);return d.toLocaleString("en-IN",{month:"long",year:"numeric"})}
+function plabelFor(k){var p=k.split("-"),d=pnameDate(new Date(+p[0],+p[1]-1,Math.min(S.ms||1,28)));return d.toLocaleString("en-IN",{month:"long",year:"numeric"})}
 function bindStmt(){
   var f=document.getElementById("stf"),pk=document.getElementById("stpick"),pb=document.getElementById("stpast");if(pb)pb.onclick=function(){var e=document.getElementById("stpastbox");if(e)e.scrollIntoView({behavior:"smooth"})};if(pk&&f)pk.onclick=function(){f.click()};
   if(f)f.onchange=async function(){var file=f.files&&f.files[0],msg=document.getElementById("stmsg");if(!file)return;if(msg){msg.className="note";msg.textContent="Reading the file…"}
@@ -753,6 +753,7 @@ function pdate(off){var n=new Date(),ms=S.ms||1,m=n.getMonth()+off;
   if(n.getDate()<Math.min(ms,new Date(n.getFullYear(),n.getMonth()+1,0).getDate()))m--;
   return new Date(n.getFullYear(),m,Math.min(ms,new Date(n.getFullYear(),m+1,0).getDate()))}
 function pend(off){var d=pdate(off+1);d.setDate(d.getDate()-1);return d}
+function pnameDate(d){var ms=S.ms||1;if(ms<=1)return d;var x=new Date(d.getFullYear(),d.getMonth(),d.getDate()+15);return new Date(x.getFullYear(),x.getMonth(),1)}
 function pkey(ds){if(!ds)return "";var ms=S.ms||1;if(S._pkm!==ms){S._pkm=ms;S._pk={}}var c=S._pk[ds];if(c)return c;
   var y=+ds.slice(0,4),m=+ds.slice(5,7)-1,d=+ds.slice(8,10),dim=[31,(y%4===0&&(y%100!==0||y%400===0))?29:28,31,30,31,30,31,31,30,31,30,31][m];
   if(d<Math.min(ms,dim))m--;if(m<0){m=11;y--}return S._pk[ds]=y+"-"+(m<9?"0":"")+(m+1)}
@@ -820,7 +821,7 @@ function cmSeries(k,M,ev){var f=pdate(k),t=pend(k),n=Math.round((t-f)/864e5)+1,d
   var cum=[],run=0;days.forEach(function(d){run+=d.t;cum.push(run)});
   var cap=n;if(k===0){cap=Math.min(n,Math.max(1,Math.round((new Date(iso(new Date())+"T00:00:00")-f)/864e5)+1))}
   var dt=[];for(i=0;i<n;i++){dt.push(new Date(f.getFullYear(),f.getMonth(),f.getDate()+i))}
-  return {f:f.getTime(),n:n,cap:cap,days:days,cum:cum,dt:dt,lab:f.toLocaleString("en-IN",{month:"short",year:"2-digit"})}}
+  return {f:f.getTime(),n:n,cap:cap,days:days,cum:cum,dt:dt,lab:pnameDate(f).toLocaleString("en-IN",{month:"short",year:"2-digit"})}}
 function cmChart(a,b,A,B){
   var ev=!!S.cmEv,sa=cmSeries(a,A,ev),sb=cmSeries(b,B,ev);
   var Lt=sa.f>=sb.f?sa:sb,Er=Lt===sa?sb:sa;
@@ -880,7 +881,7 @@ function compareMonths(){
     var fi=iso(f),ti=iso(t),Lc=S.txns.filter(function(x){return personOK(x)&&isCount(x)&&x.txn_date&&x.txn_date>=fi&&x.txn_date<=ti}),X=expenseSplit(Lc,fi,ti),A=X.useM?{sum:0,ids:{}}:autoFixed(X.outs,k),eo=X.outs.filter(function(x){return !A.ids[x.id]});
     return {sp:X.total,fx:A.sum+X.mand,ev:X.ev-A.sum,rec:sum(Lc,"in"),by:catTotals(eo),outs:X.outs,ids:A.ids}};
   var capA=(b===0&&a!==0)?el:null,capB=(a===0&&b!==0)?el:null,A=md(a,capA),B=md(b,capB);
-  var opt=function(sel){return avail.map(function(k){return '<option value="'+k+'"'+(k===sel?' selected':'')+'>'+esc(pdate(k).toLocaleString("en-IN",{month:"long",year:"numeric"}))+'</option>'}).join('')};
+  var opt=function(sel){return avail.map(function(k){return '<option value="'+k+'"'+(k===sel?' selected':'')+'>'+esc(pnameDate(pdate(k)).toLocaleString("en-IN",{month:"long",year:"numeric"}))+'</option>'}).join('')};
   var h='<h2>Compare months</h2><div class="card"><div class="row" style="gap:10px;margin:0 0 6px"><select id="cma" style="flex:1;min-width:0;margin:0">'+opt(a)+'</select><select id="cmb" style="flex:1;min-width:0;margin:0">'+opt(b)+'</select></div>';
   var spend=function(lbl,x,y){return '<div style="margin:12px 0 0"><div class="mute" style="font-size:12px">'+lbl+'</div><div class="row"><span class="mute">'+money(x)+'</span><span class="mute">→</span><b>'+money(y)+'</b>'+arrow(y,x)+'</div></div>'};
   var gain=function(lbl,x,y){var d=y-x;return '<div style="margin:12px 0 0"><div class="mute" style="font-size:12px">'+lbl+'</div><div class="row"><span class="mute">'+sm(x)+'</span><span class="mute">→</span><b>'+sm(y)+'</b><span class="chip '+(d>=0?'down':'up')+'">'+(d>=0?'+':'−')+money(Math.abs(d))+'</span></div></div>'};
@@ -1477,7 +1478,7 @@ function expCard(X,P,F){
     h+='<div class="amt hb">'+money(Xk.total)+'</div><div class="mute">'+esc(plabel(k))+(Pk?' &nbsp;'+arrow(Xk.total,Pk.X.total)+' vs '+esc(Pk.label):'')+'</div>'+
       '<div class="row" style="margin-top:10px;font-size:13px"><span class="mute" data-go="list" data-ltab="in" style="cursor:pointer">Received <b class="in">'+money(recK)+'</b> ›</span><span class="mute">'+(recK-Xk.total>=0?'Left over':'Short by')+' <b class="'+(recK-Xk.total>=0?'in':'out')+'">'+money(Math.abs(recK-Xk.total))+'</b></span></div>'+dayBars(k)}
   return h+balLine()+'</div>'}
-function sixMonths(){var r=[];for(var o=-5;o<=0;o++){var Lc=txIn(monthKey(o)).filter(isCount),X=expenseSplit(Lc,iso(pdate(o)),iso(pend(o)));r.push({v:X.total,l:pdate(o).toLocaleString("en-IN",{month:"short"}),f:plabel(o)})}
+function sixMonths(){var r=[];for(var o=-5;o<=0;o++){var Lc=txIn(monthKey(o)).filter(isCount),X=expenseSplit(Lc,iso(pdate(o)),iso(pend(o)));r.push({v:X.total,l:pnameDate(pdate(o)).toLocaleString("en-IN",{month:"short"}),f:plabel(o)})}
   while(r.length>1&&!(r[0].v>0))r.shift();return r}
 function svgBars(vals,labels,tips,hi,note){
   var mx=Math.max.apply(null,vals.concat([1])),W=300,H=96,n=vals.length,bw=W/n,svg='<svg viewBox="0 0 '+W+' '+(H+18)+'" width="100%" role="img" aria-label="Spending bars">';
@@ -1577,7 +1578,7 @@ function vSet(){
   h+='<div class="card"><button class="btn ghost" id="tourgo" style="margin:0">▶ Show app tour</button></div><h2>This phone</h2><div class="card"><div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><div class="mute">Your month starts on day (1 = normal calendar month)</div><input id="ms" type="number" inputmode="numeric" min="1" max="31" value="'+(S.ms||1)+'"><button class="btn ghost s" id="msal" style="margin-bottom:10px">Use my salary credit day</button><div class="note" id="msn">Saved on this phone only. Set the same day on the other phone. Reports, budgets and forecasts all follow it.</div><button class="btn" id="sv">Save</button></div>';
   h+=aboutCard();
   return h}
-var WEBVER="5.12 · 13 Nov 2026";
+var WEBVER="5.13 · 13 Nov 2026";
 async function loadAinfo(){if(S._ainb)return;S._ainb=1;var P=smsPlugin();try{S.ainfo=P?await P.appInfo():null}catch(e){S.ainfo=null}S._ainb=0;if(S.tab==="set")render()}
 function aboutCard(){
   var d=remDiag(),rows=[];
