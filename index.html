@@ -1435,11 +1435,12 @@ function go(t){
   if(t==="fam"||t==="set"||t==="menu")quiet(loadMembers());if(t==="fam")quiet(loadFam());
   if(t==="track"||t==="sms"||t==="mail")quiet(loadSc());
   if(t==="stmt")quiet(loadImports())}
-function byNew(a,b){return (a.txn_date||"")<(b.txn_date||"")?1:(a.txn_date||"")>(b.txn_date||"")?-1:(String(a.created_at||"")<String(b.created_at||"")?1:-1)}
+function tAt(t){return Date.parse(t.txn_at||t.created_at||"")||0}
+function byNew(a,b){return (a.txn_date||"")<(b.txn_date||"")?1:(a.txn_date||"")>(b.txn_date||"")?-1:(tAt(a)<tAt(b)?1:tAt(a)>tAt(b)?-1:(String(a.created_at||"")<String(b.created_at||"")?1:-1))}
 function dayLabel(ds){if(!ds)return "No date";var t=iso(new Date()),y=new Date();y.setDate(y.getDate()-1);
   if(ds===t)return "Today";if(ds===iso(y))return "Yesterday";
   return new Date(ds+"T00:00:00").toLocaleString("en-IN",{weekday:"short",day:"numeric",month:"short"})}
-function txTime(t){try{if(!t.created_at)return "";var d=new Date(t.created_at);if(isNaN(d)||iso(d)!==t.txn_date)return "";
+function txTime(t){try{var at=t.txn_at||t.created_at;if(!at)return "";var d=new Date(at);if(isNaN(d)||iso(d)!==t.txn_date)return "";
   return d.toLocaleTimeString("en-IN",{hour:"numeric",minute:"2-digit",hour12:true}).replace(/\s*([ap])m/i,function(m,x){return " "+x.toUpperCase()+"M"})}catch(e){return ""}}
 function miniRow(t){
   return '<div class="lt" data-cat="'+t.id+'"><span class="ico">'+ci(t.category)+'</span><div class="m"><b>'+esc(t.merchant||"Unknown")+'</b><span>'+esc(dayLabel(t.txn_date))+(txTime(t)?' · '+txTime(t):'')+(S.pf==="__both"||!S.pf?' · '+esc(t.person||""):'')+'</span></div><div style="text-align:right"><b class="'+t.type+'">'+(t.type==="out"?"−":"+")+money(t.amount)+'</b><div><span class="tag'+(t.category?'':' warn')+'" style="font-size:11px">'+esc(t.category||"Choose category")+'</span></div></div></div>'}
@@ -1564,7 +1565,7 @@ function vSet(){
   h+='<div class="card"><button class="btn ghost" id="tourgo" style="margin:0">▶ Show app tour</button></div><h2>This phone</h2><div class="card"><div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><div class="mute">Your month starts on day (1 = normal calendar month)</div><input id="ms" type="number" inputmode="numeric" min="1" max="31" value="'+(S.ms||1)+'"><button class="btn ghost s" id="msal" style="margin-bottom:10px">Use my salary credit day</button><div class="note" id="msn">Saved on this phone only. Set the same day on the other phone. Reports, budgets and forecasts all follow it.</div><button class="btn" id="sv">Save</button></div>';
   h+=aboutCard();
   return h}
-var WEBVER="5.3 · 13 Nov 2026";
+var WEBVER="5.4 · 13 Nov 2026";
 async function loadAinfo(){if(S._ainb)return;S._ainb=1;var P=smsPlugin();try{S.ainfo=P?await P.appInfo():null}catch(e){S.ainfo=null}S._ainb=0;if(S.tab==="set")render()}
 function aboutCard(){
   var d=remDiag(),rows=[];
