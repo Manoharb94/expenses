@@ -48,6 +48,7 @@ td.n,th.n{text-align:right}
 .score{display:inline-block;width:46px;height:6px;border-radius:3px;background:var(--grid);vertical-align:middle;margin-right:6px;overflow:hidden}.score i{display:block;height:100%;background:var(--s1)}
 .login{max-width:380px;margin:12vh auto 0}.login input{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font:inherit;margin:4px 0 12px}
 .login .btn{width:100%;padding:12px}.err{color:var(--bad);min-height:22px;margin-bottom:6px}
+.btn.dl{padding:4px 10px;font-size:12px;color:var(--bad);border-color:color-mix(in srgb,var(--bad) 35%,var(--line))}
 .empty{color:var(--mute);text-align:center;padding:30px 0}
 </style></head><body><main id="app"></main>
 <script>
@@ -156,14 +157,24 @@ function userTable(){
   var q=A.q.toLowerCase().trim(),U=(A.d.users||[]).filter(function(u){return (!A.seg||u.usage===A.seg)&&(!q||[u.name,u.email,u.family].join(" ").toLowerCase().indexOf(q)>=0)});
   U.sort(function(a,b){var x=a[A.sort],y=b[A.sort];if(x==null)return 1;if(y==null)return -1;return (x>y?1:x<y?-1:0)*A.dir});
   var pc={"daily user":"d","weekly user":"w","stuck: no family":"x"};
-  var h='<table><thead><tr>'+COLS.map(function(c){return '<th data-k="'+c[0]+'" class="'+(c[2]?'n ':'')+(A.sort===c[0]?'s'+(A.dir>0?' up':''):'')+'">'+c[1]+'</th>'}).join('')+'</tr></thead><tbody>';
-  if(!U.length)h+='<tr><td colspan="'+COLS.length+'" class="empty">No users match</td></tr>';
+  var h='<table><thead><tr>'+COLS.map(function(c){return '<th data-k="'+c[0]+'" class="'+(c[2]?'n ':'')+(A.sort===c[0]?'s'+(A.dir>0?' up':''):'')+'">'+c[1]+'</th>'}).join('')+'<th style="cursor:default"></th></tr></thead><tbody>';
+  if(!U.length)h+='<tr><td colspan="'+(COLS.length+1)+'" class="empty">No users match</td></tr>';
   U.forEach(function(u){h+='<tr><td><b>'+esc(u.name||"—")+'</b><div class="mute">'+esc(u.email)+'</div></td><td>'+esc(u.family||"—")+(u.role==="owner"?' <span class="mute">owner</span>':'')+'</td><td><span class="pill '+(pc[u.usage]||'')+'">'+esc(u.usage)+'</span></td>'+
     '<td class="n"><span class="score"><i style="width:'+(u.score||0)+'%"></i></span>'+(u.score||0)+'</td><td class="n">'+n(u.active30)+'</td><td class="n">'+n(u.opens30)+'</td><td>'+ago(u.last_opened)+'</td>'+
     '<td>'+(u.email_running?'<span class="ok">✓ running</span>':u.email_setup?'<span class="wa">stopped</span>':'<span class="mute">—</span>')+'</td><td>'+(u.sms?'<span class="ok">✓</span>':'<span class="mute">—</span>')+'</td>'+
-    '<td class="n">'+n(u.statements)+'</td><td class="n">'+n(u.payments)+'</td><td class="n">'+n(u.added7)+'</td><td class="n">'+(u.pct_cat==null?'—':u.pct_cat+'%')+'</td><td>'+({ios:"iPhone",and:"Android",desk:"Computer"}[u.os]||"—")+(u.pwa?' <span class="mute">app</span>':'')+'</td><td>'+esc(u.signed_up||"")+'</td></tr>'});
+    '<td class="n">'+n(u.statements)+'</td><td class="n">'+n(u.payments)+'</td><td class="n">'+n(u.added7)+'</td><td class="n">'+(u.pct_cat==null?'—':u.pct_cat+'%')+'</td><td>'+({ios:"iPhone",and:"Android",desk:"Computer"}[u.os]||"—")+(u.pwa?' <span class="mute">app</span>':'')+'</td><td>'+esc(u.signed_up||"")+'</td><td><button class="btn dl" data-del="'+esc(u.email)+'" data-nm="'+esc(u.name||"")+'" data-pay="'+(u.payments||0)+'">Delete</button></td></tr>'});
   $("ut").innerHTML=h+'</tbody></table>';$("cnt").textContent=U.length+" shown";
-  $("ut").querySelectorAll("th").forEach(function(th){th.onclick=function(){var k=th.dataset.k;if(A.sort===k)A.dir=-A.dir;else{A.sort=k;A.dir=(["name","family","usage","os"].indexOf(k)>=0)?1:-1}userTable()}})}
+  $("ut").querySelectorAll("th").forEach(function(th){th.onclick=function(){var k=th.dataset.k;if(A.sort===k)A.dir=-A.dir;else{A.sort=k;A.dir=(["name","family","usage","os"].indexOf(k)>=0)?1:-1}userTable()}});
+  $("ut").querySelectorAll("[data-del]").forEach(function(b){b.onclick=function(){delUser(b)}})}
+async function delUser(b){
+  var em=b.dataset.del,nm=b.dataset.nm||em,pay=b.dataset.pay;
+  if(!confirm("Delete "+nm+" ("+em+")?\n\nTheir login and their "+pay+" payment(s) are removed. If they are the only person in their family, the whole family's data is removed too. This cannot be undone."))return;
+  var t=prompt("Type the email to confirm:");if(t===null)return;if(t.trim().toLowerCase()!==em.toLowerCase()){alert("That did not match. Nothing was deleted.");return}
+  b.disabled=true;b.textContent="Deleting…";
+  try{var r=await fetch(BASE+"/rest/v1/rpc/admin_delete_user",{method:"POST",headers:{apikey:KEY,Authorization:"Bearer "+A.tok,"Content-Type":"application/json"},body:JSON.stringify({p_email:em})});
+    var x=await r.text();if(!r.ok){var m=/cannot be deleted/.test(x)?"An admin account cannot be deleted here.":/not allowed/.test(x)?"This account is not an admin.":/admin_delete_user/.test(x)&&/does not exist|Could not find/.test(x)?"Run 32_admin_delete_user.sql in Supabase first.":"Error "+r.status+": "+x.slice(0,140);throw new Error(m)}
+    A.d.users=(A.d.users||[]).filter(function(u){return u.email!==em});userTable();await fetchData()}
+  catch(e){alert(e.message);b.disabled=false;b.textContent="Delete"}}
 
 A.tok=ss("adm");if(A.tok)fetchData().catch(function(){loginView()});else loginView();
 </script></body></html>
