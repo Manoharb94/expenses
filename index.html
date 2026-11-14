@@ -874,23 +874,23 @@ function cmChart(a,b,A,B){
    +'<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="display:block;touch-action:pan-y;user-select:none;-webkit-user-select:none">';
   [0,.5,1].forEach(function(k){var y=Y(mx*k);o+='<line x1="'+pl+'" y1="'+y+'" x2="'+(W-pr)+'" y2="'+y+'" style="stroke:var(--line)" stroke-width="1"/><text x="'+(pl-5)+'" y="'+(y+3)+'" text-anchor="end" font-size="9" style="fill:var(--mute)">'+shortN(mx*k)+'</text>'});
   [0,.25,.5,.75,1].forEach(function(k){var i=Math.round((N-1)*k);o+='<text x="'+X(i)+'" y="'+(H-8)+'" text-anchor="'+(k===0?"start":k===1?"end":"middle")+'" font-size="9" style="fill:var(--mute)">'+(i+1)+'</text>'});
-  [[sa,"#f59e0b"],[sb,"#7c5cff"]].forEach(function(z){var s=z[0],c=z[1],solid=Math.min(s.cap,C);
+  [[sa,"#E08A2E"],[sb,"#5B3FD4"]].forEach(function(z){var s=z[0],c=z[1],solid=Math.min(s.cap,C);
     if(s.cap>C)o+='<polyline fill="none" stroke="'+c+'" stroke-opacity=".4" stroke-width="2" stroke-dasharray="4 4" points="'+pts(s,C-1,s.cap)+'"/>';
     o+='<polyline fill="none" stroke="'+c+'" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round" points="'+pts(s,0,solid)+'"/>'});
-  o+='</svg><div class="row" style="justify-content:flex-start;gap:14px;font-size:12px;margin-top:4px"><span><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#f59e0b;margin-right:5px"></i>'+esc(sa.lab)+' from '+cmD(sa.f)+'</span><span><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#7c5cff;margin-right:5px"></i>'+esc(sb.lab)+' from '+cmD(sb.f)+'</span></div><div class="mute" style="font-size:12px;margin-top:2px">Numbers across the bottom are days since the month started'+(C<N?' · faded = after today':'')+'</div></div>';
+  o+='</svg><div class="row" style="justify-content:flex-start;gap:14px;font-size:12px;margin-top:4px"><span><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#E08A2E;margin-right:5px"></i>'+esc(sa.lab)+' from '+cmD(sa.f)+'</span><span><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#5B3FD4;margin-right:5px"></i>'+esc(sb.lab)+' from '+cmD(sb.f)+'</span></div><div class="mute" style="font-size:12px;margin-top:2px">Numbers across the bottom are days since the month started'+(C<N?' · faded = after today':'')+'</div></div>';
   return o}
 var cmOn=false;
 function cmShow(box,cx){if(!CM)return;var svg=box.querySelector("svg"),r=svg.getBoundingClientRect(),g=CM.g;if(!r.width)return;
   var vx=(cx-r.left)/r.width*g.W,i=Math.round((vx-g.pl)/g.w*(g.N-1));i=Math.max(0,Math.min(g.N-1,i));var x=g.pl+g.w*i/Math.max(1,g.N-1);
   var Y=function(v){return g.pt+g.h*(1-v/g.mx)};
-  var m=svg.querySelector(".cmm");if(!m){svg.insertAdjacentHTML("beforeend",'<g class="cmm" pointer-events="none"><line stroke="#64748b" stroke-width="1" stroke-dasharray="3 3"/><circle r="5" fill="#f59e0b" stroke="#fff" stroke-width="1.5" class="cma1"/><circle r="5" fill="#7c5cff" stroke="#fff" stroke-width="1.5" class="cmb1"/></g>');m=svg.querySelector(".cmm")}
+  var m=svg.querySelector(".cmm");if(!m){svg.insertAdjacentHTML("beforeend",'<g class="cmm" pointer-events="none"><line stroke="#64748b" stroke-width="1" stroke-dasharray="3 3"/><circle r="5" fill="#E08A2E" stroke="#fff" stroke-width="1.5" class="cma1"/><circle r="5" fill="#5B3FD4" stroke="#fff" stroke-width="1.5" class="cmb1"/></g>');m=svg.querySelector(".cmm")}
   var ln=m.querySelector("line");ln.setAttribute("x1",x);ln.setAttribute("x2",x);ln.setAttribute("y1",g.pt);ln.setAttribute("y2",g.pt+g.h);
   var blk=function(s,col,cl){var c=m.querySelector(cl),ok=i<s.n&&i<s.cap;if(!ok){c.setAttribute("display","none");return '<div style="flex:1;min-width:0"><b style="color:'+col+'">'+esc(s.lab)+'</b><div class="mute" style="font-size:12px">'+(i<s.n?'No data yet':'No such day')+'</div></div>'}
     c.removeAttribute("display");c.setAttribute("cx",x);c.setAttribute("cy",Y(s.cum[i]));var d=s.days[i]||{t:0,by:{},it:[]},ks=Object.keys(d.by).sort(function(p,q){return d.by[q]-d.by[p]});
     var dt=s.dt[i];
     return '<div style="flex:1;min-width:0"><b style="color:'+col+'">'+esc(dt.toLocaleString("en-IN",{day:"numeric",month:"short"}))+'</b> · '+money(Math.round(d.t))+'<div class="mute" style="font-size:12px">Total so far '+money(Math.round(s.cum[i]))+'</div>'
      +(ks.length?ks.slice(0,5).map(function(k){return '<div style="display:flex;justify-content:space-between;gap:6px;font-size:12px;margin-top:3px"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(k===UNC?"No category yet":k)+'</span><b>'+money(Math.round(d.by[k]))+'</b></div>'}).join('')+(ks.length>5?'<div class="mute" style="font-size:11px">+'+(ks.length-5)+' more</div>':''):'<div class="mute" style="font-size:12px;margin-top:3px">Nothing spent</div>')+'</div>'};
-  box.querySelector(".cmtip").innerHTML='<div style="display:flex;gap:12px;align-items:flex-start">'+blk(CM.a,"#d97706",".cma1")+blk(CM.b,"#7c5cff",".cmb1")+'</div>'}
+  box.querySelector(".cmtip").innerHTML='<div style="display:flex;gap:12px;align-items:flex-start">'+blk(CM.a,"#E08A2E",".cma1")+blk(CM.b,"#5B3FD4",".cmb1")+'</div>'}
 document.addEventListener("pointerdown",function(e){var b=e.target&&e.target.closest&&e.target.closest(".cmchart svg");if(!b)return;cmOn=b.parentNode;cmShow(cmOn,e.clientX)});
 document.addEventListener("pointermove",function(e){if(cmOn&&(e.buttons||e.pointerType==="touch"))cmShow(cmOn,e.clientX)});
 ["pointerup","pointercancel"].forEach(function(k){document.addEventListener(k,function(){cmOn=false})});
@@ -964,8 +964,8 @@ function spentThisMonth(){var key=monthKey(0),o={};
   S.txns.forEach(function(t){if(t.type==="out"&&isCount(t)&&pkey(t.txn_date)===key){var c=t.category||UNC;o[c]=(o[c]||0)+Number(t.amount)}});return o}
 function spentByPerson(){var key=monthKey(0),o={};
   S.txns.forEach(function(t){if(t.type==="out"&&isCount(t)&&pkey(t.txn_date)===key){var c=t.category||UNC,p=t.person||"?";o[c]=o[c]||{};o[c][p]=(o[c][p]||0)+Number(t.amount)}});return o}
-var PCOL=["#5B3FD4","#A892F0","#C04FD0","#7F8CF0"];
-function pcol(p){var i=persons().slice().sort().indexOf(p);return PCOL[(i<0?0:i)%4]}
+var PCOL=["#E08A2E","#A892F0","#C04FD0","#7F8CF0"],PME="#5B3FD4";
+function pcol(p){if(p===S.name)return PME;var o=persons().filter(function(x){return x!==S.name}).sort(),k=o.indexOf(p);return PCOL[(k<0?0:k)%4]}
 function budBar(a,byp){
   var ps=Object.keys(byp||{}).sort(),tot=0;ps.forEach(function(p){tot+=byp[p]});
   var scale=Math.max(a,tot)||1,segs='',lg='';
@@ -1604,7 +1604,7 @@ function vSet(){
   h+='<div class="card"><button class="btn ghost" id="tourgo" style="margin:0">▶ Show app tour</button></div><h2>This phone</h2><div class="card"><div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><div class="mute">Your month starts on day (1 = normal calendar month)</div><input id="ms" type="number" inputmode="numeric" min="1" max="31" value="'+(S.ms||1)+'"><button class="btn ghost s" id="msal" style="margin-bottom:10px">Use my salary credit day</button><div class="note" id="msn">Saved on this phone only. Set the same day on the other phone. Reports, budgets and forecasts all follow it.</div><button class="btn" id="sv">Save</button></div>';
   h+=aboutCard();
   return h}
-var WEBVER="5.22 · 14 Nov 2026";
+var WEBVER="5.23 · 14 Nov 2026";
 async function loadAinfo(){if(S._ainb)return;S._ainb=1;var P=smsPlugin();try{S.ainfo=P?await P.appInfo():null}catch(e){S.ainfo=null}S._ainb=0;if(S.tab==="set")render()}
 function aboutCard(){
   var d=remDiag(),rows=[];
