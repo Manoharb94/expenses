@@ -1354,8 +1354,8 @@ function vPlan(){
   h+='<button class="btn ghost" id="addbud" style="margin-top:6px">＋ Add Budget</button>'+(bl.length?'<button class="btn" id="svb">Save Budget</button>':'<span id="svb" style="display:none"></span>')+'<div class="note">Only payments that have a category count against a budget. Press and hold a budget to delete it.</div></div>';
   h+='<h2>Fixed expenses (home loan, school fees…)</h2><div class="card">';
   if(!S.fixed.length)h+='<span class="mute">None added yet.</span>';
-  S.fixed.forEach(function(f){h+='<div class="swp" style="margin:6px 0"><div class="swa" data-sw="fixed|'+f.id+'|'+encodeURIComponent(f.name)+'">Delete</div><div class="swc"><div class="row" style="padding:4px 0"><span>'+esc(f.name)+'<div class="mute">'+(f.freq==="monthly"?"monthly":f.freq)+', day '+f.day+(f.category?' · '+esc(f.category):'')+'</div></span><span style="display:flex;align-items:center;gap:8px"><b>'+money(f.amount)+'</b><button class="alink" data-rem="'+f.id+'" aria-label="Reminder" style="font-size:20px;line-height:1;opacity:'+(remOn(f.id)?'1':'.35')+'">'+(remOn(f.id)?'🔔':'🔕')+'</button></span></div></div></div>'});
-  if(S.fixed.length)h+='<div class="note">Tap the bell on an expense to get a reminder at 8:00 am on its due day. You get one notification a day, even if several bills are due.'+(nativeApp()?'':' Reminders work only inside the Gharwise Android app.')+'</div><button class="btn ghost s" data-remcheck="1" style="margin-top:8px">Check reminders</button>';
+  S.fixed.forEach(function(f){h+='<div class="swp" style="margin:6px 0"><div class="swa" data-sw="fixed|'+f.id+'|'+encodeURIComponent(f.name)+'">Delete</div><div class="swc"><div class="row" style="padding:4px 0"><span>'+esc(f.name)+'<div class="mute">'+(f.freq==="monthly"?"monthly":f.freq)+', day '+f.day+(f.category?' · '+esc(f.category):'')+'</div></span><span style="display:flex;align-items:center;gap:8px"><b>'+money(f.amount)+'</b><button class="alink" data-fedit="'+f.id+'" style="font-size:13px;font-weight:600;border:1px solid var(--line);border-radius:10px;padding:5px 10px;opacity:1">Edit</button><button class="alink" data-rem="'+f.id+'" aria-label="Reminder" style="font-size:20px;line-height:1;opacity:'+(remOn(f.id)?'1':'.35')+'">'+(remOn(f.id)?'🔔':'🔕')+'</button></span></div></div></div>'});
+  if(S.fixed.length)h+='<div class="note">Tap the bell on an expense to get a reminder at 8:00 am on its due day. You get one notification a day, even if several bills are due.'+(nativeApp()?'':' Reminders work only inside the Gharwise Android app.')+'</div>';
   h+='<hr style="border:0;border-top:1px solid var(--line);margin:12px 0"><input id="fn" placeholder="Name (e.g. Home loan EMI)"><input id="fa" type="number" inputmode="decimal" placeholder="Amount"><input id="fd" type="number" inputmode="numeric" placeholder="Day of month (1-31)"><select id="ff"><option value="monthly">Every month</option><option value="quarterly">Every 3 months</option><option value="yearly">Once a year</option></select><div id="fmw" style="display:none"><div class="mute">Month it is due</div><select id="fm">';
   for(var m=1;m<=12;m++)h+='<option value="'+m+'">'+new Date(2026,m-1,1).toLocaleString("en-IN",{month:"long"})+'</option>';
   h+='</select></div><div class="mute">Category</div><select id="fc"><option value="">No category</option>';
@@ -1583,14 +1583,14 @@ function vBudget(){
   var bm={};S.budgets.forEach(function(b){bm[b.category]=Number(b.amount)});var sp=spentThisMonth(),tb=0,ts=0;
   Object.keys(bm).forEach(function(c){if(bm[c]>0){tb+=bm[c];ts+=sp[c]||0}});
   var h=topbar("Budget",0,1)+'<div class="dc"><div class="trk"><i>👛</i><div class="m"><b>Monthly</b><span>'+(tb?money(ts)+' spent of '+money(tb)+' · '+esc(plabel(0)):'Tap a category below to set a budget')+'</span></div></div>'+(tb?'<div class="bar" style="margin-top:12px;height:10px"><i class="'+(ts>tb?'over':'')+'" style="width:'+Math.min(100,Math.round(ts/tb*100))+'%"></i></div><div class="note">'+(ts>tb?'<b class="out">Over by '+money(ts-tb)+'</b>':money(tb-ts)+' left this month')+'</div>':'')+'</div>';
-  h+=loanBudgetCards();
+  h+=starterCard();h+=loanBudgetCards();
   var ch='<div class="dc"><b style="font-size:19px">Categories</b><div class="note" style="margin:2px 0 10px">Spent this month. Tap one to add or change its budget. Press and hold to delete it.</div><input id="bq" type="search" placeholder="🔍 Search categories" autocomplete="off" value="'+esc(S.bq||"")+'" style="margin-bottom:12px"><div class="cgrid">';
   var bq=(S.bq||"").toLowerCase().trim(),bn=0;
   CATS.filter(function(c){return !NOBUDGET[c]&&(!bq||c.toLowerCase().indexOf(bq)>=0)}).forEach(function(c){bn++;var s=sp[c]||0,a=bm[c]||0;
     ch+='<button data-bfocus="'+esc(c)+'" data-lp="cat|'+encodeURIComponent(c)+'|"><i class="'+(a&&s>a?'ov':'')+'">'+ci(c)+'</i>'+esc(c)+'<small>'+(s?money(Math.round(s)):'—')+(a?' / '+money(a):'')+'</small></button>'});
   ch+='<button id="bnew" style="border-style:dashed"><i>＋</i>'+(bq&&!bn?'Add “'+esc(S.bq.trim())+'”':'New category')+'<small>Add your own</small></button></div>'+(bq&&!bn?'<div class="note" style="margin-top:10px">No category matches. Tap ＋ to add it.</div>':'')+'</div>';
   var pl=vPlan().replace('<h1>Plan</h1>','');
-  if(S.profile&&S.profile.can_edit===false){pl=pl.replace(/<input /g,'<input disabled ').replace(/<select /g,'<select disabled ').replace('id="svb"','id="svb" style="display:none"').replace('id="addbud"','id="addbud" style="display:none"').replace('id="fadd"','id="fadd" style="display:none"').replace(/data-sw="fixed\|/g,'data-nosw="');h+='<div class="card" style="text-align:center">👁 View only. Ask the family owner for edit access to change budgets and bills.</div>'}
+  if(S.profile&&S.profile.can_edit===false){pl=pl.replace(/<input /g,'<input disabled ').replace(/<select /g,'<select disabled ').replace('id="svb"','id="svb" style="display:none"').replace('id="addbud"','id="addbud" style="display:none"').replace('id="fadd"','id="fadd" style="display:none"').replace(/data-fedit="/g,'data-nofedit="').replace(/data-sw="fixed\|/g,'data-nosw="');h+='<div class="card" style="text-align:center">👁 View only. Ask the family owner for edit access to change budgets and bills.</div>'}
   return h+pl+ch+'<button class="obtn" data-go="rep" data-rp="next">See next month’s forecast →</button>'}
 function vMenu(){
   var em=(S.profile&&S.profile.email)||(S.auth&&S.auth.email)||"";
@@ -1603,7 +1603,7 @@ function vSet(){
   h+='<div class="card"><button class="btn ghost" id="tourgo" style="margin:0">▶ Show app tour</button></div><h2>This phone</h2><div class="card"><div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><div class="mute">Your month starts on day (1 = normal calendar month)</div><input id="ms" type="number" inputmode="numeric" min="1" max="31" value="'+(S.ms||1)+'"><button class="btn ghost s" id="msal" style="margin-bottom:10px">Use my salary credit day</button><div class="note" id="msn">Saved on this phone only. Set the same day on the other phone. Reports, budgets and forecasts all follow it.</div><button class="btn" id="sv">Save</button></div>';
   h+=aboutCard();
   return h}
-var WEBVER="5.18 · 13 Nov 2026";
+var WEBVER="5.19 · 14 Nov 2026";
 async function loadAinfo(){if(S._ainb)return;S._ainb=1;var P=smsPlugin();try{S.ainfo=P?await P.appInfo():null}catch(e){S.ainfo=null}S._ainb=0;if(S.tab==="set")render()}
 function aboutCard(){
   var d=remDiag(),rows=[];
@@ -1819,6 +1819,8 @@ function bindV2(el){
   var bnw=document.getElementById("bnew");if(bnw)bnw.onclick=async function(){var nm=(S.bq||"").trim()||prompt("New category name");if(!nm)return;var r=await addCat(nm);if(r){S.bq="";render()}};
   var lq=document.getElementById("lq");if(lq)lq.oninput=function(){S.lq=lq.value;clearTimeout(S._lqt);S._lqt=setTimeout(function(){var p=lq.selectionStart;render();var n=document.getElementById("lq");if(n){n.focus();try{n.setSelectionRange(p,p)}catch(x){}}},140)};
   el.querySelectorAll("[data-bfocus]:not([data-go])").forEach(function(b){b.onclick=function(){var c=b.dataset.bfocus,i=document.querySelector('[data-bud="'+c.replace(/"/g,'\\"')+'"]');if(i){i.scrollIntoView({block:"center"});i.focus()}else if(!NOBUDGET[c])addBudgetSheet(c)}});
+  var bpb=document.getElementById("bplan");if(bpb)bpb.onclick=starterSheet;var bpx=document.getElementById("bpx");if(bpx)bpx.onclick=function(){ls("bpdis","1");render()};
+  el.querySelectorAll("[data-fedit]").forEach(function(b){b.onclick=function(e){e.stopPropagation();editFixedSheet(b.dataset.fedit)}});
   var ab=document.getElementById("addbud");if(ab)ab.onclick=function(){addBudgetSheet("")};
   el.querySelectorAll("[data-copy]").forEach(function(b){b.onclick=async function(){toast(await copyText(b.dataset.copy)?"Copied":"Press and hold the text to copy")}});
   el.querySelectorAll("[data-dev]").forEach(function(b){b.onclick=function(){S.smsDev=b.dataset.dev;S.smsStep=0;ls("smsdev",S.smsDev);render();window.scrollTo(0,0)}});
@@ -1909,6 +1911,77 @@ function addBudgetSheet(pre){
   document.getElementById("abx").onclick=function(){sh.innerHTML=""};
   document.getElementById("abok").onclick=function(){var c=sel.value,v=parseFloat(am.value);if(!c){alert("Choose a category");return}if(!(v>0)){alert("Enter the monthly amount");return}
     S.newBud=S.newBud||{};S.newBud[c]=v;sh.innerHTML="";render();toast("Added. Tap Save Budget to keep it.")}}
+/* ---------- starter plan (household + city + salary) ---------- */
+var SP_T={single:{Groceries:5000,Food:3000,Transport:3000,"Bills & Utilities":2500,Health:1000,Entertainment:2000,Subscriptions:800,Shopping:3000,Travel:3000},
+ couple:{Groceries:8000,Food:5000,Transport:5000,"Bills & Utilities":3500,Health:2000,Entertainment:3000,Subscriptions:1200,Shopping:4000,Travel:4000},
+ family:{Groceries:14000,Food:7000,Transport:7000,"Bills & Utilities":5000,Health:3500,Entertainment:4000,Subscriptions:1500,Shopping:5000,Travel:5000,Kids:4000},
+ parents:{Groceries:17000,Food:7000,Transport:8000,"Bills & Utilities":6500,Health:5000,Entertainment:4000,Subscriptions:1500,Shopping:5000,Travel:5000,Kids:4000}};
+var SP_HH=[["single","Single"],["couple","Couple"],["family","Family of 4"],["parents","Family + parents"]],SP_CT=[["metro","Metro",1.2],["big","Big city",1],["small","Smaller town",.8]];
+var SP_HINT={Groceries:"Food and household items",Food:"Eating out, delivery",Transport:"Fuel, cab, metro",Health:"Medicines, doctor visits",Entertainment:"Movies, outings",Shopping:"Reduced first if money is tight",Travel:"Trips and weekends","Bills & Utilities":"Electricity, gas, water",Subscriptions:"OTT, apps",Kids:"Activities, daily needs"};
+function r100(v){return Math.round(v/100)*100}
+function spPlan(hh,ct,sal){
+  var f=(SP_CT.filter(function(c){return c[0]===ct})[0]||SP_CT[1])[2],T=SP_T[hh]||SP_T.couple,flex=[],fix=[];
+  Object.keys(T).forEach(function(c){flex.push({c:c,a:r100(T[c]*f)})});
+  var fp=function(n,pc,day,cat){fix.push({name:n,a:r100(sal*pc/100),day:day,cat:cat})};
+  fp("House rent / EMI",25,1,"House Rent");fp("SIP (mutual fund)",12,5,"Investment");fp("Emergency fund",5,5,"Investment");fp("Health insurance",4,10,"Health");fp("Phone and internet",2,8,"Bills & Utilities");
+  if(hh==="family"||hh==="parents")fp("School fees",5,5,"Education");
+  var X=0,F=0;fix.forEach(function(x){X+=x.a});flex.forEach(function(x){F+=x.a});var ex=X+F-sal*0.97,tight=ex>0;
+  if(tight){["Shopping","Travel","Entertainment","Subscriptions","Food"].forEach(function(c){var r=flex.filter(function(x){return x.c===c})[0];if(r&&ex>0){var cut=Math.min(r.a,ex);r.a=r100(r.a-cut);ex-=cut}});
+    if(ex>0){F=0;flex.forEach(function(x){F+=x.a});var k=Math.max(0,(sal*0.97-X)/F);flex.forEach(function(x){x.a=r100(x.a*k)})}}
+  return {flex:flex,fix:fix,tight:tight}}
+function spTot(P){var X=0,F=0,SV=0;P.fix.forEach(function(x){X+=x.a;if(x.cat==="Investment")SV+=x.a});P.flex.forEach(function(x){F+=x.a});return {X:X,F:F,SV:SV}}
+function salaryGuess(){var m={};(S.txns||[]).forEach(function(t){if(t.type==="in"&&t.category==="Salary / Income"&&isCount(t)){var k=pkey(t.txn_date);m[k]=(m[k]||0)+Number(t.amount)}});
+  var v=Object.keys(m).sort().slice(-3).map(function(k){return m[k]}).sort(function(a,b){return a-b});return v.length?Math.round(v[Math.floor(v.length/2)]):0}
+function starterCard(){
+  if((S.budgets||[]).length||(S.fixed||[]).length||ls("bpdis")||(S.profile&&S.profile.can_edit===false))return "";
+  return '<div class="dc" style="border:1.5px solid var(--acc)"><b style="font-size:19px">✨ Get a starter plan</b><div class="note" style="margin:6px 0 10px;font-size:14px">Tell us your household and salary. We fill in budgets and bills for you. You can change every amount.</div><button class="btn" id="bplan" style="margin:0 0 8px">Create my plan</button><button class="btn ghost s" id="bpx" style="margin:0">Not now</button></div>'}
+function starterSheet(){
+  var sh=document.getElementById("sheet"),st=S.sp=S.sp||{step:1,hh:"couple",ct:"metro",sal:salaryGuess()||""};st.step=1;
+  function chips(arr,cur,key){return '<div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 12px">'+arr.map(function(a){return '<button class="tab'+(a[0]===cur?' on':'')+'" data-spk="'+key+'" data-spv="'+a[0]+'">'+esc(a[1])+'</button>'}).join('')+'</div>'}
+  function draw(){
+    var P=null,h='<div class="sheet"><div style="max-height:86vh;overflow:auto">';
+    if(st.step===1){
+      h+='<b>Your starter plan</b> <span class="mute" style="float:right">1 of 3</span><div class="mute" style="margin:10px 0 0">Who are you budgeting for?</div>'+chips(SP_HH,st.hh,"hh")+'<div class="mute">Where do you live?</div>'+chips(SP_CT,st.ct,"ct")+'<div class="mute">Monthly take-home salary</div><input id="spsal" type="number" inputmode="numeric" placeholder="e.g. 100000" value="'+(st.sal||"")+'">'+(salaryGuess()&&+st.sal===salaryGuess()?'<div class="note" style="margin:-4px 0 8px">Taken from your last salary credits. Change it if it is wrong.</div>':'')+'<button class="btn" id="spgo">See my plan</button><div class="note" style="text-align:center;margin-top:8px">A starting point, not financial advice.</div><button class="btn ghost" id="spx" style="margin-top:8px">Cancel</button>'}
+    else{P=st.P||(st.P=spPlan(st.hh,st.ct,Number(st.sal)));var T=spTot(P),left=Number(st.sal)-T.X-T.F,day=Math.round(T.F/30);
+      if(st.step===2){
+        h+='<b>Your starter plan</b> <span class="mute" style="float:right">2 of 3</span><div class="mute" style="margin:10px 0 2px">This is how you can live each month</div><div style="font-size:30px;font-weight:800">'+money(day)+' <span class="mute" style="font-size:16px;font-weight:600">a day</span></div><div class="note">to spend on everyday things, after your fixed bills and savings.</div>'
+          +'<div class="row" style="margin-top:12px"><span>Fixed bills & savings</span><b>'+money(T.X)+'</b></div><div class="row" style="margin-top:6px"><span>Everyday spending</span><b>'+money(T.F)+'</b></div><div class="row" style="margin-top:6px"><span>Left over</span><b class="'+(left<0?'out':'in')+'">'+money(Math.max(left,0))+'</b></div>'
+          +(P.tight?'<div class="card" style="margin:12px 0 0;border-color:var(--out)"><b class="out">This plan is tight for your salary.</b><div class="note">We cut shopping, travel and fun first. Review each amount.</div></div>':'')
+          +'<div class="card" style="margin:12px 0 0;background:var(--chip)"><b>Stay inside these limits and you save about '+money(T.SV+Math.max(left,0))+' every month.</b><div class="note">'+money(T.SV)+' goes to SIP and your emergency fund, plus what is left over.</div></div><div class="note" style="margin-top:8px">After 2 months you can update these guesses with what you really spend.</div>'
+          +'<button class="btn" id="spnx">Review and edit amounts</button><button class="btn ghost" id="spbk" style="margin-top:8px">Back</button>'}
+      else{
+        h+='<b>Your starter plan</b> <span class="mute" style="float:right">3 of 3</span><div style="font-weight:700;margin:12px 0 4px">Everyday spending</div>'
+          +P.flex.map(function(x,i){return '<div class="row" style="gap:8px;margin:0 0 8px"><span style="flex:1;min-width:0">'+ci(x.c)+' '+esc(x.c)+'<div class="mute" style="font-size:11.5px">'+esc(SP_HINT[x.c]||"")+'</div></span><input data-spf="'+i+'" type="number" inputmode="numeric" value="'+x.a+'" style="width:100px;margin:0;text-align:right"></div>'}).join('')
+          +'<div style="font-weight:700;margin:14px 0 4px">Fixed bills and savings</div><div class="note" style="margin:0 0 8px">Set an amount to 0 to skip it. Add your real home loan or EMI later.</div>'
+          +P.fix.map(function(x,i){return '<div class="row" style="gap:8px;margin:0 0 8px"><span style="flex:1;min-width:0">'+esc(x.name)+'<div class="mute" style="font-size:11.5px">every month, day '+x.day+'</div></span><input data-spx="'+i+'" type="number" inputmode="numeric" value="'+x.a+'" style="width:100px;margin:0;text-align:right"></div>'}).join('')
+          +'<button class="btn" id="spok">Save my plan</button><button class="btn ghost" id="spbk" style="margin-top:8px">Back</button>'}}
+    h+='</div></div>';sh.innerHTML=h;wire()}
+  function wire(){
+    sh.querySelectorAll("[data-spk]").forEach(function(b){b.onclick=function(){var v=document.getElementById("spsal");if(v)st.sal=v.value;st[b.dataset.spk]=b.dataset.spv;st.P=null;draw()}});
+    var x=document.getElementById("spx");if(x)x.onclick=function(){sh.innerHTML=""};
+    var go=document.getElementById("spgo");if(go)go.onclick=function(){var v=parseFloat(document.getElementById("spsal").value);if(!(v>=5000)){alert("Enter your monthly salary");return}st.sal=v;st.P=null;st.step=2;draw()};
+    var nx=document.getElementById("spnx");if(nx)nx.onclick=function(){st.step=3;draw()};
+    var bk=document.getElementById("spbk");if(bk)bk.onclick=function(){st.step=st.step===3?2:1;draw()};
+    var ok=document.getElementById("spok");if(ok)ok.onclick=save}
+  async function save(){var P=st.P,bud=[],fx=[];
+    sh.querySelectorAll("[data-spf]").forEach(function(i){var v=parseFloat(i.value),r=P.flex[+i.dataset.spf];if(v>0)bud.push({category:r.c,amount:v})});
+    sh.querySelectorAll("[data-spx]").forEach(function(i){var v=parseFloat(i.value),r=P.fix[+i.dataset.spx];if(v>0)fx.push({name:r.name,amount:v,day:r.day,freq:"monthly",month:null,category:r.cat})});
+    if(!bud.length&&!fx.length){alert("Add at least one amount");return}
+    try{if(bud.length)await api("budgets?on_conflict=household_id,category",{method:"POST",headers:{Prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify(bud)});
+      if(fx.length)await api("fixed_items",{method:"POST",headers:{Prefer:"return=minimal"},body:JSON.stringify(fx)});
+      sh.innerHTML="";ls("bpdis","1");S.sp=null;await load();toast("Your plan is ready")}catch(e){alert("Could not save: "+e.message)}}
+  draw()}
+function editFixedSheet(id){
+  var f=(S.fixed||[]).filter(function(x){return String(x.id)===String(id)})[0];if(!f)return;var sh=document.getElementById("sheet");
+  var cs=CATS.filter(function(c){return !NOBUD[c]});if(f.category&&cs.indexOf(f.category)<0)cs.push(f.category);
+  sh.innerHTML='<div class="sheet"><div style="max-height:86vh;overflow:auto"><b>Edit fixed expense</b><div class="mute" style="margin:10px 0 0">Name</div><input id="efn" value="'+esc(f.name)+'"><div class="mute">Amount</div><input id="efa" type="number" inputmode="decimal" value="'+Number(f.amount)+'"><div class="mute">Day of month (1-31)</div><input id="efd" type="number" inputmode="numeric" value="'+f.day+'"><div class="mute">How often</div><select id="eff"><option value="monthly"'+(f.freq==="monthly"?' selected':'')+'>Every month</option><option value="quarterly"'+(f.freq==="quarterly"?' selected':'')+'>Every 3 months</option><option value="yearly"'+(f.freq==="yearly"?' selected':'')+'>Once a year</option></select><div id="efmw" style="display:'+(f.freq==="monthly"?'none':'block')+'"><div class="mute">Month it is due</div><select id="efm">'+[1,2,3,4,5,6,7,8,9,10,11,12].map(function(m){return '<option value="'+m+'"'+(+f.month===m?' selected':'')+'>'+new Date(2026,m-1,1).toLocaleString("en-IN",{month:"long"})+'</option>'}).join('')+'</select></div><div class="mute">Category</div><select id="efc"><option value="">No category</option>'+cs.map(function(c){return '<option'+(c===f.category?' selected':'')+'>'+esc(c)+'</option>'}).join('')+'</select><button class="btn" id="efok">Save</button><button class="btn ghost" id="efdel" style="margin-top:8px;color:var(--out)">Delete</button><button class="btn ghost" id="efx" style="margin-top:8px">Cancel</button></div></div>';
+  var ff=document.getElementById("eff");ff.onchange=function(){document.getElementById("efmw").style.display=ff.value==="monthly"?"none":"block"};
+  document.getElementById("efx").onclick=function(){sh.innerHTML=""};
+  document.getElementById("efdel").onclick=function(){sh.innerHTML="";confirmSheet("Delete this fixed expense?",f.name+" will be removed from your plan and forecast.","Delete",async function(){await api("fixed_items?id=eq."+encodeURIComponent(f.id),{method:"DELETE"});load()})};
+  document.getElementById("efok").onclick=async function(){var n=document.getElementById("efn").value.trim(),a=parseFloat(document.getElementById("efa").value),d=parseInt(document.getElementById("efd").value,10)||1,fr=ff.value;
+    if(!n||!(a>0)){alert("Enter a name and an amount");return}
+    try{await api("fixed_items?id=eq."+encodeURIComponent(f.id),{method:"PATCH",headers:{Prefer:"return=minimal"},body:JSON.stringify({name:n,amount:a,day:Math.min(31,Math.max(1,d)),freq:fr,month:fr==="monthly"?null:(parseInt(document.getElementById("efm").value,10)||1),category:document.getElementById("efc").value||null})});
+      sh.innerHTML="";await load();try{schedRem()}catch(e){}toast("Saved")}catch(e){alert("Could not save: "+e.message)}}}
 async function saveBudgets(){
   var rows=[],del=[],bm={};S.budgets.forEach(function(b){bm[b.category]=1});
   document.querySelectorAll("[data-bud]").forEach(function(i){var c=i.dataset.bud,v=parseFloat(i.value);if(v>0)rows.push({category:c,amount:v});else if(bm[c])del.push(c)});
