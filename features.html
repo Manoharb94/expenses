@@ -179,6 +179,30 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:14px 28px;align-items:center}
 footer a{text-decoration:none}footer a:hover{text-decoration:underline}
 footer .sp{margin-left:auto}
 
+
+@media (min-width:1100px){
+  .wrap{max-width:1240px;padding:0 32px}
+  .hero{padding:72px 0 56px}
+  .hero .wrap{gap:64px}
+  .hero .lead{font-size:1.28rem}
+  .stage{min-height:660px}
+  .phone{width:330px;border-width:10px;border-radius:48px}
+  .phone.b{width:238px;right:-14px}
+  .strip .wrap{flex-wrap:nowrap;justify-content:space-between;gap:24px}
+  .strip .wrap span{white-space:nowrap;font-size:1rem}
+  .f{gap:96px;padding:72px 0}
+  .panel{max-width:520px}
+  .vis .phone{width:300px!important}
+  .gal{justify-content:center;overflow:visible;flex-wrap:nowrap;gap:22px;padding-inline:0;margin:0}
+  .gal .phone{width:210px}
+  .steps{gap:26px}.step{padding:30px}
+  .g{padding:28px}
+  .faq .list{max-width:840px}
+}
+@media (min-width:1500px){
+  .wrap{max-width:1320px}
+  h1{font-size:5.1rem}h2{font-size:3.3rem}
+}
 @media (max-width:900px){
   .hero .wrap,.f,.priv .wrap,.final .wrap{grid-template-columns:1fr}
   .f{gap:34px;padding:40px 0}.f.r .txt{order:0}
@@ -217,10 +241,10 @@ footer .sp{margin-left:auto}
       <p class="lead">Gharwise reads the alerts your bank and credit card already send and files every payment. You and your partner see one shared budget, in your own colours.</p>
       <div class="cta">
         <a class="btn p" href="get.html">Get it on Google Play</a>
-        <span class="btn off" aria-disabled="true">App Store: coming soon</span>
-        <a class="btn o" href="https://gharwise.net/">Use it on the web</a>
+        <a class="btn o" href="https://testflight.apple.com/join/jx6vsv5V" rel="noopener">Get it on iPhone (beta)</a>
       </div>
-      <p class="fine">Free. No bank login. Works on Android, iPhone and the web.</p>
+      <p class="fine" style="margin-top:14px">Prefer a browser? <a href="https://gharwise.net/"><u>Use Gharwise on the web</u></a>.</p>
+      <p class="fine">Free. No bank login. Works on Android, iPhone and the web. iPhone is in beta through Apple’s TestFlight app.</p>
       <div class="split" role="img" aria-label="Example: one person spent more than half the budget, the other a little under a third"><i></i><i></i></div>
       <div class="splitcap"><span><i class="dot" style="background:var(--violet)"></i>You</span><span><i class="dot" style="background:var(--amber)"></i>Your partner</span></div>
     </div>
@@ -448,7 +472,7 @@ footer .sp{margin-left:auto}
       <p>Set it up once, then let the bank’s own messages do the typing.</p>
       <div class="cta" style="margin-top:26px">
         <a class="btn p" href="get.html">Get it on Google Play</a>
-        <span class="btn off" aria-disabled="true">App Store: coming soon</span>
+        <a class="btn o" href="https://testflight.apple.com/join/jx6vsv5V" rel="noopener">Get it on iPhone (beta)</a>
         <a class="btn o" href="https://gharwise.net/">Open web app</a>
       </div>
     </div>
