@@ -209,6 +209,24 @@ details.cminfo{margin-top:12px}details.cminfo summary{font-size:12.5px;color:var
 .bellb{position:relative;font-size:20px}.bellb .bdg{position:absolute;top:2px;right:0;min-width:17px;height:17px;border-radius:9px;background:#d33;color:#fff;font-size:11px;line-height:17px;text-align:center;padding:0 4px;font-weight:700}
 .gbar{height:8px;border-radius:5px;background:var(--chip);margin-top:4px;overflow:hidden}.gbar i{display:block;height:100%;border-radius:5px}
 .seg2 button .gav{margin-right:6px}.seg2 button{display:inline-flex;align-items:center;justify-content:center}
+
+.ico,.cgrid i{transition:none}
+.mr i.mt{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:19px}.mr{gap:12px}
+.msec{font-size:12.5px;font-weight:600;color:var(--mute);margin:16px 4px 6px}
+.mbd{font-style:normal;font-weight:700;font-size:13px;margin-left:auto;padding-right:4px}.mbd.bg{background:var(--acc);color:#fff;border-radius:10px;min-width:20px;text-align:center;padding:1px 7px}
+.pchip{font-style:normal;display:inline-block;background:color-mix(in srgb,var(--acc) 14%,transparent);color:var(--acc);border-radius:12px;padding:3px 11px;font-size:12.5px;font-weight:600;margin-top:4px}
+.pring{display:inline-flex;flex:none;align-self:center;line-height:0;border-radius:50%;padding:3px;background:conic-gradient(var(--acc),#f59cff,var(--acc));flex:none}.pring>*{flex:none;display:block!important}
+.lh{background:var(--bg);color:var(--ink);border-bottom:1px solid var(--line)}.lhm button{color:var(--ink)}.lhm b{font-size:17px}
+.lht button{color:var(--mute);text-transform:none;letter-spacing:0;font-size:15px}.lht button.on{color:var(--acc);border-bottom-color:var(--acc)}
+.nrow{display:flex;justify-content:space-between;align-items:center;width:100%;border:0;background:color-mix(in srgb,#f5b400 20%,var(--card));color:var(--ink);font:inherit;font-size:14px;border-radius:14px;padding:12px 14px;margin-bottom:10px;cursor:pointer}.nrow em{font-style:normal;font-weight:700;color:var(--acc)}
+.ltot.big{text-align:left;margin:4px 4px 8px}.ltot.big b{display:block;font-size:30px;letter-spacing:-.5px}.ltot.big small{color:var(--mute);font-weight:500;font-size:13px}
+.dg{display:flex;justify-content:space-between;text-transform:none;letter-spacing:0;font-size:13.5px}.dg em{font-style:normal;color:var(--ink)}
+.txm{display:flex;flex-direction:column;min-width:0}.txm b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}.txm .mute{font-size:12px}
+.tag.ctag{color:var(--ink);font-size:11px;border-radius:8px;margin-top:3px}.tag.xfp{background:var(--chip);color:var(--mute);font-size:11px;margin-top:3px}
+.hero2{background:linear-gradient(135deg,var(--hero1),var(--hero2));color:#fff;border-radius:22px;padding:16px 18px;margin:6px 0 12px}.hero2 small{opacity:.8;font-size:13px}
+.hero2 .hp{display:flex;justify-content:space-between;align-items:center;font-size:13px;opacity:.9;margin-bottom:8px}.hero2 .hp em{font-style:normal;background:rgba(255,255,255,.22);border-radius:10px;padding:2px 9px;font-size:11.5px}
+.hero2 .hb{font-size:34px;font-weight:800;letter-spacing:-.5px;margin:2px 0 10px}.hbar{height:8px;background:rgba(255,255,255,.28);border-radius:6px;overflow:hidden}.hbar i{display:block;height:100%;background:#fff;border-radius:6px}.hero2 .hk{font-size:13.5px;margin-top:9px}
+.big{font-size:22px;font-weight:700}.dlt{display:block;font-size:12px;margin-top:3px}.dlt.dg1{color:var(--in)}.dlt.db1{color:var(--out)}
 </style>
 <style id="splashcss">#splash{position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(120% 90% at 30% 15%,#8b5cf6 0%,#6d28d9 45%,#4c1d95 100%);color:#fff;transition:opacity .45s ease,visibility .45s;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}#splash.out{opacity:0;visibility:hidden}#splash svg{width:150px;height:136px;animation:spPop .7s cubic-bezier(.2,.9,.3,1.2) both}#splash b{font-size:34px;letter-spacing:-.5px;margin-top:18px;animation:spUp .6s .25s both}#splash small{font-size:14px;opacity:.78;margin-top:6px;animation:spUp .6s .4s both}#splash .sb{animation:spBar .9s .35s both;transform-origin:bottom}@keyframes spPop{from{transform:scale(.55);opacity:0}to{transform:none;opacity:1}}@keyframes spUp{from{transform:translateY(12px);opacity:0}to{transform:none;opacity:1}}@keyframes spBar{from{transform:scaleY(.1)}to{transform:none}}#splash .sb{animation:spBar .9s .35s both,spDance 1s 1.3s ease-in-out infinite alternate}#splash .sb:nth-of-type(2){animation-delay:.35s,1.45s}#splash .sb:nth-of-type(3){animation-delay:.35s,1.6s}#splash svg path{animation:spBob 1.2s 1.2s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:50% 100%}#splash small{min-height:20px;transition:opacity .3s;padding:0 28px;text-align:center}#splash small.q{opacity:0}@keyframes spDance{from{transform:scaleY(.6)}to{transform:scaleY(1.08)}}@keyframes spBob{from{transform:translateY(0)}to{transform:translateY(-9px)}}@media(prefers-reduced-motion:reduce){#splash *{animation:none!important}}#nbar.nind{width:35%!important;animation:nind 1.1s ease-in-out infinite alternate}@keyframes nind{from{margin-left:0}to{margin-left:65%}}@media (prefers-reduced-motion:reduce){#nbar.nind{animation:none;margin-left:0}}
 </style>
@@ -1133,7 +1151,7 @@ function cardBlock(L,label){
   rows.sort(function(a,b){return (a.t.txn_date||"")<(b.t.txn_date||"")?1:-1});
   var h='<h2>Credit card'+(label?' <span class="mute" style="font-weight:500;font-size:13px">· '+esc(label)+'</span>':'')+'</h2><div class="card"><div class="row" style="margin:4px 0"><span>Spent on card</span><b class="out">'+money(c.spent)+'</b></div>';
   if(rows.length){h+='<div style="max-height:340px;overflow:auto;margin-top:8px">';
-    rows.forEach(function(r){var t=r.t;h+='<div class="lt" data-cat="'+t.id+'"><span class="ico">'+(r.bill?'💳':ci(t.category))+'</span><div class="m"><b>'+esc(r.bill?'Card Payment':(t.merchant||"Unknown"))+'</b><span>'+esc(dayLabel(t.txn_date))+'</span></div><b class="'+(r.ty==="out"?"out":"in")+'">'+(r.ty==="out"?"−":"+")+money(t.amount)+'</b></div>'});
+    rows.forEach(function(r){var t=r.t;h+='<div class="lt" data-cat="'+t.id+'"><span class="ico" style="background:'+tint(r.bill?'Bills':t.category)+'">'+(r.bill?'💳':ci(t.category))+'</span><div class="m"><b>'+esc(r.bill?'Card Payment':(t.merchant||"Unknown"))+'</b><span>'+esc(dayLabel(t.txn_date))+'</span></div><b class="'+(r.ty==="out"?"out":"in")+'">'+(r.ty==="out"?"−":"+")+money(t.amount)+'</b></div>'});
     h+='</div>'}
   return h+'<div class="note">Bill payments aren’t counted as spending.</div></div>'}
 function trfBlock(L){
@@ -1333,7 +1351,7 @@ function topPayees(X){
   var g2={};X.outs.forEach(function(t){var k=t.merchant||"Unknown",o=g2[k]=g2[k]||{n:0,s:0,c:t.category};o.n++;o.s+=Number(t.amount)});
   var ks=Object.keys(g2).sort(function(a,b){return g2[b].s-g2[a].s}).slice(0,5);if(!ks.length)return '';
   var tot=X.ev||1,mx=g2[ks[0]].s||1,h='<h2>Top 5 payees</h2><div class="card">';
-  ks.forEach(function(k){var o=g2[k];h+='<div class="cr"><div class="row"><span style="display:flex;align-items:center;min-width:0"><span class="ico">'+ci(o.c)+'</span><b style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(k)+'</b></span><b>'+money(o.s)+'</b></div><div class="row mute" style="margin-top:2px"><span>'+o.n+' payment'+(o.n>1?'s':'')+' · avg '+money(o.s/o.n)+'</span><span>'+Math.round(o.s/tot*100)+'% of everyday</span></div><div class="bar"><i style="width:'+Math.round(o.s/mx*100)+'%"></i></div></div>'});
+  ks.forEach(function(k){var o=g2[k];h+='<div class="cr"><div class="row"><span style="display:flex;align-items:center;min-width:0"><span class="ico" style="background:'+tint(o.c)+'">'+ci(o.c)+'</span><b style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(k)+'</b></span><b>'+money(o.s)+'</b></div><div class="row mute" style="margin-top:2px"><span>'+o.n+' payment'+(o.n>1?'s':'')+' · avg '+money(o.s/o.n)+'</span><span>'+Math.round(o.s/tot*100)+'% of everyday</span></div><div class="bar"><i style="width:'+Math.round(o.s/mx*100)+'%"></i></div></div>'});
   return h+'</div>'}
 function whoSpent(Lc,X,P){
   var fc=X.useM?fixedCats():{},by={};
@@ -1347,7 +1365,7 @@ function whoSpent(Lc,X,P){
   ks.forEach(function(c){Object.keys(by[c]).forEach(function(p){seenP[p]=1})});
   h+='<div class="lg" style="margin:0 0 12px">'+Object.keys(seenP).sort().map(function(p){return '<span><i style="background:'+col(p)+'"></i>'+esc(p)+'</span>'}).join('')+'</div>';
   ks.forEach(function(c){var parts=Object.keys(by[c]).sort();
-    h+='<div class="cr"><div class="row"><span style="display:flex;align-items:center"><span class="ico">'+ci(c)+'</span>'+esc(c)+'</span><span style="display:flex;align-items:center;gap:8px">'+(P?arrow(tot[c],P.X.by[c]||0):'')+'<b>'+money(tot[c])+'</b></span></div><div class="stack" style="width:'+Math.max(6,Math.round(tot[c]/mx*100))+'%">'+parts.map(function(p){return '<i style="width:'+(by[c][p]/tot[c]*100).toFixed(1)+'%;background:'+col(p)+'"></i>'}).join('')+'</div><div class="note">'+parts.map(function(p){return esc(p)+' '+money(by[c][p])}).join(' · ')+'</div></div>'});
+    h+='<div class="cr"><div class="row"><span style="display:flex;align-items:center"><span class="ico" style="background:'+tint(c)+'">'+ci(c)+'</span>'+esc(c)+'</span><span style="display:flex;align-items:center;gap:8px">'+(P?arrow(tot[c],P.X.by[c]||0):'')+'<b>'+money(tot[c])+'</b></span></div><div class="stack" style="width:'+Math.max(6,Math.round(tot[c]/mx*100))+'%">'+parts.map(function(p){return '<i style="width:'+(by[c][p]/tot[c]*100).toFixed(1)+'%;background:'+col(p)+'"></i>'}).join('')+'</div><div class="note">'+parts.map(function(p){return esc(p)+' '+money(by[c][p])}).join(' · ')+'</div></div>'});
   return h+'</div>'}
 function mandBlock(x){
   if(!S.fixed.length)return '';
@@ -1358,16 +1376,21 @@ function mandBlock(x){
 }
 function vReports(){
   var opts=[["last","Last month"],["this","This month so far"],["next","Next month (forecast)"],["year","Next 12 months (forecast)"]];
-  var h='<h1>Reports</h1>'+personUI()+'<div class="mute">Report</div><select id="rp">';
+  var h='<h1>Reports</h1>'+personUI()+'<select id="rp" style="display:none">';
   opts.forEach(function(o){h+='<option value="'+o[0]+'"'+(S.rp===o[0]?" selected":"")+'>'+o[1]+'</option>'});
   h+='</select>';
+  var chips=[["this","This month"],["last","Last month"],["next","Next month"],["year","Next 12 months"]];
+  h+='<div class="sxc" data-for="rp" style="margin-top:6px">'+chips.map(function(c){return '<button data-v="'+c[0]+'" class="'+(S.rp===c[0]||(c[0]==="this"&&!S.rp)?'on':'')+'" data-rpchip="1">'+c[1]+'</button>'}).join('')+'</div>';
   if(S.rp==="next")return h+forecastView(1);
   if(S.rp==="year")return h+forecastView(12);
   var off=S.rp==="last"?-1:0,key=monthKey(off),items=txIn(key),Lc=items.filter(isCount);
   var label=plabel(off);
   var RX=expenseSplit(Lc,iso(pdate(off)),iso(pend(off))),spent=RX.total,rec=sum(Lc,"in");
-  h+='<h2>'+esc(label)+(off===0?" (so far)":"")+'</h2><div class="grid"><div class="card"><div class="mute">Total expenses</div><div style="font-size:22px;font-weight:700" class="out">'+money(spent)+'</div></div><div class="card"><div class="mute">Money received</div><div style="font-size:22px;font-weight:700" class="in">'+money(rec)+'</div></div></div>';
-  h+='<div class="card row"><span>Left over (received − spent)</span><b class="'+(rec-spent>=0?"in":"out")+'">'+money(rec-spent)+'</b></div>';
+  var pOff=off-1,pItems=txIn(monthKey(pOff)).filter(isCount),pRX=expenseSplit(pItems,iso(pdate(pOff)),iso(pend(pOff))),pSpent=pRX.total,pRec=sum(pItems,"in"),pHas=pItems.length>0,pm=pdate(pOff).toLocaleString("en-IN",{month:"short"});
+  var kept=rec-spent,pct=rec>0?Math.round(kept/rec*100):0,usedPct=rec>0?Math.max(0,Math.min(100,Math.round(spent/rec*100))):100;
+  var dl=function(c,p,good){if(!pHas||!p)return '';var d=Math.round(c-p);if(!d)return '';var up=d>0,ok=(up===good);return '<small class="dlt '+(ok?'dg1':'db1')+'">'+(up?'▲ ':'▼ ')+money(Math.abs(d))+' vs '+esc(pm)+'</small>'};
+  h+='<div class="hero2"><div class="hp"><span>'+esc(label)+'</span>'+(off===0?'<em>So far</em>':'')+'</div><small>Total expenses</small><div class="hb">'+money(Math.round(spent))+'</div><div class="hbar"><i style="width:'+usedPct+'%"></i></div><div class="hk">'+(rec>0?(kept>=0?'You kept <b>'+pct+'%</b> · '+money(Math.round(kept))+' left over':'Spent <b>'+money(Math.round(-kept))+'</b> more than received'):'No money received yet')+'</div></div>';
+  h+='<div class="grid"><div class="card"><div class="mute">Money received</div><div class="big in">'+money(Math.round(rec))+'</div>'+dl(rec,pRec,true)+'</div><div class="card"><div class="mute">Left over</div><div class="big '+(kept>=0?"in":"out")+'">'+money(Math.round(kept))+'</div>'+dl(kept,pRec-pSpent,true)+'</div></div>';
   h+=mandBlock(RX);
   h+=trfBlock(items);
   var by=RX.by,pby=expenseSplit(txIn(monthKey(off-1)).filter(isCount),iso(pdate(off-1)),iso(pend(off-1))).by;
@@ -1391,7 +1414,7 @@ function vPlan(){
   if(!bl.length)h+='<div class="empty"><span class="ei">👛</span>No budgets yet<div class="note">Tap Add Budget to set a monthly limit for a category.</div></div>';
   bl.forEach(function(c){
     var a=S.newBud[c]!=null?S.newBud[c]:bm[c],s=sp[c]||0;
-    h+='<div class="swp" style="margin-bottom:10px;border-radius:0"><div class="swa" data-sw="bud|'+encodeURIComponent(c)+'|'+encodeURIComponent(c)+'">Delete</div><div class="swc"><div class="row"><span style="display:flex;align-items:center"><span class="ico">'+ci(c)+'</span>'+esc(c)+'</span><input data-bud="'+esc(c)+'" type="number" inputmode="numeric" placeholder="Budget" value="'+a+'" style="width:120px;margin:0"></div>';
+    h+='<div class="swp" style="margin-bottom:10px;border-radius:0"><div class="swa" data-sw="bud|'+encodeURIComponent(c)+'|'+encodeURIComponent(c)+'">Delete</div><div class="swc"><div class="row"><span style="display:flex;align-items:center"><span class="ico" style="background:'+tint(c)+'">'+ci(c)+'</span>'+esc(c)+'</span><input data-bud="'+esc(c)+'" type="number" inputmode="numeric" placeholder="Budget" value="'+a+'" style="width:120px;margin:0"></div>';
     if(a)h+=budBar(Number(a),spp[c]||{});
     h+='</div></div>'});
   h+='<button class="btn ghost" id="addbud" style="margin-top:6px">＋ Add Budget</button>'+(bl.length?'<button class="btn" id="svb">Save Budget</button>':'<span id="svb" style="display:none"></span>')+'<div class="note">Only payments that have a category count against a budget. Press and hold a budget to delete it.</div></div>';
@@ -1524,9 +1547,10 @@ function dayLabel(ds){if(!ds)return "No date";var t=iso(new Date()),y=new Date()
 function txTime(t){try{var at=t.txn_at||t.created_at;if(!at)return "";var d=new Date(at);if(isNaN(d)||iso(d)!==t.txn_date)return "";
   return d.toLocaleTimeString("en-IN",{hour:"numeric",minute:"2-digit",hour12:true}).replace(/\s*([ap])m/i,function(m,x){return " "+x.toUpperCase()+"M"})}catch(e){return ""}}
 function miniRow(t){
-  return '<div class="lt" data-cat="'+t.id+'"><span class="ico">'+ci(t.category)+'</span><div class="m"><b>'+esc(t.merchant||"Unknown")+'</b><span>'+esc(dayLabel(t.txn_date))+(txTime(t)?' · '+txTime(t):'')+(S.pf==="__both"||!S.pf?' · '+esc(t.person||""):'')+'</span></div><div style="text-align:right"><b class="'+t.type+'">'+(t.type==="out"?"−":"+")+money(t.amount)+'</b><div><span class="tag'+(t.category?'':' warn')+'" style="font-size:11px">'+esc(t.category||"Choose category")+'</span></div></div></div>'}
+  return '<div class="lt" data-cat="'+t.id+'"><span class="ico" style="background:'+tint(t.category)+'">'+ci(t.category)+'</span><div class="m"><b>'+esc(t.merchant||"Unknown")+'</b><span>'+esc(dayLabel(t.txn_date))+(txTime(t)?' · '+txTime(t):'')+(S.pf==="__both"||!S.pf?' · '+esc(t.person||""):'')+'</span></div><div style="text-align:right"><b class="'+t.type+'">'+(t.type==="out"?"−":"+")+money(t.amount)+'</b><div><span class="tag'+(t.category?'':' warn')+'" style="font-size:11px">'+esc(t.category||"Choose category")+'</span></div></div></div>'}
 function txRow(t){
-  var rowH='<div class="tx tap" data-cat="'+t.id+'"><div class="row"><span style="display:flex;align-items:center;min-width:0"><span class="ico">'+ci(t.category)+'</span><b style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(t.merchant||"Unknown")+'</b></span><b class="'+t.type+'" style="white-space:nowrap">'+(t.type==="out"?"−":"+")+money(t.amount)+'</b></div><div class="row"><span class="mute">'+[txTime(t),t.source==="sms"?"SMS":"",S.pf==="__both"?(t.person||""):""].filter(Boolean).map(esc).join(" · ")+'</span><span>'+(t.kind==="card"?'<span class="tag">💳 '+(t.card_last4?'••'+esc(t.card_last4):'card')+'</span> ':'')+'<span class="tag'+(t.category?'':' warn')+'">'+esc(t.category||"Choose category")+'</span></span></div>'+(t.note?'<div class="note">'+esc(t.note)+'</div>':'')+'</div>';
+  var xf=!isCount(t)||/wallet|upi ?lite/i.test(t.merchant||"");
+  var rowH='<div class="tx tap" data-cat="'+t.id+'"><div class="row"><span style="display:flex;align-items:center;min-width:0"><span class="ico" style="background:'+tint(t.category||"?")+'">'+ci(t.category)+'</span><span class="txm"><b>'+esc(nice(t.merchant||"Unknown"))+'</b><span class="mute">'+[txTime(t),S.pf==="__both"?(t.person||""):""].filter(Boolean).map(esc).join(" · ")+(t.note?' · '+esc(t.note):'')+'</span></span></span><span style="text-align:right;white-space:nowrap"><b class="'+(xf?'':t.type)+'"'+(xf?' style="color:var(--mute)"':'')+'>'+(t.type==="out"?"−":"+")+money(t.amount)+'</b><div>'+(t.kind==="card"?'<span class="tag">💳 '+(t.card_last4?'••'+esc(t.card_last4):'card')+'</span> ':'')+(xf&&/wallet|upi ?lite/i.test(t.merchant||"")?'<span class="tag xfp">Transfer</span>':'<span class="tag ctag'+(t.category?'':' warn')+'"'+(t.category?' style="background:'+tint(t.category)+'"':'')+'>'+esc(t.category||"Choose category")+'</span>')+'</div></span></div></div>';
   return (t.person===S.name||!t.raw||t.category===LOUT||t.category===LIN)?'<div class="swp"><div class="swa" data-sw="txn|'+t.id+'|'+encodeURIComponent((t.merchant||'Payment')+' '+money(t.amount))+'">Delete</div><div class="swc">'+rowH+'</div></div>':rowH}
 
 S.ev=ls("ev")||"m0";
@@ -1592,7 +1616,7 @@ function vDash(){
   var bd=billsDue(30);
   h+='<div class="dc"><div class="dch" data-go="plan"><b>Bills due</b><span class="arr">→</span></div>';
   if(!bd.length)h+='<div class="empty"><span class="ei">⏰</span>No bills in the next 30 days</div><button class="obtn" data-go="plan" data-bfocus="#fn">+ Add bill</button>';
-  else bd.slice(0,4).forEach(function(x){h+='<div class="lt" data-go="plan"><span class="ico">'+ci(x.f.category)+'</span><div class="m"><b>'+esc(x.f.name)+'</b><span>'+(x.diff===0?'Due today':x.diff===1?'Due tomorrow':'In '+x.diff+' days · '+x.d.toLocaleString("en-IN",{day:"numeric",month:"short"}))+'</span></div><b>'+money(x.f.amount)+'</b></div>'});
+  else bd.slice(0,4).forEach(function(x){h+='<div class="lt" data-go="plan"><span class="ico" style="background:'+tint(x.f.category)+'">'+ci(x.f.category)+'</span><div class="m"><b>'+esc(x.f.name)+'</b><span>'+(x.diff===0?'Due today':x.diff===1?'Due tomorrow':'In '+x.diff+' days · '+x.d.toLocaleString("en-IN",{day:"numeric",month:"short"}))+'</span></div><b>'+money(x.f.amount)+'</b></div>'});
   h+='</div>';
   var evR=evRange(),more=unplannedBlock(Lc)+cardBlock(evR.L,evR.label)+trfBlock(L)+lendBlock()+(typeof groupsBlock==="function"?groupsBlock():'');
   var people={};Lc.forEach(function(t){var p=t.person||"?";(people[p]=people[p]||[]).push(t)});
@@ -1614,14 +1638,15 @@ function vTx(){
     (q?'':'<div class="lht">'+[["out","Expenses"],["in","Income"],["oth","Others"]].map(function(x){return '<button data-ltab="'+x[0]+'" class="'+(lt===x[0]?'on':'')+'">'+x[1]+'</button>'}).join('')+'</div>')+'</div>';
   h+='<input id="lq" type="search" placeholder="🔍 Search payee or amount" autocomplete="off" value="'+esc(S.lq||"")+'" style="margin-bottom:12px">';
   h+=personChips();
-  if(!q&&G.none.length&&lt!=="none")h+='<button class="tab" data-ltab="none" style="margin-bottom:10px">🏷️ '+G.none.length+' need a category</button>';
+  if(!q&&G.none.length&&lt!=="none")h+='<button class="nrow" data-ltab="none"><span>🏷️ <b>'+G.none.length+'</b> need a category</span><em>Sort →</em></button>';
   if(!q&&lt==="none")h+='<button class="tab on" data-ltab="out" style="margin-bottom:10px">🏷️ Needs a category · show all</button>';
   var tot=lt==="in"?sum(F,"in"):lt==="oth"?null:sum(F,"out");
-  h+='<div class="ltot">'+(q?'RESULTS · '+F.length+' payment'+(F.length===1?'':'s')+' · out '+money(sum(F,"out"))+' · in '+money(sum(F,"in")):esc(lab.toUpperCase())+(tot===null?' · in '+money(sum(F,"in"))+' · out '+money(sum(F,"out")):' ('+money(tot)+')'))+'</div>';
+  h+='<div class="ltot'+(q||tot===null?'':' big')+'">'+(!q&&tot!==null?'<b>'+money(Math.round(tot))+'</b><small>'+(lt==="in"?'received':'spent')+' this period</small>':'')+(q?'RESULTS · '+F.length+' payment'+(F.length===1?'':'s')+' · out '+money(sum(F,"out"))+' · in '+money(sum(F,"in")):(tot===null?esc(lab)+' · in '+money(sum(F,"in"))+' · out '+money(sum(F,"out")):''))+'</div>';
   if(!q&&lt==="oth")h+='<div class="note" style="margin:-4px 0 10px;text-align:center">Transfers between you, lending, card bill payments and ignored items. They do not count as spending.</div>';
   if(!F.length)h+='<div class="empty" style="padding:40px 0"><span class="ei">🧾</span>'+(q?'Nothing matches “'+esc(q)+'”':'No '+(lt==="in"?'income':lt==="oth"?'other':lt==="none"?'uncategorised':'expense')+' transactions for '+esc(lab))+'</div>';
   else{var last=null;h+='<div class="swh">Tap a payment to choose its category. Swipe left to delete.</div>';
-    SH.forEach(function(t){if(t.txn_date!==last){if(last!==null)h+='</div>';h+='<div class="dg">'+esc(dayLabel(t.txn_date))+'</div><div class="card" style="padding:4px 14px">';last=t.txn_date}h+=txRow(t)});h+='</div>';if(F.length>SH.length)h+='<div class="note" style="text-align:center;margin:10px 0">Showing the newest 200 of '+F.length+'. Type more to narrow it down.</div>'}
+    var dtot={};SH.forEach(function(t){if(isCount(t)&&t.type===(lt==="in"?"in":"out"))dtot[t.txn_date]=(dtot[t.txn_date]||0)+Number(t.amount)});
+    SH.forEach(function(t){if(t.txn_date!==last){if(last!==null)h+='</div>';h+='<div class="dg"><span>'+esc(dayLabel(t.txn_date))+'</span>'+(lt!=="oth"&&dtot[t.txn_date]?'<em>'+(lt==="in"?'+':'−')+money(Math.round(dtot[t.txn_date]))+'</em>':'')+'</div><div class="card" style="padding:4px 14px">';last=t.txn_date}h+=txRow(t)});h+='</div>';if(F.length>SH.length)h+='<div class="note" style="text-align:center;margin:10px 0">Showing the newest 200 of '+F.length+'. Type more to narrow it down.</div>'}
   return h}
 function vBudget(){
   var bm={};S.budgets.forEach(function(b){bm[b.category]=Number(b.amount)});var sp=spentThisMonth(),tb=0,ts=0;
@@ -1631,23 +1656,26 @@ function vBudget(){
   var ch='<div class="dc"><b style="font-size:19px">Categories</b><div class="note" style="margin:2px 0 10px">Spent this month. Tap one to add or change its budget. Press and hold to delete it.</div><input id="bq" type="search" placeholder="🔍 Search categories" autocomplete="off" value="'+esc(S.bq||"")+'" style="margin-bottom:12px"><div class="cgrid">';
   var bq=(S.bq||"").toLowerCase().trim(),bn=0;
   CATS.filter(function(c){return !NOBUDGET[c]&&(!bq||c.toLowerCase().indexOf(bq)>=0)}).forEach(function(c){bn++;var s=sp[c]||0,a=bm[c]||0;
-    ch+='<button data-bfocus="'+esc(c)+'" data-lp="cat|'+encodeURIComponent(c)+'|"><i class="'+(a&&s>a?'ov':'')+'">'+ci(c)+'</i>'+esc(c)+'<small>'+(s?money(Math.round(s)):'—')+(a?' / '+money(a):'')+'</small></button>'});
+    ch+='<button data-bfocus="'+esc(c)+'" data-lp="cat|'+encodeURIComponent(c)+'|"><i class="'+(a&&s>a?'ov':'')+'" style="background:'+tint(c)+'">'+ci(c)+'</i>'+esc(c)+'<small>'+(s?money(Math.round(s)):'—')+(a?' / '+money(a):'')+'</small></button>'});
   ch+='<button id="bnew" style="border-style:dashed"><i>＋</i>'+(bq&&!bn?'Add “'+esc(S.bq.trim())+'”':'New category')+'<small>Add your own</small></button></div>'+(bq&&!bn?'<div class="note" style="margin-top:10px">No category matches. Tap ＋ to add it.</div>':'')+'</div>';
   var pl=vPlan().replace('<h1>Plan</h1>','');
   if(S.profile&&S.profile.can_edit===false){pl=pl.replace(/<input /g,'<input disabled ').replace(/<select /g,'<select disabled ').replace('id="svb"','id="svb" style="display:none"').replace('id="addbud"','id="addbud" style="display:none"').replace('id="fadd"','id="fadd" style="display:none"').replace(/data-fedit="/g,'data-nofedit="').replace(/data-sw="fixed\|/g,'data-nosw="');h+='<div class="card" style="text-align:center">👁 View only. Ask the family owner for edit access to change budgets and bills.</div>'}
   return h+pl+ch+'<button class="obtn" data-go="rep" data-rp="next">See next month’s forecast →</button>'}
 function vMenu(){
   var em=(S.profile&&S.profile.email)||(S.auth&&S.auth.email)||"";
-  var row=function(t,i,a,b){return '<button class="mr" data-go="'+t+'"><i>'+i+'</i><span><b>'+a+'</b>'+(b?'<span>'+b+'</span>':'')+'</span><span class="go">›</span></button>'};
-  return topbar("Menu","home")+(typeof profCard==="function"?profCard():'')+'<div class="sec">App settings</div><div class="card" style="padding:0 12px">'+row("set","⚙️","Settings","Theme, colour, currency, month start")+row("cats","🗂️","Categories","What each category has this month")+'</div>'+
-    '<div class="sec">Automation & sharing</div><div class="card" style="padding:0 12px">'+row("track","💬","Automated tracking","SMS & Email")+row("fam","👥","Family Sync","Share expenses with family")+(typeof gOKUI==="function"&&gOKUI()?row("grps","🧳","Groups","Trips, flats and shared payments"):'')+row("goals","🎯","Goals","Save for things together")+'<button class="mr" data-go="home" data-lend="1"><i>🤝</i><span><b>Lending</b><span>Money you lent or borrowed</span></span><span class="go">›</span></button>'+'</div>'+
-    '<div class="sec">Account</div><div class="card" style="padding:0 12px"><a class="mr" href="privacy.html" target="_blank" rel="noopener" style="text-decoration:none"><i>🔒</i><span><b>Privacy policy</b><span>What the app stores and why</span></span><span class="go">›</span></a><button class="mr" id="lo"><i>⏻</i><span><b>Log out</b><span>'+esc(em)+'</span></span></button><button class="mr" id="delacc"><i>🗑️</i><span><b class="out">Delete my account</b><span>Removes your login and your payments</span></span></button></div><div class="note" style="text-align:center;margin:14px 0">Gharwise version 2.0 (build 44)</div>'}
+  var row=function(t,i,a,b,bg,badge,extra){return '<button class="mr" data-go="'+t+'"'+(extra||'')+'><i class="mt" style="background:'+bg+'">'+i+'</i><span><b>'+a+'</b>'+(b?'<span>'+b+'</span>':'')+'</span>'+(badge||'')+'<span class="go">›</span></button>'};
+  var nG=0;try{nG=gList().length}catch(e){}
+  var lb=0;try{lendBal().forEach(function(r){lb+=r.get-r.owe})}catch(e){}
+  var lbad=lb?'<em class="mbd" style="color:'+(lb>0?'var(--acc)':'var(--out)')+'">'+(lb>0?'+':'−')+money(Math.abs(Math.round(lb)))+'</em>':'';
+  return topbar("Menu","home")+(typeof profCard==="function"?profCard():'')+'<div class="msec">App settings</div><div class="card" style="padding:0 12px">'+row("set","⚙️","Settings","Theme, colour, currency, month start","rgba(120,130,150,.20)")+row("cats","🗂️","Categories","What each category has this month","rgba(255,150,40,.22)")+'</div>'+
+    '<div class="msec">Automation & sharing</div><div class="card" style="padding:0 12px">'+row("track","💬","Automated tracking","SMS & Email","rgba(60,130,255,.20)")+row("fam","👥","Family Sync","Share expenses with family","rgba(140,100,255,.20)")+(typeof gOKUI==="function"&&gOKUI()?row("grps","🧳","Groups","Trips, flats and shared payments","rgba(40,170,230,.20)",nG?'<em class="mbd bg">'+nG+'</em>':''):'')+row("goals","🎯","Goals","Save for things together","rgba(240,80,150,.20)")+row("home","🤝","Lending","Money you lent or borrowed","rgba(40,180,100,.20)",lbad,' data-lend="1"')+'</div>'+
+    '<div class="msec">Account</div><div class="card" style="padding:0 12px"><a class="mr" href="privacy.html" target="_blank" rel="noopener" style="text-decoration:none"><i class="mt" style="background:rgba(120,130,150,.20)">🔒</i><span><b>Privacy policy</b><span>What the app stores and why</span></span><span class="go">›</span></a><button class="mr" id="lo"><i class="mt" style="background:rgba(120,130,150,.20)">⏻</i><span><b>Log out</b><span>'+esc(em)+'</span></span></button><button class="mr" id="delacc"><i class="mt" style="background:rgba(230,70,70,.18)">🗑️</i><span><b class="out">Delete my account</b><span>Removes your login and your payments</span></span></button></div><div class="note" style="text-align:center;margin:14px 0">Gharwise version 2.0 (build 44)</div>'}
 function vSet(){
   var h=topbar("Settings","menu")+lookCard();
   h+='<div class="card"><button class="btn ghost" id="tourgo" style="margin:0">▶ Show app tour</button></div><h2>This phone</h2><div class="card"><div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><div class="mute">Your month starts on day (1 = normal calendar month)</div><input id="ms" type="number" inputmode="numeric" min="1" max="31" value="'+(S.ms||1)+'"><button class="btn ghost s" id="msal" style="margin-bottom:10px">Use my salary credit day</button><div class="note" id="msn">Saved on this phone only. Set the same day on the other phone. Reports, budgets and forecasts all follow it.</div><button class="btn" id="sv">Save</button></div>';
   h+=aboutCard();
   return h}
-var WEBVER="5.45 · 17 Nov 2026";
+var WEBVER="5.46 · 17 Nov 2026";
 async function loadAinfo(){if(S._ainb)return;S._ainb=1;var P=smsPlugin();try{S.ainfo=P?await P.appInfo():null}catch(e){S.ainfo=null}S._ainb=0;if(S.tab==="set")render()}
 function aboutCard(){
   var d=remDiag(),rows=[];
@@ -1699,7 +1727,7 @@ function bindFam(el){
 function vCatsP(){
   var key=monthKey(0),by={};txIn(key).filter(function(t){return t.type==="out"&&isCount(t)}).forEach(function(t){var c=t.category||UNC;by[c]=(by[c]||0)+Number(t.amount)});
   var h=topbar("Categories","menu")+'<div class="dc"><div class="note" style="margin:0 0 14px">Built-in categories, with what was spent in each this month ('+esc(plabel(0))+'). Tap a payment in List to change its category.</div><div class="cgrid">';
-  CATS.concat([UNC]).forEach(function(c){h+='<button data-go="list"><i>'+ci(c)+'</i>'+esc(c)+'<small>'+(by[c]?money(Math.round(by[c])):'—')+'</small></button>'});
+  CATS.concat([UNC]).forEach(function(c){h+='<button data-go="list"><i style="background:'+tint(c)+'">'+ci(c)+'</i>'+esc(c)+'<small>'+(by[c]?money(Math.round(by[c])):'—')+'</small></button>'});
   return h+'</div></div><div class="note" style="text-align:center">Need a new category? Ask for it to be added to the app.</div>'}
 function trackStat(){var c=S.sc;if(!c||c.err)return '';
   return c.alert_count>0?'<div class="note" style="margin-top:10px">✓ '+c.alert_count+' payment'+(c.alert_count>1?'s':'')+' received automatically · last '+ago(c.last_alert)+'</div>':'<div class="note" style="margin-top:10px">No payments received automatically yet.</div>'}
@@ -1927,6 +1955,7 @@ function render(){
   var cma=q("cma"),cmb=q("cmb");if(cma)cma.onchange=function(){S.cmA=Number(cma.value);render()};if(cmb)cmb.onchange=function(){S.cmB=Number(cmb.value);render()};
   var otc=q("otc");if(otc)otc.onclick=function(){var ob=q("otb");if(ob)ob.style.display=ob.style.display==="none"?"block":"none"};
   var rp=q("rp");if(rp)rp.onchange=function(){S.rp=rp.value;render()};
+  document.querySelectorAll("[data-rpchip]").forEach(function(b){b.addEventListener("click",function(){S.rp=b.getAttribute("data-v");render()})});
   el.querySelectorAll("[data-cat]").forEach(function(b){b.onclick=function(){var t=S.txns.filter(function(x){return x.id===b.dataset.cat})[0];if(t)pick(t)}});
   var ma=q("msal");if(ma)ma.onclick=function(){var r=salaryDay(),n=q("msn");
     if(!r){n.textContent="No salary credit found yet. Mark your salary payee as Salary / Income in History first.";return}
@@ -2598,7 +2627,7 @@ function gSplitLabel(e){return e.split_mode==="percent"?"Percent split":e.split_
 
 /* ----- F1: profile ----- */
 function profCard(){var em=(S.profile&&S.profile.email)||(S.auth&&S.auth.email)||"";
-  return '<button class="mr" data-go="prof" style="border:1px solid var(--line);border-radius:16px;margin:0 0 6px;padding:14px;background:var(--card)">'+famAv(S.name,56)+'<span><b style="font-size:17px">'+esc(S.name)+'</b><span>'+esc(em)+'</span><span style="color:var(--acc);margin-top:2px">Edit profile</span></span><span class="go">›</span></button>'}
+  return '<button class="mr" data-go="prof" style="border:1px solid var(--line);border-radius:16px;margin:0 0 6px;padding:14px;background:var(--card)">'+'<span class="pring">'+famAv(S.name,56)+'</span><span><b style="font-size:17px">'+esc(S.name)+'</b><span>'+esc(em)+'</span><span><em class="pchip">Edit profile</em></span></span><span class="go">›</span></button>'}
 function vProfile(){var em=(S.profile&&S.profile.email)||(S.auth&&S.auth.email)||"",ph=GR.ex&&GR.ex.photo,up=(GR.ex&&GR.ex.upis)||[];
   var h=topbar("Profile","menu");
   h+='<div class="card" style="text-align:center">'+famAv(S.name,120);
