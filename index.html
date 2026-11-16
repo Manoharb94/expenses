@@ -156,17 +156,17 @@ nav button{padding:8px 2px;gap:3px;border-radius:22px}nav button svg{width:22px;
 .cmh{font-size:12px;font-weight:700;color:var(--mute);margin:14px 2px 2px}
 details.cminfo{margin-top:12px}details.cminfo summary{font-size:12.5px;color:var(--mute);cursor:pointer;list-style:none}details.cminfo summary::-webkit-details-marker{display:none}
 .fc{border:0;border-radius:22px;padding:18px;box-shadow:var(--shadow);position:relative;overflow:hidden}
-.fc.len{background:linear-gradient(160deg,color-mix(in srgb,var(--in) 13%,var(--card)),var(--card) 62%)}
+.fc.len{background:linear-gradient(160deg,color-mix(in srgb,var(--acc) 13%,var(--card)),var(--card) 62%)}
 .fc.grp{background:linear-gradient(160deg,color-mix(in srgb,var(--acc) 13%,var(--card)),var(--card) 62%)}
 .fcr{display:flex;gap:14px;align-items:center}.fcr b{font-size:16px}.fcr .note{margin:3px 0 0}
 .fci{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;font-size:28px;flex:none}
-.fci.l{background:color-mix(in srgb,var(--in) 20%,var(--card))}.fci.g{background:color-mix(in srgb,var(--acc) 20%,var(--card))}
+.fci.l{background:color-mix(in srgb,var(--acc) 20%,var(--card))}.fci.g{background:color-mix(in srgb,var(--acc) 20%,var(--card))}
 .fcb{border:0;border-radius:14px;padding:11px 18px;font:inherit;font-weight:700;font-size:14px;color:#fff;background:var(--acc);margin-top:14px;cursor:pointer;box-shadow:0 4px 12px color-mix(in srgb,var(--acc) 35%,transparent)}
 .fcl{border:0;background:none;color:var(--mute);font:inherit;font-size:13px;margin:14px 0 0 12px;cursor:pointer}
 .fchips{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
 .fchip{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:20px;padding:8px 13px;font:inherit;font-size:13px;font-weight:600;cursor:pointer}.fchip.p{background:var(--acc);color:#fff;border-color:var(--acc)}
 .fsum{display:flex;gap:10px;margin-bottom:10px}.fsum>div{flex:1;border-radius:16px;padding:12px}.fsum span{font-size:11px;font-weight:600}.fsum b{display:block;font-size:20px;margin-top:2px}
-.fsum .a{background:color-mix(in srgb,var(--in) 14%,var(--card));color:var(--in)}.fsum .b{background:color-mix(in srgb,var(--out) 14%,var(--card));color:var(--out)}
+.fsum .a{background:color-mix(in srgb,var(--acc) 14%,var(--card));color:var(--acc)}.fsum .b{background:color-mix(in srgb,var(--out) 14%,var(--card));color:var(--out)}
 .gtl{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x proximity;padding:0 2px 6px;margin:0 -2px}
 .gt{flex:none;width:138px;scroll-snap-align:start;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:12px 12px 14px;position:relative;text-align:left;color:var(--ink);font:inherit;cursor:pointer;overflow:hidden}
 .gt b{display:block;font-size:14px;margin:8px 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.gt small{font-size:11.5px;font-weight:600;display:block}
@@ -896,7 +896,7 @@ function cmChart(a,b,A,B,extra){
   var X=function(i){return pl+w*(i/Math.max(1,N-1))},Y=function(v){return pt+h*(1-v/mx)};
   CM.g={W:W,pl:pl,w:w,pt:pt,h:h,N:N,mx:mx};
   var pts=function(s,from,to){var r=[];for(var i=from;i<to&&i<s.n;i++)r.push(X(i).toFixed(1)+","+Y(s.cum[i]).toFixed(1));return r.join(" ")};
-  var o='<div class="cmchart" style="margin:16px 0 4px"><div style="font-weight:600;margin-bottom:6px" class="mute">Spending day by day</div><div class="seg2" style="margin-bottom:8px"><button type="button" class="'+(ev?'':'on')+'" data-cmev="0">All spending</button><button type="button" class="'+(ev?'on':'')+'" data-cmev="1">Everyday only</button></div>'
+  var o='<div class="cmchart" style="margin:16px 0 4px"><div style="font-weight:600;margin-bottom:6px" class="mute">Spending day by day</div><div class="seg2" style="margin-bottom:8px"><button type="button" class="'+(ev?'':'on')+'" data-cmev="0">All expense</button><button type="button" class="'+(ev?'on':'')+'" data-cmev="1">Daily expense</button></div>'
    +'<div class="cmtip" style="min-height:40px;font-size:13px;margin-bottom:4px"><span class="mute">Touch the graph to see a day</span></div>'
    +'<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="display:block;touch-action:pan-y;user-select:none;-webkit-user-select:none">';
   [0,.5,1].forEach(function(k){var y=Y(mx*k);o+='<line x1="'+pl+'" y1="'+y+'" x2="'+(W-pr)+'" y2="'+y+'" style="stroke:var(--line)" stroke-width="1"/><text x="'+(pl-5)+'" y="'+(y+3)+'" text-anchor="end" font-size="9" style="fill:var(--mute)">'+shortN(mx*k)+'</text>'});
@@ -944,7 +944,7 @@ function compareMonths(){
   var ch=Object.keys(keys).map(function(k){return {k:k,a:A.by[k]||0,b:B.by[k]||0,d:(B.by[k]||0)-(A.by[k]||0)}});
   var up=ch.filter(function(x){return x.d>0}).sort(function(x,y){return y.d-x.d}).slice(0,3),dn=ch.filter(function(x){return x.d<0}).sort(function(x,y){return x.d-y.d}).slice(0,3);
   var rows=function(l,cl,sg){var mxd=Math.max.apply(null,l.map(function(x){return Math.abs(x.d)}).concat([1]));return l.length?l.map(function(x){return '<div class="cmr"><span>'+esc(x.k===UNC?"No category yet":x.k)+'</span><span class="cmb"><i style="width:'+Math.max(6,Math.round(Math.abs(x.d)/mxd*100))+'%;background:var(--'+cl+')"></i></span><b class="'+cl+'">'+(sg==="▲"?'+':'−')+money(Math.round(Math.abs(x.d)))+'</b></div>'}).join(''):'<div class="mute" style="margin:6px 2px">Nothing</div>'};
-  h+=cmChart(a,b,A,B,(capA!=null||capB!=null?'<div class="note">This month is still running, so the other month is compared on the same number of days.</div>':'')+'<div class="note">Fixed bills such as EMIs are kept out of “Everyday spending” and the lists below.</div>');
+  h+=cmChart(a,b,A,B,(capA!=null||capB!=null?'<div class="note">This month is still running, so the other month is compared on the same number of days.</div>':'')+'<div class="note">Fixed bills such as EMIs are kept out of “Daily expense” and the lists below.</div>');
   h+='<div class="cmh">WENT UP</div>'+rows(up,"out","▲")+'<div class="cmh">WENT DOWN</div>'+rows(dn,"in","▼");
   return h+'</div>'}
 function pie(by,total){
@@ -1633,7 +1633,7 @@ function vSet(){
   h+='<div class="card"><button class="btn ghost" id="tourgo" style="margin:0">▶ Show app tour</button></div><h2>This phone</h2><div class="card"><div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><div class="mute">Your month starts on day (1 = normal calendar month)</div><input id="ms" type="number" inputmode="numeric" min="1" max="31" value="'+(S.ms||1)+'"><button class="btn ghost s" id="msal" style="margin-bottom:10px">Use my salary credit day</button><div class="note" id="msn">Saved on this phone only. Set the same day on the other phone. Reports, budgets and forecasts all follow it.</div><button class="btn" id="sv">Save</button></div>';
   h+=aboutCard();
   return h}
-var WEBVER="5.42 · 17 Nov 2026";
+var WEBVER="5.43 · 17 Nov 2026";
 async function loadAinfo(){if(S._ainb)return;S._ainb=1;var P=smsPlugin();try{S.ainfo=P?await P.appInfo():null}catch(e){S.ainfo=null}S._ainb=0;if(S.tab==="set")render()}
 function aboutCard(){
   var d=remDiag(),rows=[];
