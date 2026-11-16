@@ -1612,7 +1612,7 @@ function vSet(){
   h+='<div class="card"><button class="btn ghost" id="tourgo" style="margin:0">▶ Show app tour</button></div><h2>This phone</h2><div class="card"><div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><div class="mute">Your month starts on day (1 = normal calendar month)</div><input id="ms" type="number" inputmode="numeric" min="1" max="31" value="'+(S.ms||1)+'"><button class="btn ghost s" id="msal" style="margin-bottom:10px">Use my salary credit day</button><div class="note" id="msn">Saved on this phone only. Set the same day on the other phone. Reports, budgets and forecasts all follow it.</div><button class="btn" id="sv">Save</button></div>';
   h+=aboutCard();
   return h}
-var WEBVER="5.32 · 16 Nov 2026";
+var WEBVER="5.33 · 16 Nov 2026";
 async function loadAinfo(){if(S._ainb)return;S._ainb=1;var P=smsPlugin();try{S.ainfo=P?await P.appInfo():null}catch(e){S.ainfo=null}S._ainb=0;if(S.tab==="set")render()}
 function aboutCard(){
   var d=remDiag(),rows=[];
@@ -2465,7 +2465,9 @@ var PHOTO_RE=/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/=]+$/;
 var GCATS=["Stay","Food","Travel","Fun","Shopping","Rent","Bills","Other"];
 function myId(){return S.profile&&S.profile.user_id}
 function r2(n){return Math.round(n*100)/100}
-function gOKUI(){return GR.ok&&!!GR.d&&!!myId()}
+function gTryCache(){if(GR.d||GR.ok===false||!myId())return;try{var c=JSON.parse(ls("gcache")||"null");if(c&&c.u===myId()&&c.d&&c.d.groups){GR.d=c.d;GR.ex=GR.ex||c.ex||null;GR.ok=true;gMap()}}catch(e){}}
+function gSaveCache(){try{ls("gcache",JSON.stringify({u:myId(),d:GR.d,ex:GR.ex}))}catch(e){}}
+function gOKUI(){if(!GR.d)gTryCache();return GR.ok&&!!GR.d&&!!myId()}
 function gList(){return (GR.d&&GR.d.groups)||[]}
 function gGet(id){return gList().filter(function(g){return g.id===id})[0]}
 function gMem(g,u){return g.members.filter(function(m){return m.user_id===u})[0]}
@@ -2515,12 +2517,12 @@ function gMyNet(g){return gNets(g)[myId()]||0}
 async function loadGroups(force){
   if(!S.auth||!S.code||!myId())return;
   if(!force&&Date.now()-GR.t<15000)return;GR.t=Date.now();
-  var s0=JSON.stringify([GR.d,GR.ex,GR.ok,GR.exok]);
+  var s0=JSON.stringify([GR.d,GR.ex,GR.ok,GR.exok,GR.err]);
   try{GR.ex=await api("rpc/my_extra",{method:"POST",body:"{}"});GR.exok=true}catch(e){if(/PGRST202|Could not find|schema cache|404/.test(String(e&&e.message)))GR.exok=false}
-  try{GR.d=await api("rpc/my_groups",{method:"POST",body:"{}"});GR.ok=true}catch(e){if(/PGRST202|Could not find|schema cache|404/.test(String(e&&e.message)))GR.ok=false}
-  gMap();
+  try{GR.d=await api("rpc/my_groups",{method:"POST",body:"{}"});GR.ok=true;GR.err="";gSaveCache()}catch(e){GR.err=String(e&&e.message||e).slice(0,160);if(/PGRST202|Could not find|schema cache|404/.test(String(e&&e.message)))GR.ok=false}
+  try{gMap()}catch(e){GR.err="gMap: "+String(e&&e.message||e).slice(0,120)}
   try{await gJoinPending()}catch(e){}
-  if(s0!==JSON.stringify([GR.d,GR.ex,GR.ok,GR.exok])){var a=document.activeElement;if(!a||!/INPUT|TEXTAREA|SELECT/.test(a.tagName)){if(!document.querySelector("#sheet .sheet"))render()}}
+  if(s0!==JSON.stringify([GR.d,GR.ex,GR.ok,GR.exok,GR.err])){var a=document.activeElement;if(!a||!/INPUT|TEXTAREA|SELECT/.test(a.tagName)){if(!document.querySelector("#sheet .sheet"))render()}}
   gPopups()}
 function gQuiet(){loadGroups(true).catch(function(){})}
 function captureG(){try{var u=new URLSearchParams(location.search),c=(u.get("g")||"").trim();if(c){ls("pendg",c.slice(0,60));u.delete("g");var q=u.toString();history.replaceState(null,"",location.pathname+(q?"?"+q:"")+location.hash)}}catch(e){}}
@@ -2570,7 +2572,7 @@ function bindProfile(el){
     try{await api("rpc/set_my_upis",{method:"POST",body:JSON.stringify({p_upis:v})});GR.ex.upis=v.map(function(x){return x.toLowerCase()});await loadGroups(true);toast("UPI ID saved")}catch(e){toast(errText(e))}}}
 
 /* ----- Home: groups block, suggestions ----- */
-function groupsBlock(){if(!gOKUI())return '';
+function groupsBlock(){if(!gOKUI()){return GR.err?'<h2>Groups</h2><div class="card"><div class="note" style="margin:0 0 8px">Groups could not load: '+esc(GR.err)+'</div><button class="btn ghost s" data-gretry="1">Try again</button></div>':''}
   var gs=gList().filter(function(g){return !g.closed}),cl=gList().length-gs.length,me=myId();
   var h='<h2>Groups <span class="mute" style="font-weight:400;font-size:12px">shared with friends</span></h2><div class="card" id="grpcard">';
   if(!gs.length)h+='<div style="font-weight:700">Trips or a shared flat?</div><div class="note" style="margin:4px 0 10px">Make a group, split payments with friends, and settle up with real payments.</div>';
@@ -2831,6 +2833,7 @@ function gPickBind(sh,t){sh.querySelectorAll("[data-gt]").forEach(function(b){b.
 function bindGroups(el){
   if(S.tab==="prof")bindProfile(el);
   el.querySelectorAll("[data-gopen]").forEach(function(b){b.onclick=function(e){e.stopPropagation();S.gid=b.dataset.gopen;S.gfrom=S.tab==="grps"?"grps":"home";go("grpv");gQuiet()}});
+  el.querySelectorAll("[data-gretry]").forEach(function(b){b.onclick=async function(){b.disabled=true;b.textContent="Loading…";try{await loadGroups(true)}catch(e){}render()}});
   el.querySelectorAll("[data-gnew]").forEach(function(b){b.onclick=function(e){e.stopPropagation();gEditSheet(null)}});
   el.querySelectorAll("[data-bell]").forEach(function(b){b.onclick=function(e){e.stopPropagation();gBell()}});
   el.querySelectorAll("[data-gsy]").forEach(function(b){b.onclick=function(){var s=gSugg()[+b.dataset.gsy];if(s)gSuggYes(s)}});
