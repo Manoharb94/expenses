@@ -1613,7 +1613,7 @@ function vSet(){
   h+='<div class="card"><button class="btn ghost" id="tourgo" style="margin:0">▶ Show app tour</button></div><h2>This phone</h2><div class="card"><div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><div class="mute">Your month starts on day (1 = normal calendar month)</div><input id="ms" type="number" inputmode="numeric" min="1" max="31" value="'+(S.ms||1)+'"><button class="btn ghost s" id="msal" style="margin-bottom:10px">Use my salary credit day</button><div class="note" id="msn">Saved on this phone only. Set the same day on the other phone. Reports, budgets and forecasts all follow it.</div><button class="btn" id="sv">Save</button></div>';
   h+=aboutCard();
   return h}
-var WEBVER="5.35 · 16 Nov 2026";
+var WEBVER="5.36 · 16 Nov 2026";
 async function loadAinfo(){if(S._ainb)return;S._ainb=1;var P=smsPlugin();try{S.ainfo=P?await P.appInfo():null}catch(e){S.ainfo=null}S._ainb=0;if(S.tab==="set")render()}
 function aboutCard(){
   var d=remDiag(),rows=[];
@@ -2182,7 +2182,7 @@ function addSheet(pre){
   var h='<div class="sheet"><div><b>Add cash or other expense</b><div class="mute" style="margin:4px 0 10px">For money that did not come as a bank alert.</div><div class="mute">For</div><select id="xp">'+persons().map(function(n){return '<option value="'+esc(n)+'"'+(n===((S.pf&&S.pf!=="__both")?S.pf:S.name)?" selected":"")+'>'+esc(n)+'</option>'}).join("")+'</select><select id="xt"><option value="out">Money spent</option><option value="in">Money received</option></select><input id="xa" type="number" inputmode="decimal" placeholder="Amount"><input id="xm" placeholder="Payee or description (e.g. Cash – vegetables)"><input id="xd" type="date" value="'+iso(new Date())+'"><select id="xc"><option value="">No category yet</option>';
   CATS.forEach(function(c){if(typeof gNames==="function"&&gNames().indexOf(c)>=0&&UNBUILT(c))return;h+='<option>'+esc(c)+'</option>'});
   var go_=typeof gOpen==="function"&&typeof gOKUI==="function"&&gOKUI()?gOpen():[];if(go_.length){h+='<optgroup label="Groups">';go_.forEach(function(g){h+='<option value="g:'+esc(g.id)+'"'+(g.id===pre?' selected':'')+'>'+esc(g.name)+'</option>'});h+='</optgroup>'}
-  h+='</select><input id="xn" maxlength="200" placeholder="Note (optional)"><div class="note" style="margin:6px 0 10px">Lent money to someone, or borrowed? Choose <b>Lend out</b> or <b>Lend in</b> to track it under Lending.</div><button class="btn" id="xs">Save</button><button class="btn ghost" style="margin-top:8px" id="xx">Cancel</button></div></div>';
+  h+='</select><div class="note" style="margin:6px 0 10px">Lent money to someone, or borrowed? Choose <b>Lend out</b> or <b>Lend in</b> to track it under Lending.</div><button class="btn" id="xs">Save</button><button class="btn ghost" style="margin-top:8px" id="xx">Cancel</button></div></div>';
   sh.innerHTML=h;
   document.getElementById("xx").onclick=function(){sh.innerHTML=""};
   document.getElementById("xs").onclick=async function(){
@@ -2193,7 +2193,7 @@ function addSheet(pre){
       if(!grp||grp.closed){alert("This group is closed");return}
       if(g("xt")!=="out"){alert("Choose Money spent to add a payment to a group");return}
       if((g("xp")||S.name)!==S.name){alert("Group payments are added for you. Choose your own name in For.");return}}
-    try{var sv=await saveTxn({amount:a,type:g("xt"),merchant:m,merchant_key:key,note:g("xn").trim()||null,category:cat||null,txn_date:g("xd")||iso(new Date()),person:g("xp")||S.name});sh.innerHTML="";
+    try{var sv=await saveTxn({amount:a,type:g("xt"),merchant:m,merchant_key:key,category:cat||null,txn_date:g("xd")||iso(new Date()),person:g("xp")||S.name});sh.innerHTML="";
       if(grp&&sv&&sv.id&&!sv._pend){toast("Saved. Now split it with "+grp.name);await load();gExpSheet({g:gGet(grp.id)||grp,t:S.txns.filter(function(x){return x.id===sv.id})[0]||sv});return}
       if(grp)toast("Saved offline. Add it to "+grp.name+" when you are back online");else toast("Saved "+money(a)+" · "+m+" for "+(g("xp")||S.name));load()}
     catch(e){alert("Could not save: "+e.message)}
@@ -2204,7 +2204,7 @@ document.addEventListener("change",function(e){if(e.target&&e.target.id==="lflt"
 document.addEventListener("click",function(e){
   var dz=e.target&&e.target.closest?e.target.closest("[data-ldis]"):null;if(dz){ls("lenddis","1");render();toast("Hidden. Find Lending again in Menu.");return}
   var t=e.target&&e.target.closest?e.target.closest("#addx,[data-lnew],[data-lt]"):null;if(!t)return;
-  try{if(t.id==="addx"){var pg=(S.tab==="grpv"||S.tab==="grpo")&&typeof gGet==="function"?gGet(S.gid):null;addSheet(pg&&!pg.closed?pg.id:null)}else if(t.hasAttribute("data-lnew"))lendSheet("");else lendSheet(decodeURIComponent(t.getAttribute("data-lt")),t.getAttribute("data-ldef")||undefined)}
+  try{if(t.id==="addx"){var pg=(S.tab==="grpv"||S.tab==="grpo")&&typeof gGet==="function"?gGet(S.gid):null;if(pg&&!pg.closed)gExpSheet({g:pg});else addSheet(null)}else if(t.hasAttribute("data-lnew"))lendSheet("");else lendSheet(decodeURIComponent(t.getAttribute("data-lt")),t.getAttribute("data-ldef")||undefined)}
   catch(x){showErr(x.message)}
 });
 
@@ -2671,6 +2671,14 @@ function gInviteSheet(id,fresh){var g=gGet(id);if(!g)return;
 
 /* ----- payment in a group: split ----- */
 function gEqual(amt,ids){var n=ids.length,per=Math.floor(amt/n*100)/100,o={},tot=0;ids.forEach(function(u,i){o[u]=per;tot+=per});o[ids[0]]=r2(o[ids[0]]+r2(amt-tot));return o}
+var GCUR=["INR","USD","EUR","GBP","AED","SGD","THB","IDR","MYR","JPY","AUD","CAD","CHF","SAR","QAR","OMR","KWD","NPR","LKR","BDT","VND","HKD","CNY","KRW","NZD","ZAR","TRY","PHP"];
+function gCurOpts(c){var cur=c||"INR",l=GCUR.slice();if(l.indexOf(cur)<0)l.push(cur);return l.map(function(x){return '<option'+(x===cur?' selected':'')+'>'+x+'</option>'}).join("")}
+var _rc={};
+async function gRate(cur,date){cur=String(cur||"").toUpperCase();if(!cur||cur==="INR")return {rate:1,note:""};var k=cur+"|"+date;if(_rc[k])return _rc[k];
+  var today=iso(new Date()),to=function(u){return Promise.race([fetch(u).then(function(r){if(!r.ok)throw new Error("x");return r.json()}),new Promise(function(_,rj){setTimeout(function(){rj(new Error("t"))},6000)})])};
+  try{var u="https://api.frankfurter.app/"+(date&&date<today?date:"latest")+"?from="+encodeURIComponent(cur)+"&to=INR",j=await to(u);if(j&&j.rates&&j.rates.INR){return _rc[k]={rate:Math.round(j.rates.INR*10000)/10000,note:"Rate for "+(j.date||date)+". You can edit it."}}}catch(e){}
+  try{var j2=await to("https://open.er-api.com/v6/latest/"+encodeURIComponent(cur));if(j2&&j2.rates&&j2.rates.INR){return _rc[k]={rate:Math.round(j2.rates.INR*10000)/10000,note:"Latest rate"+(date&&date<today?" (not the exact day)":"")+". You can edit it."}}}catch(e){}
+  return null}
 function gExpSheet(o){var g=o.g,e=o.e,t=o.t,me=myId();if(!g)return;
   var canEdit=!e||(e.created_by===me||e.paid_by===me||(g.owner||g.created_by)===me);
   var st={payer:e?e.paid_by:me,mode:e?e.split_mode:"equal",amt:e?Number(e.amount):(t?Number(t.amount):0),title:e?e.title:(t&&t.merchant)||"",date:e?String(e.txn_date).slice(0,10):(t&&t.txn_date)||iso(new Date()),cat:e?(e.cat||""):"",note:e?(e.note||""):((t&&t.note)||""),photo:e?e.photo:null,
@@ -2683,12 +2691,14 @@ function gExpSheet(o){var g=o.g,e=o.e,t=o.t,me=myId();if(!g)return;
     var tot=0;ids.forEach(function(u){tot+=parseFloat(st.val[u])||0});tot=r2(tot);
     if(st.mode==="percent"){if(Math.abs(tot-100)>0.01){res.msg="Percentages add up to "+tot+"% (need 100%)";return res}var run=0;ids.forEach(function(u,i){var a=i===ids.length-1?r2(A-run):r2(A*(parseFloat(st.val[u])||0)/100);run=r2(run+a);res.shares[u]=a});res.ok=true;return res}
     if(Math.abs(tot-A)>0.01){res.msg=money(r2(Math.abs(A-tot)))+(tot>A?" too much":" left to assign");return res}ids.forEach(function(u){res.shares[u]=r2(parseFloat(st.val[u])||0)});res.ok=true;return res}
+  async function fetchRate(){var r=await gRate(st.cur,st.date);if(r&&r.rate){st.rate=String(r.rate);st.rmsg=r.note;st.amt=r2((parseFloat(st.orig)||0)*r.rate)}else st.rmsg="Could not get the rate. Type it in.";draw()}
   function draw(keep){var sc=calc(),h=gHead(e?(canEdit?"Edit payment":"Payment"):"Add to "+esc(g.name));
     if(t)h+='<div class="note" style="margin:-4px 0 8px">'+esc(t.merchant||"Payment")+' · '+esc(t.txn_date||"")+'</div>';
     var dis=canEdit?'':' disabled';
+    var rb=st.fx?'<div class="row" style="gap:8px;margin-top:8px"><div style="flex:1"><div class="mute">Rate: 1 '+esc(st.cur)+' = ₹</div><input id="xr" type="number" inputmode="decimal" value="'+esc(st.rate)+'"'+dis+' style="margin:0"></div><button class="btn ghost s" id="xrf"'+dis+' style="margin:18px 0 0">↻ Rate</button></div><div class="note" id="xrm">'+(st.orig&&st.rate?'<b>'+esc(st.cur)+' '+esc(st.orig)+' × '+esc(st.rate)+' = '+money(r2(st.orig*st.rate))+'</b> · converted to ₹. ':'Enter the amount. ')+esc(st.rmsg||'')+'</div>':'';
     h+='<div class="mute">What was it</div><input id="xt" maxlength="60" value="'+esc(st.title)+'" placeholder="e.g. Hotel"'+dis+'>'+
-      '<div class="row" style="gap:8px"><div style="flex:1"><div class="mute">Amount</div><input id="xa" type="number" inputmode="decimal" value="'+(st.amt||"")+'"'+(st.fx||(t&&!e)?' disabled':dis)+' style="margin:0"></div><div style="flex:1"><div class="mute">Date</div><input id="xd" type="date" value="'+esc(st.date)+'"'+dis+' style="margin:0"></div></div>'+
-      '<div class="mute" style="margin-top:8px">Type</div><select id="xc"'+dis+'><option value="">Choose</option>'+GCATS.map(function(c){return '<option'+(c===st.cat?' selected':'')+'>'+c+'</option>'}).join("")+'</select>'+
+      '<div class="row" style="gap:8px"><div style="flex:1.3"><div class="mute">Amount</div><div class="row" style="gap:6px"><select id="xcu" style="margin:0;width:88px"'+(t&&!e?' disabled':dis)+'>'+gCurOpts(st.cur)+'</select><input id="'+(st.fx?'xo':'xa')+'" type="number" inputmode="decimal" value="'+(st.fx?(st.orig||''):(st.amt||''))+'"'+(t&&!e?' disabled':dis)+' style="margin:0;min-width:0"></div></div><div style="flex:1"><div class="mute">Date</div><input id="xd" type="date" value="'+esc(st.date)+'"'+dis+' style="margin:0"></div></div>'+
+      rb+'<div class="mute" style="margin-top:8px">Type</div><select id="xc"'+dis+'><option value="">Choose</option>'+GCATS.map(function(c){return '<option'+(c===st.cat?' selected':'')+'>'+c+'</option>'}).join("")+'</select>'+
       '<div class="mute">Paid by</div><select id="xp"'+dis+'>'+g.members.map(function(m){return '<option value="'+m.user_id+'"'+(m.user_id===st.payer?' selected':'')+'>'+esc(m.name)+(m.user_id===me?' (you)':'')+'</option>'}).join("")+'</select>'+
       '<div class="seg2" style="margin-top:6px">'+[["equal","Equal"],["percent","Percent"],["manual","Manual"]].map(function(x){return '<button data-xm="'+x[0]+'" class="'+(st.mode===x[0]?'on':'')+'"'+dis+'>'+x[1]+'</button>'}).join("")+'</div>'+
       '<div class="mute">Split between ('+sc.ids.length+' of '+g.members.length+')</div><div class="card" style="padding:4px 10px;margin-bottom:8px">';
@@ -2696,32 +2706,36 @@ function gExpSheet(o){var g=o.g,e=o.e,t=o.t,me=myId();if(!g)return;
       h+='<div class="row" style="padding:7px 0;gap:8px"><input type="checkbox" data-xs="'+u+'"'+(on?' checked':'')+dis+' style="width:20px;margin:0">'+mAv(g,u,28)+'<span style="flex:1;min-width:0;'+(on?'':'color:var(--mute)')+'">'+esc(m.name)+(u===me?' (you)':'')+'</span>'+
         (st.mode==="equal"?'<b>'+(on&&sc.shares[u]!=null?money(sc.shares[u]):money(0))+'</b>':on?'<input data-xv="'+u+'" type="number" inputmode="decimal" value="'+esc(st.val[u]||"")+'" placeholder="'+(st.mode==="percent"?'%':'₹')+'" style="width:92px;margin:0"'+dis+'>':'')+'</div>'});
     h+='</div><div class="note" id="xmsg" style="font-weight:700;'+(sc.ok?'':'color:var(--out)')+'">'+(sc.ok?'Split adds up ✓':esc(sc.msg))+'</div>';
-    h+='<label class="row" style="justify-content:flex-start;gap:8px;margin:8px 0"><input type="checkbox" id="xfx"'+(st.fx?' checked':'')+dis+' style="width:auto;margin:0"><span>Paid in another currency</span></label>';
-    if(st.fx)h+='<div class="row" style="gap:6px"><input id="xcu" maxlength="4" placeholder="IDR" value="'+esc(st.cur)+'" style="width:70px;margin:0"'+dis+'><input id="xo" type="number" inputmode="decimal" placeholder="Amount" value="'+esc(st.orig)+'" style="margin:0"'+dis+'><input id="xr" type="number" inputmode="decimal" placeholder="Rate to '+esc(S.cur)+'" value="'+esc(st.rate)+'" style="margin:0"'+dis+'></div><div class="note">Group balances use '+esc(S.cur)+'. '+(st.orig&&st.rate?esc(st.cur||"")+' '+esc(st.orig)+' × '+esc(st.rate)+' = '+money(r2(st.orig*st.rate)):'Enter the amount and the rate.')+'</div>';
-    h+='<div class="mute">Note</div><input id="xn" maxlength="200" placeholder="Optional" value="'+esc(st.note)+'"'+dis+'>'+
-      '<div class="row" style="justify-content:flex-start;gap:10px;margin:6px 0">'+(st.photo&&PHOTO_RE.test(st.photo)?'<img src="'+st.photo+'" style="width:64px;height:64px;border-radius:10px;object-fit:cover">':'')+(canEdit?'<button class="btn ghost s" id="xph">🧾 '+(st.photo?'Change':'Add')+' bill photo</button>'+(st.photo?'<button class="btn ghost s out" id="xpr">Remove</button>':'')+'<input type="file" id="xpf" accept="image/*" style="display:none">':'')+'</div>';
+    h+='<div class="row" style="justify-content:flex-start;gap:10px;margin:6px 0">'+(st.photo&&PHOTO_RE.test(st.photo)?'<img src="'+st.photo+'" style="width:64px;height:64px;border-radius:10px;object-fit:cover">':'')+(canEdit?'<button class="btn ghost s" id="xph">🧾 '+(st.photo?'Change':'Add')+' bill photo</button>'+(st.photo?'<button class="btn ghost s out" id="xpr">Remove</button>':'')+'<input type="file" id="xpf" accept="image/*" style="display:none">':'')+'</div>';
     if(e)h+='<div class="note">Added by '+esc(e.created_by_name||"")+(e.updated_by_name?' · last changed by '+esc(e.updated_by_name):'')+'</div>';
     if(canEdit)h+='<button class="btn" id="xok" style="margin-top:6px"'+(sc.ok?'':' disabled')+'>'+(e?'Save changes':'Save split')+'</button>'+(e?'<button class="btn ghost out" id="xdel" style="margin-top:8px">Remove from group</button>':'');
     else h+='<div class="note">Only the person who added it, the person who paid, or the group creator can change this.</div>';
     var sh=gSheet(h);gBindX(sh);bind(sh)}
   function bind(sh){
     var re=function(){var a=document.activeElement,id=a&&a.id,dv=a&&a.dataset&&a.dataset.xv;draw();if(id){var n=document.querySelector("#sheet #"+id);if(n&&n.focus){n.focus();try{n.setSelectionRange(n.value.length,n.value.length)}catch(x){}}}else if(dv){var n2=document.querySelector('#sheet [data-xv="'+dv+'"]');if(n2){n2.focus()}}};
-    var rd=function(){st.title=gv(sh,"xt");st.date=gv(sh,"xd")||st.date;st.cat=gv(sh,"xc");st.payer=gv(sh,"xp")||st.payer;st.note=gv(sh,"xn");
-      if(st.fx){st.cur=gv(sh,"xcu").toUpperCase();st.orig=gv(sh,"xo");st.rate=gv(sh,"xr");st.amt=r2((parseFloat(st.orig)||0)*(parseFloat(st.rate)||0))}else if(sh.querySelector("#xa")&&!sh.querySelector("#xa").disabled)st.amt=parseFloat(gv(sh,"xa"))||0;
+    var rd=function(){st.title=gv(sh,"xt");st.date=gv(sh,"xd")||st.date;st.cat=gv(sh,"xc");st.payer=gv(sh,"xp")||st.payer;
+      var cu=gv(sh,"xcu");if(cu){st.cur=cu==="INR"?"":cu;st.fx=!!st.cur}
+      if(st.fx){st.orig=gv(sh,"xo");st.rate=gv(sh,"xr");st.amt=r2((parseFloat(st.orig)||0)*(parseFloat(st.rate)||0))}else if(sh.querySelector("#xa")&&!sh.querySelector("#xa").disabled)st.amt=parseFloat(gv(sh,"xa"))||0;
       sh.querySelectorAll("[data-xv]").forEach(function(i){st.val[i.dataset.xv]=i.value})};
     ["xa","xo","xr"].forEach(function(id){var i=sh.querySelector("#"+id);if(i)i.oninput=function(){rd();var sc=calc(),m=sh.querySelector("#xmsg");if(m){m.textContent=sc.ok?"Split adds up ✓":sc.msg;m.style.color=sc.ok?"":"var(--out)"}var b=sh.querySelector("#xok");if(b)b.disabled=!sc.ok;if(st.mode==="equal"||id!=="xa")re()}});
     sh.querySelectorAll("[data-xv]").forEach(function(i){i.oninput=function(){rd();var sc=calc(),m=sh.querySelector("#xmsg");m.textContent=sc.ok?"Split adds up ✓":sc.msg;m.style.color=sc.ok?"":"var(--out)";var b=sh.querySelector("#xok");if(b)b.disabled=!sc.ok}});
     sh.querySelectorAll("[data-xm]").forEach(function(b){b.onclick=function(){rd();st.mode=b.dataset.xm;draw()}});
     sh.querySelectorAll("[data-xs]").forEach(function(c){c.onchange=function(){rd();st.sel[c.dataset.xs]=c.checked;draw()}});
-    var fx=sh.querySelector("#xfx");if(fx)fx.onchange=function(){rd();st.fx=fx.checked;if(!st.fx){st.cur="";st.orig="";st.rate=""}draw()};
+    var cs=sh.querySelector("#xcu");if(cs)cs.onchange=async function(){var was=st.amt,wasFx=st.fx;rd();if(!st.fx){st.orig="";st.rate="";st.rmsg="";if(wasFx)st.amt=0;draw();return}
+      if(!wasFx){st.orig=was?String(was):"";}st.rate="";st.rmsg="Getting today's rate…";draw();await fetchRate()};
+    var rf=sh.querySelector("#xrf");if(rf)rf.onclick=async function(){rd();st.rmsg="Getting the rate…";draw();await fetchRate()};
+    var xdt=sh.querySelector("#xd");if(xdt)xdt.onchange=async function(){rd();if(st.fx){st.rmsg="Getting the rate…";draw();await fetchRate()}};
     var xp=sh.querySelector("#xph");if(xp){var f=sh.querySelector("#xpf");xp.onclick=function(){f.click()};f.onchange=async function(){var x=f.files&&f.files[0];if(!x)return;rd();try{st.photo=await imgToData(x,900,false,110000);draw()}catch(er){toast(errText(er))}}}
     var xr=sh.querySelector("#xpr");if(xr)xr.onclick=function(){rd();st.photo=null;draw()};
     var ok=sh.querySelector("#xok");if(ok)ok.onclick=async function(){rd();var sc=calc();if(!sc.ok){toast(sc.msg);return}
       var body={p_group:g.id,p_id:e?e.id:null,p_txn:t?t.id:(e?e.txn_id:null),p_paid_by:st.payer,p_amount:sc.ids.length?r2(st.amt):0,p_date:st.date,p_title:st.title||(t&&t.merchant)||"Payment",p_mode:st.mode,p_shares:sc.shares,p_note:st.note||null,p_photo:st.photo||null,p_cur:st.fx?(st.cur||null):null,p_orig:st.fx?(parseFloat(st.orig)||null):null,p_rate:st.fx?(parseFloat(st.rate)||null):null,p_cat:st.cat||null};
-      ok.disabled=true;var r=await gCall("group_save_expense",body,e?"Saved":"Added to "+g.name);if(!r.ok){ok.disabled=false;return}
+      ok.disabled=true;var mine=null;
+      if(!e&&!t&&st.payer===me&&navigator.onLine!==false){try{var ttl=st.title||"Payment";mine=await saveTxn({amount:r2(st.amt),type:"out",merchant:ttl,merchant_key:mk(ttl),category:g.name,note:st.fx&&st.orig&&st.rate?(st.cur+" "+st.orig+" × "+st.rate):null,txn_date:st.date,person:S.name});if(mine&&mine.id&&!mine._pend)body.p_txn=mine.id;else mine=null}catch(er){mine=null}}
+      var r=await gCall("group_save_expense",body,e?"Saved":"Added to "+g.name);if(!r.ok){ok.disabled=false;if(mine&&mine.id){try{await api("transactions?id=eq."+mine.id,{method:"DELETE"});load(true)}catch(er){}}return}
+      if(mine)load(true);
       if(t&&!e){try{await api("transactions?id=eq."+t.id,{method:"PATCH",headers:{Prefer:"return=minimal"},body:JSON.stringify({category:g.name})})}catch(er){}load(true)}
       gClose();render()};
-    var del=sh.querySelector("#xdel");if(del)del.onclick=async function(){if(!confirm("Remove this payment from the group? Everyone's balance changes."))return;var r=await gCall("group_delete_expense",{p_id:e.id},"Removed");if(r.ok){gClose();render()}}}
+    var del=sh.querySelector("#xdel");if(del)del.onclick=async function(){if(!confirm("Remove this payment from the group? Everyone's balance changes."))return;var r=await gCall("group_delete_expense",{p_id:e.id},"Removed");if(r.ok){if(e.txn_id){try{await api("transactions?id=eq."+e.txn_id,{method:"PATCH",headers:{Prefer:"return=minimal"},body:JSON.stringify({category:null})});load(true)}catch(er){}}gClose();render()}}}
   draw()}
 
 /* ----- settle up ----- */
@@ -2788,9 +2802,9 @@ function vGroupOpts(){var g=gGet(S.gid),h=topbar(g?g.name:"Group","grpv");if(!g)
   var me=myId();h+='<div class="card" style="text-align:center">'+gIcon(g,76)+'<div style="font-size:20px;font-weight:700;margin-top:8px">'+esc(g.name)+'</div><div class="note" style="margin:2px 0 8px">'+g.members.length+' members'+(g.start_date||g.end_date?' · '+esc((g.start_date||"")+(g.end_date?" – "+g.end_date:"")):"")+(g.closed?' · <b>Closed</b>':'')+'</div><button class="btn ghost s" data-gedit="1">✏️ Edit name / photo</button></div>';
   return h+gOptsHtml(g)}
 function gOpts(g){var sh=gSheet(gHead(esc(g.name))+gOptsHtml(g));gBindX(sh);gAct(sh,g)}
-function vGroup(){var g=gGet(S.gid),bk=gBack(),h=g?'<div class="tb"><button class="tbb" data-go="'+bk+'" aria-label="Back">'+IC.back+'</button><b data-gopts="1" role="button" tabindex="0" style="cursor:pointer">'+esc(g.name)+' <span class="go">›</span></b><span class="tbb"></span></div>':topbar("Group",bk);if(!g)return h+'<div class="card"><div class="note">This group is not available. It may have been deleted, or you left it.</div><button class="btn s" data-go="'+bk+'">Back</button></div>';
+function vGroup(){var g=gGet(S.gid),bk=gBack(),h=g?'<div class="tb"><button class="tbb" data-go="'+bk+'" aria-label="Back">'+IC.back+'</button><b data-gopts="1" role="button" tabindex="0" style="cursor:pointer;text-align:center">'+esc(g.name)+' <span class="go">›</span></b><span class="tbb"></span></div>':topbar("Group",bk);if(!g)return h+'<div class="card"><div class="note">This group is not available. It may have been deleted, or you left it.</div><button class="btn s" data-go="'+bk+'">Back</button></div>';
   var me=myId(),n=gMyNet(g);
-  h+='<div data-gopts="1" role="button" tabindex="0" class="row" style="justify-content:flex-start;gap:10px;margin:0 0 6px;cursor:pointer">'+gIcon(g,34)+'<span class="note" style="margin:0">'+g.members.length+' members · <b class="'+(n>0.49?'in':n<-0.49?'out':'mute')+'">'+(n>0.49?'you get '+money(n):n<-0.49?'you owe '+money(-n):'all settled')+'</b> · tap for settings</span></div>';
+  h+='<div data-gopts="1" role="button" tabindex="0" class="row" style="justify-content:center;gap:10px;margin:0 0 8px;cursor:pointer">'+gIcon(g,34)+'<span class="note" style="margin:0;text-align:center">'+g.members.length+' members · <b class="'+(n>0.49?'in':n<-0.49?'out':'mute')+'">'+(n>0.49?'you get '+money(n):n<-0.49?'you owe '+money(-n):'all settled')+'</b> · tap for settings</span></div>';
   if(g.closed)h+='<div class="card note">This group is closed. No new payments can be added, but debts can still be settled.'+(isC?' <button class="btn ghost s" data-gclose="0" style="margin-left:6px">Reopen</button>':'')+'</div>';
   gDue(g).forEach(function(r){h+='<div class="dc" style="border:1.5px solid var(--acc)"><b>Due: '+esc(r.title)+' '+money(Number(r.amount))+'</b><div class="note" style="margin:2px 0 8px">Paid by '+esc(r.paid_by_name||"")+' · split equally</div><button class="btn s" data-gdue="'+r.id+'">Add now</button></div>'});
   h+='<h2>Activity</h2><div class="card" style="padding:0 12px">';
@@ -2798,7 +2812,7 @@ function vGroup(){var g=gGet(S.gid),bk=gBack(),h=g?'<div class="tb"><button clas
   items.sort(function(a,b){return a.d<b.d?1:a.d>b.d?-1:(a.c<b.c?1:-1)});
   if(!items.length)h+='<div class="note" style="padding:12px 0">No payments yet. Tap the ＋ button below to add one, or pick “'+esc(g.name)+'” as the category on any payment.</div>';
   var lastd="";items.forEach(function(it){if(it.d!==lastd){lastd=it.d;h+='<div class="mute" style="padding:10px 0 2px">'+esc(dayLabel(it.d))+'</div>'}
-    if(it.k==="e"){var e=it.x,my=Number((e.shares||{})[me]||0);h+='<button class="mr" data-gexp="'+e.id+'" style="padding:10px 0">'+mAv(g,e.paid_by,34)+'<span><b>'+esc(e.title)+'</b><span>'+esc(gYou(g,e.paid_by))+' paid '+money(Number(e.amount))+' · '+gSplitLabel(e)+(e.orig_cur?' · '+esc(e.orig_cur)+' '+esc(e.orig_amount):'')+'</span></span><span style="margin-left:auto;text-align:right"><span style="display:block">'+(my>0?'your share':'not in this')+'</span><b class="'+(my>0?'out':'')+'">'+(my>0?money(my):'')+'</b></span></button>'}
+    if(it.k==="e"){var e=it.x,my=Number((e.shares||{})[me]||0);h+='<button class="mr" data-gexp="'+e.id+'" style="padding:10px 0">'+mAv(g,e.paid_by,34)+'<span><b>'+esc(e.title)+'</b><span>'+esc(gYou(g,e.paid_by))+' paid '+money(Number(e.amount))+' · '+gSplitLabel(e)+(e.orig_cur?' · converted from '+esc(e.orig_cur)+' '+esc(e.orig_amount)+(e.rate?' @ '+esc(e.rate):''):'')+'</span></span><span style="margin-left:auto;text-align:right"><span style="display:block">'+(my>0?'your share':'not in this')+'</span><b class="'+(my>0?'out':'')+'">'+(my>0?money(my):'')+'</b></span></button>'}
     else{var s=it.x,can=s.created_by===me||s.from_user===me||s.to_user===me;h+='<div class="row" style="padding:10px 0;gap:10px">'+mAv(g,s.from_user,34)+'<span style="flex:1;min-width:0"><b>'+esc(gYou(g,s.from_user))+' paid '+esc(gMeName(g,s.to_user))+'</b><span class="note" style="display:block;margin:0">Settled ✓'+(s.method?' · '+esc(s.method):'')+(s.txn_id?' · matched to a real payment':'')+'</span></span><b class="in">'+money(Number(s.amount))+'</b>'+(can?'<button class="btn ghost s out" data-gds="'+s.id+'" aria-label="Remove">✕</button>':'')+'</div>'}});
   h+='</div>';
   return h}
