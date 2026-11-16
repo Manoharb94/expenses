@@ -1612,7 +1612,7 @@ function vSet(){
   h+='<div class="card"><button class="btn ghost" id="tourgo" style="margin:0">▶ Show app tour</button></div><h2>This phone</h2><div class="card"><div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><div class="mute">Your month starts on day (1 = normal calendar month)</div><input id="ms" type="number" inputmode="numeric" min="1" max="31" value="'+(S.ms||1)+'"><button class="btn ghost s" id="msal" style="margin-bottom:10px">Use my salary credit day</button><div class="note" id="msn">Saved on this phone only. Set the same day on the other phone. Reports, budgets and forecasts all follow it.</div><button class="btn" id="sv">Save</button></div>';
   h+=aboutCard();
   return h}
-var WEBVER="5.30 · 16 Nov 2026";
+var WEBVER="5.31 · 16 Nov 2026";
 async function loadAinfo(){if(S._ainb)return;S._ainb=1;var P=smsPlugin();try{S.ainfo=P?await P.appInfo():null}catch(e){S.ainfo=null}S._ainb=0;if(S.tab==="set")render()}
 function aboutCard(){
   var d=remDiag(),rows=[];
@@ -2537,8 +2537,8 @@ function vProfile(){var em=(S.profile&&S.profile.email)||(S.auth&&S.auth.email)|
   var h=topbar("Profile","menu");
   h+='<div class="card" style="text-align:center">'+famAv(S.name,120);
   if(GR.exok){h+='<div class="note" style="margin:8px 0 12px">'+(ph?'Your photo is visible to your family and to people in your groups.':'No photo yet. Your initial is shown instead.')+'</div>'+
-    '<div class="row" style="gap:8px;justify-content:center;flex-wrap:wrap"><button class="btn s" id="pfc">📷 Choose photo</button><button class="btn ghost s" id="pft">Take a photo</button>'+(ph?'<button class="btn ghost s out" id="pfr">Remove</button>':'')+'</div>'+
-    '<input type="file" id="pfile" accept="image/*" style="display:none"><input type="file" id="pfile2" accept="image/*" capture="user" style="display:none">'}
+    '<div class="row" style="gap:8px;justify-content:center;flex-wrap:wrap"><button class="btn s" id="pfc">📷 Choose photo</button>'+(ph?'<button class="btn ghost s out" id="pfr">Remove</button>':'')+'</div>'+
+    '<input type="file" id="pfile" accept="image/*" style="display:none">'}
   else h+='<div class="note" style="margin-top:10px">Profile pictures will be available after the next update.</div>';
   h+='</div><h2>Your details</h2><div class="card"><div class="mute">Name</div><div style="font-weight:600;margin-bottom:10px">'+esc(S.name)+'</div><div class="mute">Email</div><div style="font-weight:600">'+esc(em)+'</div></div>';
   if(GR.exok)h+='<h2>My UPI ID <span class="mute" style="font-weight:400;font-size:12px">optional</span></h2><div class="card"><input id="pupi" placeholder="e.g. name@okhdfc (separate several with commas)" value="'+esc(up.join(", "))+'" autocapitalize="off" autocomplete="off"><div class="note" style="margin:6px 0 10px">Used only to match settlements inside your groups. People in your groups can see it. Nobody else can.</div><button class="btn s" id="pupis">Save UPI ID</button></div>';
@@ -2547,7 +2547,7 @@ function vProfile(){var em=(S.profile&&S.profile.email)||(S.auth&&S.auth.email)|
 function bindProfile(el){
   var pick=function(inp){inp.onchange=async function(){var f=inp.files&&inp.files[0];inp.value="";if(!f)return;
     try{toast("Saving…");var d=await imgToData(f,256,true,60000);await api("rpc/set_my_photo",{method:"POST",body:JSON.stringify({p_photo:d})});GR.ex=GR.ex||{};GR.ex.photo=d;await loadGroups(true);render();toast("Photo saved")}catch(e){toast(errText(e))}}};
-  var a=el.querySelector("#pfile"),b=el.querySelector("#pfile2");if(a){pick(a);pick(b);el.querySelector("#pfc").onclick=function(){a.click()};el.querySelector("#pft").onclick=function(){b.click()}}
+  var a=el.querySelector("#pfile");if(a){pick(a);el.querySelector("#pfc").onclick=function(){a.click()}}
   var r=el.querySelector("#pfr");if(r)r.onclick=async function(){try{await api("rpc/set_my_photo",{method:"POST",body:JSON.stringify({p_photo:""})});GR.ex.photo=null;await loadGroups(true);render();toast("Photo removed")}catch(e){toast(errText(e))}};
   var u=el.querySelector("#pupis");if(u)u.onclick=async function(){var v=(el.querySelector("#pupi").value||"").split(/[,\s]+/).filter(Boolean);
     try{await api("rpc/set_my_upis",{method:"POST",body:JSON.stringify({p_upis:v})});GR.ex.upis=v.map(function(x){return x.toLowerCase()});await loadGroups(true);toast("UPI ID saved")}catch(e){toast(errText(e))}}}
