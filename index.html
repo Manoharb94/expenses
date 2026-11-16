@@ -151,6 +151,24 @@ nav button{padding:8px 2px;gap:3px;border-radius:22px}nav button svg{width:22px;
 .lht{display:flex;margin-top:4px}.lht button{flex:1;border:0;background:none;color:rgba(255,255,255,.65);font:inherit;font-weight:700;font-size:14px;letter-spacing:.05em;padding:12px 0;border-bottom:3px solid transparent;text-transform:uppercase;cursor:pointer}.lht button.on{color:#fff;border-bottom-color:#fff}
 .ltot{text-align:center;font-weight:700;margin:2px 0 10px}
 .dg{font-size:12px;font-weight:700;color:var(--mute);margin:14px 4px 6px;text-transform:uppercase;letter-spacing:.04em}
+.fc{border:0;border-radius:22px;padding:18px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.fc.len{background:linear-gradient(160deg,color-mix(in srgb,var(--in) 13%,var(--card)),var(--card) 62%)}
+.fc.grp{background:linear-gradient(160deg,color-mix(in srgb,var(--acc) 13%,var(--card)),var(--card) 62%)}
+.fcr{display:flex;gap:14px;align-items:center}.fcr b{font-size:16px}.fcr .note{margin:3px 0 0}
+.fci{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;font-size:28px;flex:none}
+.fci.l{background:color-mix(in srgb,var(--in) 20%,var(--card))}.fci.g{background:color-mix(in srgb,var(--acc) 20%,var(--card))}
+.fcb{border:0;border-radius:14px;padding:11px 18px;font:inherit;font-weight:700;font-size:14px;color:#fff;background:var(--acc);margin-top:14px;cursor:pointer;box-shadow:0 4px 12px color-mix(in srgb,var(--acc) 35%,transparent)}.fcb.l{background:var(--in);box-shadow:0 4px 12px color-mix(in srgb,var(--in) 35%,transparent)}
+.fcl{border:0;background:none;color:var(--mute);font:inherit;font-size:13px;margin:14px 0 0 12px;cursor:pointer}
+.fchips{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.fchip{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:20px;padding:8px 13px;font:inherit;font-size:13px;font-weight:600;cursor:pointer}.fchip.p{background:var(--acc);color:#fff;border-color:var(--acc)}
+.fsum{display:flex;gap:10px;margin-bottom:10px}.fsum>div{flex:1;border-radius:16px;padding:12px}.fsum span{font-size:11px;font-weight:600}.fsum b{display:block;font-size:20px;margin-top:2px}
+.fsum .a{background:color-mix(in srgb,var(--in) 14%,var(--card));color:var(--in)}.fsum .b{background:color-mix(in srgb,var(--out) 14%,var(--card));color:var(--out)}
+.gtl{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x proximity;padding:0 2px 6px;margin:0 -2px}
+.gt{flex:none;width:138px;scroll-snap-align:start;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:12px 12px 14px;position:relative;text-align:left;color:var(--ink);font:inherit;cursor:pointer;overflow:hidden}
+.gt b{display:block;font-size:14px;margin:8px 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.gt small{font-size:11.5px;font-weight:600;display:block}
+.gt:after{content:"";position:absolute;left:12px;right:12px;bottom:0;height:3px;border-radius:3px;background:var(--c,var(--line))}
+.gav{display:flex;margin-top:8px}.gav i{width:22px;height:22px;border-radius:50%;border:2px solid var(--card);margin-left:-7px;font-style:normal;font-size:10px;display:grid;place-items:center;color:#fff;font-weight:700}.gav i:first-child{margin-left:0}
+.gt.new{border-style:dashed;display:grid;place-items:center;text-align:center;color:var(--acc);width:100px;font-weight:700;font-size:13px}.gt.new:after{display:none}
 .mr{display:flex;align-items:center;gap:14px;padding:14px 4px;border:0;background:none;width:100%;color:var(--ink);font:inherit;text-align:left;cursor:pointer;border-bottom:1px solid var(--line)}.mr:last-child{border:0}
 .mr i{font-style:normal;font-size:22px;width:30px;text-align:center;flex:none}.mr b{display:block;font-weight:600}.mr span span{display:block;font-size:13px;color:var(--mute)}.mr .go{margin-left:auto;color:var(--mute);font-size:22px}
 .sec{font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--mute);text-transform:uppercase;margin:22px 4px 8px}
@@ -1124,12 +1142,12 @@ function lendBlock(){
     any=true;var k=t.merchant||"Unknown",o=by[k]=by[k]||{lent:0,back:0,took:0,paid:0,e:[]},a=Number(t.amount);
     if(t.category===LOUT){if(t.type==="out"){o.lent+=a;o.e.push([t.txn_date,"lent",a,t.note])}else{o.back+=a;o.e.push([t.txn_date,"got back",a,t.note])}}
     else{if(t.type==="in"){o.took+=a;o.e.push([t.txn_date,"borrowed",a,t.note])}else{o.paid+=a;o.e.push([t.txn_date,"paid back",a,t.note])}}});
-  if(!any){if(ls("lenddis"))return '';return '<h2>Lending <span class="mute" style="font-weight:400;font-size:12px">🔒 only you see this</span></h2><div class="card" id="lendcard"><div style="font-weight:700">Lent or borrowed money?</div><div class="note" style="margin:4px 0 10px">Track who owes you and who you owe. It is never counted as spending or income.</div><button class="btn ghost s" data-lnew="1">+ Add new lender</button> <button class="btn ghost s" data-ldis="1" style="opacity:.7">Hide</button></div>'}
+  if(!any){if(ls("lenddis"))return '';return '<h2>Lending <span class="mute" style="font-weight:400;font-size:12px">🔒 only you see this</span></h2><div class="card fc len" id="lendcard"><div class="fcr"><div class="fci l">🪙</div><div><b>Lent or borrowed money?</b><div class="note">Track who owes you and who you owe. It is never counted as spending or income.</div></div></div><button class="fcb l" data-lnew="1">+ Add lender</button><button class="fcl" data-ldis="1">Hide</button></div>'}
   var rows=Object.keys(by).map(function(k){var o=by[k],r1=Math.max(0,Math.round((o.lent-o.back)*100)/100),r2=Math.max(0,Math.round((o.took-o.paid)*100)/100);return {k:k,o:o,r1:r1,r2:r2,net:Math.round((r1-r2)*100)/100,open:Math.abs(r1)+Math.abs(r2)}});
   rows.sort(function(a,b){return (a.open===0)-(b.open===0)||b.open-a.open});
   var get=0,owe=0;rows.forEach(function(r){if(r.net>0)get+=r.net;else if(r.net<0)owe-=r.net});
   S.lrows={};
-  var h='<h2>Lending <span class="mute" style="font-weight:400;font-size:12px">🔒 only you see this</span></h2><div class="card" id="lendcard"><button class="btn ghost s" style="margin-bottom:10px" data-lnew="1">+ Add new lender</button><div class="grid" style="margin-bottom:8px"><div><div class="mute">You will get</div><b class="in">'+money(get)+'</b></div><div><div class="mute">You have to pay</div><b class="out">'+money(owe)+'</b></div></div>';
+  var h='<h2>Lending <span class="mute" style="font-weight:400;font-size:12px">🔒 only you see this</span></h2><div class="card fc len" id="lendcard"><div class="fsum"><div class="a"><span>You will get</span><b>'+money(get)+'</b></div><div class="b"><span>You have to pay</span><b>'+money(owe)+'</b></div></div><button class="btn ghost s" style="margin-bottom:10px" data-lnew="1">+ Add new lender</button>';
   function line(label,total,done,rem,who){
     if(total===0&&done>0)return '<div style="margin:6px 0"><div class="row"><span class="mute">'+(who==="still to get"?'Got back ':'Paid back ')+money(done)+'</span><span class="in"><b>Settled ✓</b></span></div><div class="note">No earlier '+(who==="still to get"?'lend':'borrowing')+' was recorded, so nothing is pending.</div></div>';
     var pct=total>0?Math.min(100,Math.round(done/total*100)):0;
@@ -1613,7 +1631,7 @@ function vSet(){
   h+='<div class="card"><button class="btn ghost" id="tourgo" style="margin:0">▶ Show app tour</button></div><h2>This phone</h2><div class="card"><div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><div class="mute">Your month starts on day (1 = normal calendar month)</div><input id="ms" type="number" inputmode="numeric" min="1" max="31" value="'+(S.ms||1)+'"><button class="btn ghost s" id="msal" style="margin-bottom:10px">Use my salary credit day</button><div class="note" id="msn">Saved on this phone only. Set the same day on the other phone. Reports, budgets and forecasts all follow it.</div><button class="btn" id="sv">Save</button></div>';
   h+=aboutCard();
   return h}
-var WEBVER="5.38 · 16 Nov 2026";
+var WEBVER="5.39 · 17 Nov 2026";
 async function loadAinfo(){if(S._ainb)return;S._ainb=1;var P=smsPlugin();try{S.ainfo=P?await P.appInfo():null}catch(e){S.ainfo=null}S._ainb=0;if(S.tab==="set")render()}
 function aboutCard(){
   var d=remDiag(),rows=[];
@@ -2581,12 +2599,15 @@ function bindProfile(el){
 /* ----- Home: groups block, suggestions ----- */
 function groupsBlock(){if(!gOKUI()){return GR.err?'<h2>Groups</h2><div class="card"><div class="note" style="margin:0 0 8px">Groups could not load: '+esc(GR.err)+'</div><button class="btn ghost s" data-gretry="1">Try again</button></div>':''}
   var gs=gList().filter(function(g){return !g.closed}),cl=gList().length-gs.length,me=myId();
-  var h='<h2>Groups <span class="mute" style="font-weight:400;font-size:12px">shared with friends</span></h2><div class="card" id="grpcard">';
-  if(!gs.length)h+='<div style="font-weight:700">Trips or a shared flat?</div><div class="note" style="margin:4px 0 10px">Make a group, split payments with friends, and settle up with real payments.</div>';
-  gs.slice(0,4).forEach(function(g){var n=gMyNet(g),sub=g.members.length+" members";
-    h+='<button class="mr" data-gopen="'+g.id+'" style="padding:10px 0">'+gIcon(g,42)+'<span><b>'+esc(g.name)+'</b><span>'+esc(sub)+'</span></span><b class="'+(n>0.49?'in':n<-0.49?'out':'mute')+'" style="margin-left:auto;text-align:right">'+(n>0.49?'you get '+money(n):n<-0.49?'you owe '+money(-n):'settled')+'</b></button>'});
-  h+='<button class="btn ghost s" data-gnew="1" style="margin-top:8px">＋ Create group</button>';
-  if(gs.length>4||cl)h+=' <button class="btn ghost s" data-go="grps" style="margin-top:8px">All groups'+(cl?' · '+cl+' closed':'')+'</button>';
+  var h='<h2>Groups <span class="mute" style="font-weight:400;font-size:12px">shared with friends</span></h2><div class="card fc grp" id="grpcard">';
+  if(!gs.length){h+='<div class="fcr"><div class="fci g">🧳</div><div><b>Trips or a shared flat?</b><div class="note">Split payments with friends and settle up with real payments.</div></div></div><div class="fchips"><button class="fchip p" data-gnew="Trip">✈️ Trip</button><button class="fchip" data-gnew="Flat">🏠 Flat</button><button class="fchip" data-gnew="Friends">🍽️ Friends</button><button class="fchip" data-gnew="Other">＋ Other</button></div>';
+    if(cl)h+='<button class="fcl" data-go="grps" style="margin-left:0">All groups · '+cl+' closed</button>';return h+'</div>'}
+  var pal=["#6d3fd8","#1f8a5b","#e08a1e","#c4372c","#2a5bd7","#0f8b9c"];
+  h+='<div class="gtl">';
+  gs.slice(0,8).forEach(function(g){var n=gMyNet(g),c=n>0.49?'var(--in)':n<-0.49?'var(--out)':'var(--line)',lab=n>0.49?'You get '+money(n):n<-0.49?'You owe '+money(-n):'Settled';
+    h+='<button class="gt" data-gopen="'+g.id+'" style="--c:'+c+'">'+gIcon(g,44)+'<b>'+esc(g.name)+'</b><small style="color:'+(n>0.49?'var(--in)':n<-0.49?'var(--out)':'var(--mute)')+'">'+lab+'</small><span class="gav">'+g.members.slice(0,3).map(function(m,i){return '<i style="background:'+pal[i%pal.length]+'">'+esc(String(m.name||"?").charAt(0).toUpperCase())+'</i>'}).join("")+(g.members.length>3?'<i style="background:var(--mute)">+'+(g.members.length-3)+'</i>':'')+'</span></button>'});
+  h+='<button class="gt new" data-gnew="1"><span><span style="font-size:26px;display:block">＋</span>New group</span></button></div>';
+  if(gs.length>8||cl)h+='<button class="fcl" data-go="grps" style="margin-left:2px">All groups'+(cl?' · '+cl+' closed':'')+'</button>';
   return h+'</div>'}
 function vGroups(){var h=topbar("Groups","menu");if(!gOKUI())return h+'<div class="card"><div class="note">Groups will be available after the next update.</div></div>';
   var op=gList().filter(function(g){return !g.closed}),cl=gList().filter(function(g){return g.closed});
@@ -2649,9 +2670,9 @@ function gPopups(){if(!gOKUI()||S.tab!=="home"||document.querySelector("#sheet .
   sh.querySelector("[data-gir]").onclick=async function(){var r=await gCall("group_invite_respond",{p_id:inv.id,p_accept:false});if(r.ok){gClose();render()}}}
 
 /* ----- create / edit group ----- */
-function gEditSheet(id){var g=id?gGet(id):null,me=myId(),isC=!g||(g.owner||g.created_by)===me,st={photo:g?g.photo:null,change:false};
+function gEditSheet(id,preset){var g=id?gGet(id):null,me=myId(),isC=!g||(g.owner||g.created_by)===me,st={photo:g?g.photo:null,change:false};
   var h=gHead(g?"Edit group":"New group")+'<div style="text-align:center"><div id="gph" style="display:inline-block;cursor:pointer">'+(g?gIcon(g,92):'<span class="gic" style="width:92px;height:92px;font-size:38px;border:2px dashed var(--line)">📷</span>')+'</div><div class="note" style="margin:6px 0 10px"><a id="gphl" style="color:var(--acc);cursor:pointer">'+(g&&g.photo?'Change group photo':'Add group photo')+'</a></div><input type="file" id="gfile" accept="image/*" style="display:none"></div>'+
-    '<div class="mute">Group name</div><input id="gnm" maxlength="40" placeholder="e.g. Goa Trip" value="'+esc(g?g.name:"")+'">';
+    '<div class="mute">Group name</div><input id="gnm" maxlength="40" placeholder="e.g. Goa Trip" value="'+esc(g?g.name:(preset||""))+'">';
   if(isC)h+='<div class="mute">Trip dates (optional)</div><div class="row" style="gap:8px"><input id="gsd" type="date" value="'+esc(g&&g.start_date||"")+'" style="margin:0"><input id="ged" type="date" value="'+esc(g&&g.end_date||"")+'" style="margin:0"></div><div class="note" style="margin:4px 0 8px">After the end date, new payments cannot be added to the group.</div>'+
     '<label class="row" style="justify-content:flex-start;gap:10px;margin:8px 0"><input type="checkbox" id="gsm" style="width:auto;margin:0"'+(!g||g.simplify!==false?' checked':'')+'><span><b>Simplify group debts</b><span class="note" style="display:block;margin:0">Fewest payments between members</span></span></label>';
   h+='<button class="btn" id="gok" style="margin-top:10px">'+(g?'Save':'Create group')+'</button>';
@@ -2868,7 +2889,7 @@ function bindGroups(el){
   if(S.tab==="prof")bindProfile(el);
   el.querySelectorAll("[data-gopen]").forEach(function(b){b.onclick=function(e){e.stopPropagation();S.gid=b.dataset.gopen;S.gfrom=S.tab==="grps"?"grps":"home";go("grpv");gQuiet()}});
   el.querySelectorAll("[data-gretry]").forEach(function(b){b.onclick=async function(){b.disabled=true;b.textContent="Loading…";try{await loadGroups(true)}catch(e){}render()}});
-  el.querySelectorAll("[data-gnew]").forEach(function(b){b.onclick=function(e){e.stopPropagation();gEditSheet(null)}});
+  el.querySelectorAll("[data-gnew]").forEach(function(b){b.onclick=function(e){e.stopPropagation();var v=b.getAttribute("data-gnew");gEditSheet(null,v==="Trip"||v==="Flat"||v==="Friends"?v:"")}});
   el.querySelectorAll("[data-bell]").forEach(function(b){b.onclick=function(e){e.stopPropagation();gBell()}});
   el.querySelectorAll("[data-gsy]").forEach(function(b){b.onclick=function(){var s=gSugg()[+b.dataset.gsy];if(s)gSuggYes(s)}});
   el.querySelectorAll("[data-gsn]").forEach(function(b){b.onclick=function(){var s=gSugg()[+b.dataset.gsn];if(!s)return;var d=gDismissed();d[s.t.id]=1;ls("gdis",JSON.stringify(d));render()}});
