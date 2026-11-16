@@ -157,7 +157,7 @@ nav button{padding:8px 2px;gap:3px;border-radius:22px}nav button svg{width:22px;
 .fcr{display:flex;gap:14px;align-items:center}.fcr b{font-size:16px}.fcr .note{margin:3px 0 0}
 .fci{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;font-size:28px;flex:none}
 .fci.l{background:color-mix(in srgb,var(--in) 20%,var(--card))}.fci.g{background:color-mix(in srgb,var(--acc) 20%,var(--card))}
-.fcb{border:0;border-radius:14px;padding:11px 18px;font:inherit;font-weight:700;font-size:14px;color:#fff;background:var(--acc);margin-top:14px;cursor:pointer;box-shadow:0 4px 12px color-mix(in srgb,var(--acc) 35%,transparent)}.fcb.l{background:var(--in);box-shadow:0 4px 12px color-mix(in srgb,var(--in) 35%,transparent)}
+.fcb{border:0;border-radius:14px;padding:11px 18px;font:inherit;font-weight:700;font-size:14px;color:#fff;background:var(--acc);margin-top:14px;cursor:pointer;box-shadow:0 4px 12px color-mix(in srgb,var(--acc) 35%,transparent)}
 .fcl{border:0;background:none;color:var(--mute);font:inherit;font-size:13px;margin:14px 0 0 12px;cursor:pointer}
 .fchips{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
 .fchip{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:20px;padding:8px 13px;font:inherit;font-size:13px;font-weight:600;cursor:pointer}.fchip.p{background:var(--acc);color:#fff;border-color:var(--acc)}
@@ -1631,7 +1631,7 @@ function vSet(){
   h+='<div class="card"><button class="btn ghost" id="tourgo" style="margin:0">▶ Show app tour</button></div><h2>This phone</h2><div class="card"><div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><div class="mute">Your month starts on day (1 = normal calendar month)</div><input id="ms" type="number" inputmode="numeric" min="1" max="31" value="'+(S.ms||1)+'"><button class="btn ghost s" id="msal" style="margin-bottom:10px">Use my salary credit day</button><div class="note" id="msn">Saved on this phone only. Set the same day on the other phone. Reports, budgets and forecasts all follow it.</div><button class="btn" id="sv">Save</button></div>';
   h+=aboutCard();
   return h}
-var WEBVER="5.39 · 17 Nov 2026";
+var WEBVER="5.40 · 17 Nov 2026";
 async function loadAinfo(){if(S._ainb)return;S._ainb=1;var P=smsPlugin();try{S.ainfo=P?await P.appInfo():null}catch(e){S.ainfo=null}S._ainb=0;if(S.tab==="set")render()}
 function aboutCard(){
   var d=remDiag(),rows=[];
