@@ -236,7 +236,7 @@ function lookCard(){var t=ls("theme")||"light",a=ls("accent")||"violet";
   return h+'</div><div class="note">This is saved on this phone only, so you and your family can each pick your own.</div></div>'}
 function ls(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
-function money(n){return S.cur+Number(n).toLocaleString("en-IN",{maximumFractionDigits:2})}
+function money(n){n=Number(n);return (n<0?"−":"")+S.cur+Math.abs(n).toLocaleString("en-IN",{maximumFractionDigits:2})}
 function pad(n){return String(n).padStart(2,"0")}
 function ym(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)}
 function iso(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())}
@@ -1613,7 +1613,7 @@ function vSet(){
   h+='<div class="card"><button class="btn ghost" id="tourgo" style="margin:0">▶ Show app tour</button></div><h2>This phone</h2><div class="card"><div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><div class="mute">Your month starts on day (1 = normal calendar month)</div><input id="ms" type="number" inputmode="numeric" min="1" max="31" value="'+(S.ms||1)+'"><button class="btn ghost s" id="msal" style="margin-bottom:10px">Use my salary credit day</button><div class="note" id="msn">Saved on this phone only. Set the same day on the other phone. Reports, budgets and forecasts all follow it.</div><button class="btn" id="sv">Save</button></div>';
   h+=aboutCard();
   return h}
-var WEBVER="5.36 · 16 Nov 2026";
+var WEBVER="5.37 · 16 Nov 2026";
 async function loadAinfo(){if(S._ainb)return;S._ainb=1;var P=smsPlugin();try{S.ainfo=P?await P.appInfo():null}catch(e){S.ainfo=null}S._ainb=0;if(S.tab==="set")render()}
 function aboutCard(){
   var d=remDiag(),rows=[];
@@ -2134,25 +2134,27 @@ function pick(t){
 
 function splitSheet(t){
   var A=Number(t.amount),st={blocks:[{cat:"",rows:[{p:"",a:""}]}]},sh=document.getElementById("sheet");
-  var cats=CATS.filter(function(c){return c!==UNC&&c!==IGN&&c!==TRF&&c!==SELF&&c!==PASS&&c!==CCB&&c!==LIN&&c!==RENT&&c!=="Salary / Income"});
+  var cats=CATS.filter(function(c){if(c===UNC||c===IGN||c===TRF||c===SELF||c===PASS||c===CCB||c===LIN||c===RENT||c==="Salary / Income")return false;var gn=typeof gNames==="function"&&gNames().indexOf(c)>=0;return !gn||!!(typeof gByName==="function"&&gByName(c))});
+  var isG=function(c){return !!(c&&typeof gByName==="function"&&typeof gOKUI==="function"&&gOKUI()&&gByName(c))};
   function tot(){var x=0;st.blocks.forEach(function(b){b.rows.forEach(function(r){x+=parseFloat(r.a)||0})});return Math.round(x*100)/100}
   function left(){return Math.round((A-tot())*100)/100}
-  function line(){var l=left(),e=document.getElementById("sleft");if(!e)return;e.className="note"+(l<0?" out":"");e.style.fontWeight="700";e.textContent=money(A)+" − "+money(tot())+" = "+money(Math.abs(l))+(l<0?" too much":" left");var b=document.getElementById("sok");if(b)b.disabled=l!==0}
+  function line(){var l=left(),e=document.getElementById("sleft");if(!e)return;var ok=l===0;e.className="note"+(ok?"":" out");e.style.cssText="font-weight:700;margin:8px 0;"+(ok?"color:var(--in)":"color:var(--out)");
+    e.textContent=ok?"✓ Adds up to "+money(A):"Does not match the payment amount "+money(A)+" · "+money(Math.abs(l))+(l<0?" too much":" left");var b=document.getElementById("sok");if(b)b.style.opacity=ok?"":".55"}
   function draw(){
     var h='<div class="sheet"><div style="max-height:80vh;overflow:auto"><b>Split this payment</b><div class="mute" style="margin:4px 0 10px">'+esc(t.merchant||"Payment")+' · '+money(A)+' · '+esc(t.txn_date||"")+'</div>';
     st.blocks.forEach(function(b,bi){
       h+='<div class="card" style="box-shadow:none;border:1px solid var(--line);margin:0 0 10px;padding:10px"><div class="row"><select data-bc="'+bi+'" style="margin:0"><option value="">Choose category</option>'+cats.map(function(c){return '<option'+(c===b.cat?' selected':'')+'>'+esc(c)+'</option>'}).join('')+'</select>'+(st.blocks.length>1?'<button class="btn ghost s" data-dc="'+bi+'" style="margin:0 0 0 8px">✕</button>':'')+'</div>';
-      b.rows.forEach(function(r,ri){h+='<div class="row" style="margin-top:8px;gap:8px"><input data-bp="'+bi+'|'+ri+'" list="pl" placeholder="'+(b.cat===LOUT?'Person name':'Person (optional)')+'" value="'+esc(r.p)+'" style="margin:0;flex:1;min-width:0"><input data-ba="'+bi+'|'+ri+'" type="number" inputmode="decimal" placeholder="Amount" value="'+esc(r.a)+'" style="margin:0;width:110px">'+(b.rows.length>1?'<button class="btn ghost s" data-dr="'+bi+'|'+ri+'" style="margin:0">✕</button>':'')+'</div>'});
+      b.rows.forEach(function(r,ri){h+='<div class="row" style="margin-top:8px;gap:8px">'+(isG(b.cat)?'':'<input data-bp="'+bi+'|'+ri+'" list="pl" placeholder="'+(b.cat===LOUT?'Person name':'Person (optional)')+'" value="'+esc(r.p)+'" style="margin:0;flex:1;min-width:0">')+'<input data-ba="'+bi+'|'+ri+'" type="number" inputmode="decimal" placeholder="Amount" value="'+esc(r.a)+'" style="margin:0;'+(isG(b.cat)?'flex:1;min-width:0':'width:110px')+'">'+(b.rows.length>1?'<button class="btn ghost s" data-dr="'+bi+'|'+ri+'" style="margin:0">✕</button>':'')+'</div>'});
       h+='<button class="btn ghost s" data-ap="'+bi+'" style="margin:8px 0 0">＋ Add another person</button></div>'});
-    h+='<datalist id="pl">'+lendNames()+'</datalist><button class="btn ghost" id="sac" style="margin-bottom:8px">＋ Add category</button><div id="sleft" class="note"></div><button class="btn" id="sok">Save split</button><button class="btn ghost" style="margin-top:8px" id="sno">Cancel</button></div></div>';
+    h+='<datalist id="pl">'+lendNames()+'</datalist><div id="sleft" class="note"></div><button class="btn" id="sok">Save split</button><button class="btn ghost" style="margin-top:8px" id="sno">Cancel</button></div></div>';
     sh.innerHTML=h;line();
     sh.querySelectorAll("[data-bc]").forEach(function(e){e.onchange=function(){st.blocks[+e.dataset.bc].cat=e.value;draw()}});
+    var so=document.getElementById("sok");if(so)so.onmousedown=function(ev){ev.preventDefault()};
     sh.querySelectorAll("[data-bp]").forEach(function(e){e.oninput=function(){var k=e.dataset.bp.split("|");st.blocks[+k[0]].rows[+k[1]].p=e.value}});
     sh.querySelectorAll("[data-ba]").forEach(function(e){e.oninput=function(){var k=e.dataset.ba.split("|");st.blocks[+k[0]].rows[+k[1]].a=e.value;line()}});
     sh.querySelectorAll("[data-ap]").forEach(function(e){e.onclick=function(){st.blocks[+e.dataset.ap].rows.push({p:"",a:""});draw()}});
     sh.querySelectorAll("[data-dr]").forEach(function(e){e.onclick=function(){var k=e.dataset.dr.split("|");st.blocks[+k[0]].rows.splice(+k[1],1);draw()}});
     sh.querySelectorAll("[data-dc]").forEach(function(e){e.onclick=function(){st.blocks.splice(+e.dataset.dc,1);draw()}});
-    document.getElementById("sac").onclick=function(){var l=left();st.blocks.push({cat:"",rows:[{p:"",a:l>0?String(l):""}]});draw()};
     document.getElementById("sno").onclick=function(){sh.innerHTML=""};
     document.getElementById("sok").onclick=async function(){
       var ch=[],bad="";
@@ -2161,14 +2163,18 @@ function splitSheet(t){
         ch.push({a:a,cat:b.cat,p:r.p.trim()})})});
       if(bad){alert(bad);return}
       if(!ch.length){alert("Add at least one part");return}
-      if(left()!==0){alert("The parts must add up to "+money(A));return}
+      if(left()!==0){alert("Does not match the payment amount "+money(A)+". "+money(Math.abs(left()))+(left()<0?" too much.":" left."));return}
       var btn=document.getElementById("sok");btn.disabled=true;btn.textContent="Saving…";
       var tag="✂ Split of "+(t.merchant||"payment")+" "+money(A)+" ["+t.id+"]";
+      var gq=[];
       try{
-        for(var i=0;i<ch.length;i++){var c=ch[i],isL=c.cat===LOUT,mn=isL?c.p:(t.merchant||"Payment");
-          await saveTxn({amount:c.a,type:"out",merchant:mn,merchant_key:mk(mn),category:c.cat,txn_date:t.txn_date||iso(new Date()),person:t.person||S.name,note:tag+(!isL&&c.p?" · "+c.p:"")})}
+        for(var i=0;i<ch.length;i++){var c=ch[i],isL=c.cat===LOUT,mn=isL?c.p:(t.merchant||"Payment"),gg=isG(c.cat)?gByName(c.cat):null;
+          var sv=await saveTxn({amount:c.a,type:"out",merchant:mn,merchant_key:mk(mn),category:c.cat,txn_date:t.txn_date||iso(new Date()),person:t.person||S.name,note:tag+(!isL&&c.p&&!gg?" · "+c.p:"")});
+          if(gg&&sv&&sv.id&&!sv._pend)gq.push({g:gg,t:Object.assign({},sv,{amount:c.a,type:"out",merchant:mn,txn_date:t.txn_date||iso(new Date())})})}
         await api("transactions?id=eq."+encodeURIComponent(t.id),{method:"PATCH",headers:{Prefer:"return=minimal"},body:JSON.stringify({category:IGN,note:"✂ Split into "+ch.length+" parts ["+t.id+"]"})});
-        sh.innerHTML="";toast("Split into "+ch.length+" parts");load()
+        sh.innerHTML="";toast("Split into "+ch.length+" parts");await load();
+        var nextG=function(){if(!gq.length)return;var x=gq.shift();gExpSheet({g:gGet(x.g.id)||x.g,t:x.t,next:nextG})};
+        if(gq.length){toast("Now split "+(gq.length>1?"each group part":"the group part")+" with "+gq[0].g.name);nextG()}
       }catch(e){btn.disabled=false;btn.textContent="Save split";alert("Could not save: "+e.message)}}}
   draw()}
 function unsplit(t){
@@ -2704,21 +2710,25 @@ function gExpSheet(o){var g=o.g,e=o.e,t=o.t,me=myId();if(!g)return;
       '<div class="mute">Split between ('+sc.ids.length+' of '+g.members.length+')</div><div class="card" style="padding:4px 10px;margin-bottom:8px">';
     g.members.forEach(function(m){var on=st.sel[m.user_id],u=m.user_id;
       h+='<div class="row" style="padding:7px 0;gap:8px"><input type="checkbox" data-xs="'+u+'"'+(on?' checked':'')+dis+' style="width:20px;margin:0">'+mAv(g,u,28)+'<span style="flex:1;min-width:0;'+(on?'':'color:var(--mute)')+'">'+esc(m.name)+(u===me?' (you)':'')+'</span>'+
-        (st.mode==="equal"?'<b>'+(on&&sc.shares[u]!=null?money(sc.shares[u]):money(0))+'</b>':on?'<input data-xv="'+u+'" type="number" inputmode="decimal" value="'+esc(st.val[u]||"")+'" placeholder="'+(st.mode==="percent"?'%':'₹')+'" style="width:92px;margin:0"'+dis+'>':'')+'</div>'});
+        (st.mode==="equal"?'<b data-xsh="'+u+'">'+(on&&sc.shares[u]!=null?money(sc.shares[u]):money(0))+'</b>':on?'<input data-xv="'+u+'" type="number" inputmode="decimal" value="'+esc(st.val[u]||"")+'" placeholder="'+(st.mode==="percent"?'%':'₹')+'" style="width:92px;margin:0"'+dis+'>':'')+'</div>'});
     h+='</div><div class="note" id="xmsg" style="font-weight:700;'+(sc.ok?'':'color:var(--out)')+'">'+(sc.ok?'Split adds up ✓':esc(sc.msg))+'</div>';
     h+='<div class="row" style="justify-content:flex-start;gap:10px;margin:6px 0">'+(st.photo&&PHOTO_RE.test(st.photo)?'<img src="'+st.photo+'" style="width:64px;height:64px;border-radius:10px;object-fit:cover">':'')+(canEdit?'<button class="btn ghost s" id="xph">🧾 '+(st.photo?'Change':'Add')+' bill photo</button>'+(st.photo?'<button class="btn ghost s out" id="xpr">Remove</button>':'')+'<input type="file" id="xpf" accept="image/*" style="display:none">':'')+'</div>';
     if(e)h+='<div class="note">Added by '+esc(e.created_by_name||"")+(e.updated_by_name?' · last changed by '+esc(e.updated_by_name):'')+'</div>';
-    if(canEdit)h+='<button class="btn" id="xok" style="margin-top:6px"'+(sc.ok?'':' disabled')+'>'+(e?'Save changes':'Save split')+'</button>'+(e?'<button class="btn ghost out" id="xdel" style="margin-top:8px">Remove from group</button>':'');
+    if(canEdit)h+='<button class="btn" id="xok" style="margin-top:6px;'+(sc.ok?'':'opacity:.55')+'">'+(e?'Save changes':'Save split')+'</button>'+(e?'<button class="btn ghost out" id="xdel" style="margin-top:8px">Remove from group</button>':'');
     else h+='<div class="note">Only the person who added it, the person who paid, or the group creator can change this.</div>';
     var sh=gSheet(h);gBindX(sh);bind(sh)}
   function bind(sh){
-    var re=function(){var a=document.activeElement,id=a&&a.id,dv=a&&a.dataset&&a.dataset.xv;draw();if(id){var n=document.querySelector("#sheet #"+id);if(n&&n.focus){n.focus();try{n.setSelectionRange(n.value.length,n.value.length)}catch(x){}}}else if(dv){var n2=document.querySelector('#sheet [data-xv="'+dv+'"]');if(n2){n2.focus()}}};
+    var re=function(){var sc=calc(),m=sh.querySelector("#xmsg");if(m){m.textContent=sc.ok?"Split adds up ✓":sc.msg;m.style.color=sc.ok?"":"var(--out)"}
+      var b=sh.querySelector("#xok");if(b)b.style.opacity=sc.ok?"":".55";
+      sh.querySelectorAll("[data-xsh]").forEach(function(x){var u=x.dataset.xsh;x.textContent=money(st.sel[u]&&sc.shares[u]!=null?sc.shares[u]:0)});
+      var rm=sh.querySelector("#xrm");if(rm)rm.innerHTML=(st.orig&&st.rate?'<b>'+esc(st.cur)+' '+esc(st.orig)+' × '+esc(st.rate)+' = '+money(r2(st.orig*st.rate))+'</b> · converted to ₹. ':'Enter the amount. ')+esc(st.rmsg||'')};
+    var okb=sh.querySelector("#xok");if(okb)okb.onmousedown=function(ev){ev.preventDefault()};
     var rd=function(){st.title=gv(sh,"xt");st.date=gv(sh,"xd")||st.date;st.cat=gv(sh,"xc");st.payer=gv(sh,"xp")||st.payer;
       var cu=gv(sh,"xcu");if(cu){st.cur=cu==="INR"?"":cu;st.fx=!!st.cur}
       if(st.fx){st.orig=gv(sh,"xo");st.rate=gv(sh,"xr");st.amt=r2((parseFloat(st.orig)||0)*(parseFloat(st.rate)||0))}else if(sh.querySelector("#xa")&&!sh.querySelector("#xa").disabled)st.amt=parseFloat(gv(sh,"xa"))||0;
       sh.querySelectorAll("[data-xv]").forEach(function(i){st.val[i.dataset.xv]=i.value})};
-    ["xa","xo","xr"].forEach(function(id){var i=sh.querySelector("#"+id);if(i)i.oninput=function(){rd();var sc=calc(),m=sh.querySelector("#xmsg");if(m){m.textContent=sc.ok?"Split adds up ✓":sc.msg;m.style.color=sc.ok?"":"var(--out)"}var b=sh.querySelector("#xok");if(b)b.disabled=!sc.ok;if(st.mode==="equal"||id!=="xa")re()}});
-    sh.querySelectorAll("[data-xv]").forEach(function(i){i.oninput=function(){rd();var sc=calc(),m=sh.querySelector("#xmsg");m.textContent=sc.ok?"Split adds up ✓":sc.msg;m.style.color=sc.ok?"":"var(--out)";var b=sh.querySelector("#xok");if(b)b.disabled=!sc.ok}});
+    ["xa","xo","xr"].forEach(function(id){var i=sh.querySelector("#"+id);if(i)i.oninput=function(){rd();var sc=calc(),m=sh.querySelector("#xmsg");if(m){m.textContent=sc.ok?"Split adds up ✓":sc.msg;m.style.color=sc.ok?"":"var(--out)"}re()}});
+    sh.querySelectorAll("[data-xv]").forEach(function(i){i.oninput=function(){rd();var sc=calc(),m=sh.querySelector("#xmsg");m.textContent=sc.ok?"Split adds up ✓":sc.msg;m.style.color=sc.ok?"":"var(--out)";var b=sh.querySelector("#xok");if(b)b.style.opacity=sc.ok?"":".55"}});
     sh.querySelectorAll("[data-xm]").forEach(function(b){b.onclick=function(){rd();st.mode=b.dataset.xm;draw()}});
     sh.querySelectorAll("[data-xs]").forEach(function(c){c.onchange=function(){rd();st.sel[c.dataset.xs]=c.checked;draw()}});
     var cs=sh.querySelector("#xcu");if(cs)cs.onchange=async function(){var was=st.amt,wasFx=st.fx;rd();if(!st.fx){st.orig="";st.rate="";st.rmsg="";if(wasFx)st.amt=0;draw();return}
@@ -2733,6 +2743,7 @@ function gExpSheet(o){var g=o.g,e=o.e,t=o.t,me=myId();if(!g)return;
       if(!e&&!t&&st.payer===me&&navigator.onLine!==false){try{var ttl=st.title||"Payment";mine=await saveTxn({amount:r2(st.amt),type:"out",merchant:ttl,merchant_key:mk(ttl),category:g.name,note:st.fx&&st.orig&&st.rate?(st.cur+" "+st.orig+" × "+st.rate):null,txn_date:st.date,person:S.name});if(mine&&mine.id&&!mine._pend)body.p_txn=mine.id;else mine=null}catch(er){mine=null}}
       var r=await gCall("group_save_expense",body,e?"Saved":"Added to "+g.name);if(!r.ok){ok.disabled=false;if(mine&&mine.id){try{await api("transactions?id=eq."+mine.id,{method:"DELETE"});load(true)}catch(er){}}return}
       if(mine)load(true);
+      if(o.next){gClose();o.next();return}
       if(t&&!e){try{await api("transactions?id=eq."+t.id,{method:"PATCH",headers:{Prefer:"return=minimal"},body:JSON.stringify({category:g.name})})}catch(er){}load(true)}
       gClose();render()};
     var del=sh.querySelector("#xdel");if(del)del.onclick=async function(){if(!confirm("Remove this payment from the group? Everyone's balance changes."))return;var r=await gCall("group_delete_expense",{p_id:e.id},"Removed");if(r.ok){if(e.txn_id){try{await api("transactions?id=eq."+e.txn_id,{method:"PATCH",headers:{Prefer:"return=minimal"},body:JSON.stringify({category:null})});load(true)}catch(er){}}gClose();render()}}}
@@ -2793,7 +2804,7 @@ function gOptsHtml(g){var me=myId(),isC=(g.owner||g.created_by)===me,nets=gNets(
   (g.recurring||[]).forEach(function(r){h+='<button class="mr" data-grec="'+r.id+'" style="padding:8px 0"><i>🔁</i><span><b>'+esc(r.title)+'</b><span>Day '+r.day+' of every month · '+(r.people||[]).length+' people</span></span><b style="margin-left:auto">'+money(Number(r.amount))+'</b></button>'});
   if(!(g.recurring||[]).length)h+='<div class="note">Rent, internet or a subscription that repeats every month.</div>';
   h+='<button class="btn ghost s" data-grecn="1" style="margin-top:8px">＋ Add repeating payment</button></div>';
-  h+='<h2>Share &amp; export</h2><div class="card"><div class="row" style="gap:8px;flex-wrap:wrap;justify-content:flex-start"><button class="btn s" data-gimg="1">🖼️ Summary picture</button><button class="btn ghost s" data-gcsv="1">📊 CSV / Excel</button><button class="btn ghost s" data-gpdf="1">📄 PDF</button></div></div>';
+  h+='<h2>Share &amp; export</h2><div class="card"><button class="btn" data-gcsv="1">⬆️ Export</button><div class="note" style="margin:6px 0 0">Saves every payment in this group as a CSV file you can open in Excel.</div></div>';
   h+='<h2>Group settings</h2><div class="card" style="padding:0 12px">'+(isC?'<button class="mr" data-gedit="1"><i>⚙️</i><span><b>Dates &amp; simplify debts</b><span>'+(g.simplify!==false?'Simplify is on':'Simplify is off')+'</span></span><span class="go">›</span></button>':'')+(isC&&!g.closed?'<button class="mr" data-gclose="1"><i>🏁</i><span><b>Close group</b><span>No new payments. Debts can still be settled.</span></span><span class="go">›</span></button>':'')+
     '<button class="mr" data-gleave="1"><i>🚪</i><span><b>Leave group</b><span>Only when your balance is zero</span></span></button>'+(isC?'<button class="mr" data-gdelg="1"><i>🗑️</i><span><b class="out">Delete group</b><span>Removes it for everyone</span></span></button>':'')+'</div>';
   h+='<div class="note" style="margin:10px 0 24px">Members see only the payments tagged to this group, never each other’s other spending.</div>';
@@ -2830,6 +2841,10 @@ function gShareImg(g){var c=document.createElement("canvas"),W=1080,lines=gLines
   if(!lines.length){x.textAlign="center";x.fillText("All settled ✓",W/2,610)}else lines.slice(0,12).forEach(function(l,i){x.textAlign="left";x.fillText(gName(g,l.from).slice(0,14)+" pays "+gName(g,l.to).slice(0,14),120,600+i*70);x.textAlign="right";x.fillText(S.cur+Number(l.amt).toLocaleString("en-IN"),W-120,600+i*70)});
   x.textAlign="center";x.globalAlpha=.7;x.font="400 30px system-ui,sans-serif";x.fillStyle="#fff";x.fillText("Made with Gharwise",W/2,H-60);
   c.toBlob(function(b){shareFile("gharwise-"+g.name.replace(/\W+/g,"-")+".png",b,"image/png",g.name+" on Gharwise")},"image/png")}
+async function gExport(g){var csv=gCsv(g),name="gharwise-"+g.name.replace(/\W+/g,"-")+".csv",blob=new Blob(["\ufeff"+csv],{type:"text/csv"});
+  try{var f=new File([blob],name,{type:"text/csv"});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f]});return}}catch(e){if(e&&e.name==="AbortError")return}
+  if(typeof nativeApp==="function"&&nativeApp()){var sh=gSheet(gHead("Export")+'<div class="note" style="margin:0 0 8px">Copy this and paste it into Excel or Sheets, or send it to yourself.</div><textarea id="gex" readonly rows="8" style="width:100%;font-size:12px"></textarea><button class="btn" id="gexc" style="margin-top:8px">Copy</button>');gBindX(sh);var ta=sh.querySelector("#gex");ta.value=csv;sh.querySelector("#gexc").onclick=async function(){try{await navigator.clipboard.writeText(csv);toast("Copied")}catch(e){ta.select();toast("Press and hold, then Copy")}};return}
+  var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;a.rel="noopener";document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},1500)}
 function gPdf(g){var sm=gSummary(g),w=window.open("","_blank");if(!w){toast("Allow pop-ups to save as PDF");return}
   var rows=g.expenses.slice().sort(function(a,b){return a.txn_date<b.txn_date?-1:1}).map(function(e){return '<tr><td>'+esc(String(e.txn_date).slice(0,10))+'</td><td>'+esc(e.title)+'</td><td>'+esc(e.cat||"")+'</td><td>'+esc(e.paid_by_name)+'</td><td style="text-align:right">'+money(Number(e.amount))+'</td></tr>'}).join("");
   var ln=gLines(g).map(function(l){return '<li>'+esc(gName(g,l.from))+' pays '+esc(gName(g,l.to))+' <b>'+money(l.amt)+'</b></li>'}).join("")||"<li>All settled</li>";
@@ -2837,7 +2852,7 @@ function gPdf(g){var sm=gSummary(g),w=window.open("","_blank");if(!w){toast("All
 
 /* ----- pick() hooks: tag a payment with a group, or settle a group debt ----- */
 function gPickHtml(t){if(!gOKUI())return '';var h='',me=myId();
-  if(t.type==="out")gList().filter(function(g){return !g.closed}).forEach(function(g){h+='<button data-gt="'+g.id+'"><i style="background:none">'+gIcon(g,26).replace('class="gic"','class="gic" style="border-radius:8px"')+'</i>'+esc(g.name)+'</button>'});
+  if(t.type==="out")gList().filter(function(g){return !g.closed}).forEach(function(g){h+='<button data-gt="'+g.id+'"><i style="background:none">'+gIcon(g,44)+'</i>'+esc(g.name)+'</button>'});
   var any=gList().some(function(g){return gLines(g).some(function(l){return t.type==="out"?l.from===me:l.to===me})});
   if(any)h+='<button class="wide" data-gs="1"><i>🤝</i>Settle a group debt with this</button>';return h}
 function gPickBind(sh,t){sh.querySelectorAll("[data-gt]").forEach(function(b){b.onclick=function(){var g=gGet(b.dataset.gt);gClose();gExpSheet({g:g,t:t})}});
@@ -2870,9 +2885,7 @@ function gAct(el,g){var q=function(sel,f){el.querySelectorAll(sel).forEach(funct
   q("[data-gdue]",function(b){gDueAdd(g,{id:b.dataset.gdue})});
   q("[data-grec]",function(b){gRecSheet(g.id,b.dataset.grec)});
   q("[data-grecn]",function(){gRecSheet(g.id)});
-  q("[data-gimg]",function(){gShareImg(g)});
-  q("[data-gcsv]",function(){shareFile("gharwise-"+g.name.replace(/\W+/g,"-")+".csv",new Blob([gCsv(g)],{type:"text/csv"}),"text/csv")});
-  q("[data-gpdf]",function(){gPdf(g)});
+  q("[data-gcsv]",function(){gExport(g)});
   q("[data-gclose]",async function(b){var c=b.dataset.gclose==="1";if(c&&!confirm("Close this group? No new payments can be added. Debts can still be settled."))return;var r=await gCall("group_set_closed",{p_group:g.id,p_closed:c},c?"Group closed":"Group reopened");if(r.ok){gClose();render()}});
   q("[data-gleave]",async function(){if(!confirm("Leave this group? Your past payments stay in its history."))return;var r=await gCall("group_leave",{p_group:g.id},"You left the group");if(r.ok){gClose();go(gBack())}});
   q("[data-gdelg]",async function(){if(!confirm("Delete this group for everyone? All its payments and settlements are removed. Your own payments in History stay."))return;var r=await gCall("group_delete",{p_group:g.id},"Group deleted");if(r.ok){gClose();go(gBack())}})}
