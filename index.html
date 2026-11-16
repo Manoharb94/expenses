@@ -1613,7 +1613,7 @@ function vSet(){
   h+='<div class="card"><button class="btn ghost" id="tourgo" style="margin:0">▶ Show app tour</button></div><h2>This phone</h2><div class="card"><div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><div class="mute">Your month starts on day (1 = normal calendar month)</div><input id="ms" type="number" inputmode="numeric" min="1" max="31" value="'+(S.ms||1)+'"><button class="btn ghost s" id="msal" style="margin-bottom:10px">Use my salary credit day</button><div class="note" id="msn">Saved on this phone only. Set the same day on the other phone. Reports, budgets and forecasts all follow it.</div><button class="btn" id="sv">Save</button></div>';
   h+=aboutCard();
   return h}
-var WEBVER="5.37 · 16 Nov 2026";
+var WEBVER="5.38 · 16 Nov 2026";
 async function loadAinfo(){if(S._ainb)return;S._ainb=1;var P=smsPlugin();try{S.ainfo=P?await P.appInfo():null}catch(e){S.ainfo=null}S._ainb=0;if(S.tab==="set")render()}
 function aboutCard(){
   var d=remDiag(),rows=[];
@@ -2185,7 +2185,7 @@ function unsplit(t){
     load()})}
 function addSheet(pre){
   var sh=document.getElementById("sheet");
-  var h='<div class="sheet"><div><b>Add cash or other expense</b><div class="mute" style="margin:4px 0 10px">For money that did not come as a bank alert.</div><div class="mute">For</div><select id="xp">'+persons().map(function(n){return '<option value="'+esc(n)+'"'+(n===((S.pf&&S.pf!=="__both")?S.pf:S.name)?" selected":"")+'>'+esc(n)+'</option>'}).join("")+'</select><select id="xt"><option value="out">Money spent</option><option value="in">Money received</option></select><input id="xa" type="number" inputmode="decimal" placeholder="Amount"><input id="xm" placeholder="Payee or description (e.g. Cash – vegetables)"><input id="xd" type="date" value="'+iso(new Date())+'"><select id="xc"><option value="">No category yet</option>';
+  var h='<div class="sheet"><div><b>Add cash payment</b><div class="mute" style="margin:4px 0 10px">For money that did not come as a bank alert.</div><div class="mute">For</div><select id="xp">'+persons().map(function(n){return '<option value="'+esc(n)+'"'+(n===((S.pf&&S.pf!=="__both")?S.pf:S.name)?" selected":"")+'>'+esc(n)+'</option>'}).join("")+'</select><select id="xt"><option value="out">Money spent</option><option value="in">Money received</option></select><input id="xa" type="number" inputmode="decimal" placeholder="Amount"><input id="xm" placeholder="Payee or description (e.g. Cash – vegetables)"><input id="xd" type="date" value="'+iso(new Date())+'"><select id="xc"><option value="">No category yet</option>';
   CATS.forEach(function(c){if(typeof gNames==="function"&&gNames().indexOf(c)>=0&&UNBUILT(c))return;h+='<option>'+esc(c)+'</option>'});
   var go_=typeof gOpen==="function"&&typeof gOKUI==="function"&&gOKUI()?gOpen():[];if(go_.length){h+='<optgroup label="Groups">';go_.forEach(function(g){h+='<option value="g:'+esc(g.id)+'"'+(g.id===pre?' selected':'')+'>'+esc(g.name)+'</option>'});h+='</optgroup>'}
   h+='</select><div class="note" style="margin:6px 0 10px">Lent money to someone, or borrowed? Choose <b>Lend out</b> or <b>Lend in</b> to track it under Lending.</div><button class="btn" id="xs">Save</button><button class="btn ghost" style="margin-top:8px" id="xx">Cancel</button></div></div>';
@@ -2599,10 +2599,10 @@ function vGroups(){var h=topbar("Groups","menu");if(!gOKUI())return h+'<div clas
 function gDismissed(){try{return JSON.parse(ls("gdis")||"{}")}catch(e){return {}}}
 function gAliases(){try{return JSON.parse(ls("gali")||"{}")}catch(e){return {}}}
 function gSugg(){var out=[],me=myId(),dis=gDismissed(),ali=gAliases();if(!gOKUI())return out;
-  var cut=Date.now()-25*86400000;
   gList().forEach(function(g){var lines=gLines(g);if(!lines.length)return;
+    var lo=g.start_date?Date.parse(g.start_date)-31*86400000:Date.now()-25*86400000,hi=g.end_date?Date.parse(g.end_date)+32*86400000:Date.now()+86400000;
     var used={};g.settlements.forEach(function(s){if(s.txn_id)used[s.txn_id]=1});
-    S.txns.forEach(function(t){if(t.person!==S.name||!t.txn_date||Date.parse(t.txn_date)<cut||dis[t.id]||used[t.id]||isLend(t))return;
+    S.txns.forEach(function(t){if(t.person!==S.name||!t.txn_date||Date.parse(t.txn_date)<lo||Date.parse(t.txn_date)>hi||dis[t.id]||used[t.id]||isLend(t))return;
       if(t.category&&t.category!==UNC&&t.category!=="Family & Friends"&&t.category!=="Other")return;
       var amt=Number(t.amount),mk=String(t.merchant||"").toLowerCase();if(!mk||amt<1)return;
       var best=null;lines.forEach(function(l){var other=t.type==="out"?(l.from===me?l.to:null):(l.to===me?l.from:null);if(!other)return;
@@ -2624,15 +2624,21 @@ async function gSuggYes(x){var l=x.l,g=x.g,t=x.t;
   toast("Settled ✓");load(true)}
 
 /* ----- bell ----- */
-function gBellN(){if(!gOKUI())return 0;var d=GR.d||{},me=myId(),n=(d.invites||[]).length;(d.events||[]).forEach(function(e){if(e.id>GR.seen&&e.actor!==me)n++});return n}
+function gEvList(){var me=myId(),lo=Math.max(Date.now()-864e5,Number(ls("gclr")||0));return ((GR.d&&GR.d.events)||[]).filter(function(e){return e.actor!==me&&Date.parse(e.at)>lo})}
+function gEvText(e){var t=String(e.text||""),v=/^(added|changed|removed|created|updated|closed|reopened|joined|left)\b/.test(t),fm=function(n){return money(Number(n))};
+  t=t.replace(/\s*\((\d+(?:\.\d+)?)\)\s*$/,function(_,n){return " · "+fm(n)}).replace(/\s(\d+(?:\.\d+)?)$/,function(_,n){return " "+fm(n)});
+  return (e.name||"Someone")+" "+(v?"":"recorded that ")+t}
+function gBellN(){if(!gOKUI())return 0;var d=GR.d||{},n=(d.invites||[]).length;gEvList().forEach(function(e){if(e.id>GR.seen)n++});return n}
 function bellHtml(){if(!gOKUI()||!(gList().length||((GR.d&&GR.d.invites)||[]).length))return '';var n=gBellN();
   return '<button class="tbb bellb" data-bell="1" aria-label="Notifications">🔔'+(n?'<b class="bdg">'+(n>9?"9+":n)+'</b>':'')+'</button>'}
 function gBell(){var d=GR.d||{},me=myId(),h=gHead("Notifications");
   (d.invites||[]).forEach(function(i){h+='<div class="card" style="border:1.5px solid var(--acc)"><div class="row" style="justify-content:flex-start;gap:12px">'+gAvH(i.by,i.by_photo,PCOL[0],44)+'<div><b>'+esc(i.by)+'</b> asked you to join <b>'+esc(i.group)+'</b></div></div><div class="row" style="gap:8px;margin-top:10px;justify-content:flex-start"><button class="btn s" data-gia="'+i.id+'">Accept</button><button class="btn ghost s out" data-gir="'+i.id+'">Reject</button></div></div>'});
-  var ev=(d.events||[]).filter(function(e){return e.actor!==me});
-  if(!ev.length&&!(d.invites||[]).length)h+='<div class="note">Nothing new.</div>';
-  ev.slice(0,25).forEach(function(e){var g=gGet(e.group_id);h+='<div class="mr" style="padding:10px 0;cursor:default">'+(g?gIcon(g,34):'')+'<span><b>'+esc(e.name||"Someone")+' '+esc(e.text)+'</b><span>'+esc(g?g.name:"")+' · '+esc(gWhen(e.at))+'</span></span></div>'});
+  var ev=gEvList();
+  if(!ev.length&&!(d.invites||[]).length)h+='<div class="note">Nothing new. Updates stay for one day.</div>';
+  ev.slice(0,25).forEach(function(e){var g=gGet(e.group_id);h+='<div class="mr" style="padding:10px 0;cursor:default">'+(g?gIcon(g,34):'')+'<span><em style="font-style:normal;font-weight:600;display:block">'+esc(gEvText(e))+'</em><span>'+esc(g?g.name:"")+' · '+esc(gWhen(e.at))+'</span></span></div>'});
+  if(ev.length)h+='<button class="btn ghost s" id="gclr" style="margin-top:8px">Clear all</button>';
   var sh=gSheet(h);gBindX(sh);var top=(d.events||[])[0];if(top&&top.id>GR.seen){GR.seen=top.id;ls("gseen",String(GR.seen))}
+  var cb=sh.querySelector("#gclr");if(cb)cb.onclick=function(){ls("gclr",String(Date.now()));gClose();render()};
   sh.querySelectorAll("[data-gia]").forEach(function(b){b.onclick=async function(){var r=await gCall("group_invite_respond",{p_id:b.dataset.gia,p_accept:true},"You joined the group");if(r.ok){gClose();if(r.r){S.gid=r.r;go("grpv")}else render()}}});
   sh.querySelectorAll("[data-gir]").forEach(function(b){b.onclick=async function(){var r=await gCall("group_invite_respond",{p_id:b.dataset.gir,p_accept:false});if(r.ok){gClose();render()}}})}
 function gPopups(){if(!gOKUI()||S.tab!=="home"||document.querySelector("#sheet .sheet"))return;
@@ -2853,13 +2859,9 @@ function gPdf(g){var sm=gSummary(g),w=window.open("","_blank");if(!w){toast("All
 /* ----- pick() hooks: tag a payment with a group, or settle a group debt ----- */
 function gPickHtml(t){if(!gOKUI())return '';var h='',me=myId();
   if(t.type==="out")gList().filter(function(g){return !g.closed}).forEach(function(g){h+='<button data-gt="'+g.id+'"><i style="background:none">'+gIcon(g,44)+'</i>'+esc(g.name)+'</button>'});
-  var any=gList().some(function(g){return gLines(g).some(function(l){return t.type==="out"?l.from===me:l.to===me})});
-  if(any)h+='<button class="wide" data-gs="1"><i>🤝</i>Settle a group debt with this</button>';return h}
+  gList().forEach(function(g){var has=gLines(g).some(function(l){return t.type==="out"?l.from===me:l.to===me});if(has)h+='<button class="wide" data-gs="'+g.id+'"><i>🤝</i>Settle up with '+esc(g.name)+'</button>'});return h}
 function gPickBind(sh,t){sh.querySelectorAll("[data-gt]").forEach(function(b){b.onclick=function(){var g=gGet(b.dataset.gt);gClose();gExpSheet({g:g,t:t})}});
-  var s=sh.querySelector("[data-gs]");if(s)s.onclick=function(){var me=myId(),gs=gList().filter(function(g){return gLines(g).some(function(l){return t.type==="out"?l.from===me:l.to===me})});
-    var go1=function(g){var l=gLines(g).filter(function(l){return t.type==="out"?l.from===me:l.to===me})[0];gClose();gSettleSheet(g.id,{from:l.from,to:l.to,txn:t.id})};
-    if(gs.length===1){go1(gs[0]);return}
-    var h=gHead("Which group?")+gs.map(function(g){return '<button class="mr" data-gg="'+g.id+'">'+gIcon(g,34)+'<span><b>'+esc(g.name)+'</b></span></button>'}).join("");var s2=gSheet(h);gBindX(s2);s2.querySelectorAll("[data-gg]").forEach(function(b){b.onclick=function(){go1(gGet(b.dataset.gg))}})}}
+  sh.querySelectorAll("[data-gs]").forEach(function(b){b.onclick=function(){var me=myId(),g=gGet(b.dataset.gs),l=gLines(g).filter(function(l){return t.type==="out"?l.from===me:l.to===me})[0];if(!l)return;gClose();gSettleSheet(g.id,{from:l.from,to:l.to,txn:t.id})}})}
 
 /* ----- bindings for every screen ----- */
 function bindGroups(el){
