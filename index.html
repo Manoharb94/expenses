@@ -242,6 +242,11 @@ details.cminfo{margin-top:12px}details.cminfo summary{font-size:12.5px;color:var
 .dc.trk{border-radius:22px}
 .empty b{display:block}
 .look button.on{border-color:var(--acc)}
+
+.wzp{margin:4px 0 14px}.wzs{font-size:13px;color:var(--mute);font-weight:600;margin-bottom:6px}.wzbar{height:8px;border-radius:5px;background:var(--chip);overflow:hidden}.wzbar i{display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,var(--hero2),var(--acc))}
+.wzc{padding:18px}.wzh{display:flex;align-items:center;gap:12px;margin-bottom:12px}.wzh em{font-style:normal;flex:none;width:36px;height:36px;border-radius:12px;display:grid;place-items:center;font-weight:800;color:#fff;background:linear-gradient(135deg,var(--hero1),var(--hero2))}.wzh b{font-size:18px;line-height:1.25}
+.wzb ol{padding-left:22px}.wzb li::marker{color:var(--acc);font-weight:700}.wzb .btn{margin-top:6px}
+.gstk{display:flex;margin-bottom:3px}.gstk .gav{margin-right:-6px;border:2px solid var(--card)}
 </style>
 <style id="splashcss">#splash{position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(120% 90% at 30% 15%,#8b5cf6 0%,#6d28d9 45%,#4c1d95 100%);color:#fff;transition:opacity .45s ease,visibility .45s;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}#splash.out{opacity:0;visibility:hidden}#splash svg{width:150px;height:136px;animation:spPop .7s cubic-bezier(.2,.9,.3,1.2) both}#splash b{font-size:34px;letter-spacing:-.5px;margin-top:18px;animation:spUp .6s .25s both}#splash small{font-size:14px;opacity:.78;margin-top:6px;animation:spUp .6s .4s both}#splash .sb{animation:spBar .9s .35s both;transform-origin:bottom}@keyframes spPop{from{transform:scale(.55);opacity:0}to{transform:none;opacity:1}}@keyframes spUp{from{transform:translateY(12px);opacity:0}to{transform:none;opacity:1}}@keyframes spBar{from{transform:scaleY(.1)}to{transform:none}}#splash .sb{animation:spBar .9s .35s both,spDance 1s 1.3s ease-in-out infinite alternate}#splash .sb:nth-of-type(2){animation-delay:.35s,1.45s}#splash .sb:nth-of-type(3){animation-delay:.35s,1.6s}#splash svg path{animation:spBob 1.2s 1.2s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:50% 100%}#splash small{min-height:20px;transition:opacity .3s;padding:0 28px;text-align:center}#splash small.q{opacity:0}@keyframes spDance{from{transform:scaleY(.6)}to{transform:scaleY(1.08)}}@keyframes spBob{from{transform:translateY(0)}to{transform:translateY(-9px)}}@media(prefers-reduced-motion:reduce){#splash *{animation:none!important}}#nbar.nind{width:35%!important;animation:nind 1.1s ease-in-out infinite alternate}@keyframes nind{from{margin-left:0}to{margin-left:65%}}@media (prefers-reduced-motion:reduce){#nbar.nind{animation:none;margin-left:0}}
 </style>
@@ -1335,7 +1340,7 @@ function autoFixed(outs,base,wantPend){
   outs.forEach(function(x){var k=fxKey(x),a=Number(x.amount),isRec=k&&rec[k]&&fxNear(rec[k],a);if(isRec)paid[k]=1;if(isRec||a>=thr){res.ids[x.id]=1;res.sum+=a}});
   if(wantPend)Object.keys(rec).forEach(function(k){if(!paid[k]&&!outs.some(function(x){return fxKey(x)===k}))res.pend+=rec[k]});
   return res}
-var TC_SEL="h1,h2,.dch>b,.dc>b[style*='font-size:18px'],.ic small,.tile small,.sec,.mr>span>b,.tb>b,.balr>span,.sxh b,.btn,.obtn,.tab,.alink,.nrow span,.cgrid button,.cats button,.sxc button,.sxs button,.seg2 button,.lht button,.tag,.cc button,.hero2 .hp span,.cr .row>span:first-child";
+var TC_SEL="h1,h2,.dch>b,.dc>b[style*='font-size:18px'],.ic small,.tile small,.sec,.mr>span>b,.tb>b,.balr>span,.sxh b,.btn,.obtn,.tab,.alink,.nrow span,.cgrid button,.cats button,.sxc button,.sxs button,.seg2 button,.lht button,.tag,.cc button,.hero2 .hp span,.cr .row>span:first-child,.wzh b";
 var TC_SMALL={a:1,an:1,the:1,of:1,and:1,or:1,for:1,in:1,on:1,to:1,at:1,by:1,vs:1,with:1};
 function tcTxt(str,st){return str.replace(/[A-Za-z][A-Za-z'’]*/g,function(w){var f=st.n++===0;if(!f&&TC_SMALL[w])return w;return w.charAt(0).toUpperCase()+w.slice(1)})}
 function tcApply(root){if(!root||!root.querySelectorAll)return;root.querySelectorAll(TC_SEL).forEach(function(e){var st={n:0};
@@ -1667,7 +1672,8 @@ function vBudget(){
   var bm={};S.budgets.forEach(function(b){bm[b.category]=Number(b.amount)});var sp=spentThisMonth(),tb=0,ts=0;
   Object.keys(bm).forEach(function(c){if(bm[c]>0){tb+=bm[c];ts+=sp[c]||0}});
   var dl=Math.max(0,Math.ceil((pend(0)-new Date())/864e5));
-  var h=topbar("Budget",0,1)+'<div class="hero2"><div class="hp"><span>👛 Monthly budget</span><em>'+dl+' day'+(dl===1?'':'s')+' left</em></div>'+(tb?'<small>'+(ts>tb?'Over budget by':'Left to spend')+'</small><div class="hb">'+money(Math.round(Math.abs(tb-ts)))+'</div><div class="hbar"><i style="width:'+Math.min(100,Math.round(ts/tb*100))+'%;'+(ts>tb?'background:#ffb4b4':'')+'"></i></div><div class="hk">'+money(Math.round(ts))+' spent of '+money(tb)+' · '+esc(plabel(0))+'</div>':'<div class="hb" style="font-size:22px">No budget set yet</div><div class="hk">Tap a category below to set one.</div>')+'</div>';
+  var heroB='<div class="hero2"><div class="hp"><span>👛 Monthly budget</span><em>'+dl+' day'+(dl===1?'':'s')+' left</em></div>'+(tb?'<small>'+(ts>tb?'Over budget by':'Left to spend')+'</small><div class="hb">'+money(Math.round(Math.abs(tb-ts)))+'</div><div class="hbar"><i style="width:'+Math.min(100,Math.round(ts/tb*100))+'%;'+(ts>tb?'background:#ffb4b4':'')+'"></i></div><div class="hk">'+money(Math.round(ts))+' spent of '+money(tb)+' · '+esc(plabel(0))+'</div>':'<div class="hb" style="font-size:22px">No budget set yet</div><div class="hk">Tap a category below to set one.</div>')+'</div>';
+  var h=topbar("Budget",0,1);
   h+=starterCard();h+=loanBudgetCards();
   var ch='<div class="dc"><b style="font-size:18px">Categories</b><div class="note" style="margin:2px 0 10px">Spent this month. Tap one to add or change its budget. Press and hold to delete it.</div><input id="bq" type="search" placeholder="🔍 Search categories" autocomplete="off" value="'+esc(S.bq||"")+'" style="margin-bottom:12px"><div class="cgrid">';
   var bq=(S.bq||"").toLowerCase().trim(),bn=0;
@@ -1676,7 +1682,7 @@ function vBudget(){
   ch+='<button id="bnew" style="border-style:dashed"><i>＋</i>'+(bq&&!bn?'Add “'+esc(S.bq.trim())+'”':'New category')+'<small>Add your own</small></button></div>'+(bq&&!bn?'<div class="note" style="margin-top:10px">No category matches. Tap ＋ to add it.</div>':'')+'</div>';
   var pl=vPlan().replace('<h1>Plan</h1>','');
   if(S.profile&&S.profile.can_edit===false){pl=pl.replace(/<input /g,'<input disabled ').replace(/<select /g,'<select disabled ').replace('id="svb"','id="svb" style="display:none"').replace('id="addbud"','id="addbud" style="display:none"').replace('id="fadd"','id="fadd" style="display:none"').replace(/data-fedit="/g,'data-nofedit="').replace(/data-sw="fixed\|/g,'data-nosw="');h+='<div class="card" style="text-align:center">👁 View only. Ask the family owner for edit access to change budgets and bills.</div>'}
-  return h+pl+ch+'<button class="obtn" data-go="rep" data-rp="next">See next month’s forecast →</button>'}
+  return h+heroB+pl+ch+'<button class="obtn" data-go="rep" data-rp="next">See next month’s forecast →</button>'}
 function vMenu(){
   var em=(S.profile&&S.profile.email)||(S.auth&&S.auth.email)||"";
   var row=function(t,i,a,b,bg,badge,extra){return '<button class="mr" data-go="'+t+'"'+(extra||'')+'><i class="mt" style="background:'+bg+'">'+i+'</i><span><b>'+a+'</b>'+(b?'<span>'+b+'</span>':'')+'</span>'+(badge||'')+'<span class="go">›</span></button>'};
@@ -1691,7 +1697,7 @@ function vSet(){
   h+='<div class="card"><button class="btn ghost" id="tourgo" style="margin:0">▶ Show app tour</button></div><div class="card">'+sxHead('📱','This phone','Saved on this phone only')+'<div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><div class="mute">Your month starts on day (1 = normal calendar month)</div><input id="ms" type="number" inputmode="numeric" min="1" max="31" value="'+(S.ms||1)+'"><button class="btn ghost s" id="msal" style="margin-bottom:10px">Use my salary credit day</button><div class="note" id="msn">Saved on this phone only. Set the same day on the other phone. Reports, budgets and forecasts all follow it.</div><button class="btn" id="sv">Save</button></div>';
   h+=aboutCard();
   return h}
-var WEBVER="5.49 · 17 Nov 2026";
+var WEBVER="5.50 · 17 Nov 2026";
 async function loadAinfo(){if(S._ainb)return;S._ainb=1;var P=smsPlugin();try{S.ainfo=P?await P.appInfo():null}catch(e){S.ainfo=null}S._ainb=0;if(S.tab==="set")render()}
 function aboutCard(){
   var d=remDiag(),rows=[];
@@ -1717,7 +1723,7 @@ function vFam(){
     h+='<div class="sec" style="margin-top:4px">Sharing your data</div><div class="note" style="margin:-4px 4px 10px">People here can see your payments. '+(own?'You decide whether each can also edit.':'')+'</div>';
     h+='<div class="card" style="margin-top:12px;padding:4px 14px">';
     if(!others.length&&!(F.invites||[]).length)h+='<div class="empty"><span class="ei">👥</span><b>No one yet</b><div class="note">Send the invite below to your spouse or family.</div></div>';
-    others.forEach(function(m){h+='<div class="lt" style="cursor:default"><span class="ico" style="background:'+tint(m.name||"?")+'">'+esc((m.name||"?").charAt(0).toUpperCase())+'</span><div class="m"><b>'+esc(m.name)+(m.role==="owner"?' <span class="mute" style="font-weight:400">· owner</span>':'')+'</b><span>'+esc(m.email||"")+'</span></div>'+
+    others.forEach(function(m){h+='<div class="lt" style="cursor:default"><span style="flex:none;display:inline-flex;margin-right:2px">'+famAv(m.name||"?",44)+'</span><div class="m"><b>'+esc(m.name)+(m.role==="owner"?' <span class="mute" style="font-weight:400">· owner</span>':'')+'</b><span>'+esc(m.email||"")+'</span></div>'+
       (own&&m.role!=="owner"?'<div style="text-align:center"><label class="tgl" title="Allow editing"><input type="checkbox" data-medit="'+m.user_id+'"'+(m.can_edit?' checked':'')+'><span></span></label><div class="note" style="margin:2px 0 0;font-size:11px">Can edit</div></div>':'<span class="pill2">'+(m.can_edit?'Can edit':'View only')+'</span>')+'</div>'});
     (F.invites||[]).forEach(function(x){h+='<div class="lt" style="cursor:default"><span class="ico" style="background:rgba(255,150,40,.22)">✉️</span><div class="m"><b>'+esc(x.email)+'</b><span>Invited · waiting · '+(x.can_edit?'can edit':'view only')+'</span></div>'+(ce?'<button class="btn ghost s" data-icancel="'+x.id+'">Cancel</button>':'')+'</div>'});
     h+='</div>';
@@ -1727,7 +1733,7 @@ function vFam(){
   }else{
     h+='<div class="sec" style="margin-top:4px">Shared with you</div><div class="note" style="margin:-4px 4px 10px">You can see these people’s payments'+(ce?' and edit them':' (view only)')+'.</div><div class="card" style="padding:4px 14px">';
     if(!others.length)h+='<div class="empty"><span class="ei">👁</span><b>Nothing shared with you yet</b><div class="note">When someone adds you, they appear here.</div></div>';
-    others.forEach(function(m){h+='<div class="lt" style="cursor:default"><span class="ico" style="background:'+tint(m.name||"?")+'">'+esc((m.name||"?").charAt(0).toUpperCase())+'</span><div class="m"><b>'+esc(m.name)+'</b><span>'+esc(m.email||"")+' · in family since '+esc(String(m.since||"").slice(0,10))+'</span></div><span class="pill2">'+(ce?'Can edit':'View only')+'</span></div>'});
+    others.forEach(function(m){h+='<div class="lt" style="cursor:default"><span style="flex:none;display:inline-flex;margin-right:2px">'+famAv(m.name||"?",44)+'</span><div class="m"><b>'+esc(m.name)+'</b><span>'+esc(m.email||"")+' · in family since '+esc(String(m.since||"").slice(0,10))+'</span></div><span class="pill2">'+(ce?'Can edit':'View only')+'</span></div>'});
     h+='</div>';
     if(others.length)h+='<button class="btn ghost" id="fleave" style="margin-top:16px;color:var(--out)">Leave family</button><div class="note" style="margin:6px 4px">You get your own family again and your payments come with you.</div>';
   }
@@ -1761,9 +1767,9 @@ function vTrack(){
   return h}
 function wz(title,steps,cur,doneTo){
   var s=steps[cur],tb=topbar(title,"track");if(cur>0)tb=tb.replace('data-go="track"','data-step="-1"');
-  var h='<div class="wz">'+tb+'<div class="mute" style="text-align:center">Step '+(cur+1)+' of '+steps.length+'</div><div class="dots">';
-  steps.forEach(function(x,i){h+='<i class="'+(i===cur?'on':'')+'"></i>'});
-  h+='</div><h3>'+(cur+1)+'. '+s[0]+'</h3><div style="line-height:1.55">'+s[1]+'</div><div class="wzn"><button class="btn ghost" data-step="-1"'+(cur===0?' data-go="track"':'')+'>'+(cur===0?'Back':'Previous')+'</button>'+
+  var h='<div class="wz">'+tb+'<div class="wzp"><div class="wzs">Step '+(cur+1)+' of '+steps.length+'</div><div class="wzbar"><i style="width:'+Math.round((cur+1)/steps.length*100)+'%"></i></div></div>'+
+    '<div class="card wzc"><div class="wzh"><em>'+(cur+1)+'</em><b>'+s[0]+'</b></div><div class="wzb" style="line-height:1.55">'+s[1]+'</div></div>'+
+    '<div class="wzn"><button class="btn ghost" data-step="-1"'+(cur===0?' data-go="track"':'')+'>'+(cur===0?'Back':'Previous')+'</button>'+
     (cur===steps.length-1?'<button class="btn" data-go="'+doneTo+'">Done</button>':'<button class="btn" data-step="1">Next</button>')+'</div></div>';
   return h}
 function kv(label,val){return '<div class="mute" style="margin-top:10px">'+label+'</div><div class="kv"><span>'+esc(val)+'</span><button class="btn ghost s" data-copy="'+esc(val)+'">Copy</button></div>'}
@@ -2681,7 +2687,7 @@ function groupsBlock(){if(!gOKUI()){return GR.err?'<h2>Groups</h2><div class="ca
   return h+'</div>'}
 function vGroups(){var h=topbar("Groups","menu");if(!gOKUI())return h+'<div class="card"><div class="note">Groups will be available after the next update.</div></div>';
   var op=gList().filter(function(g){return !g.closed}),cl=gList().filter(function(g){return g.closed});
-  var row=function(g){var n=gMyNet(g);return '<button class="mr" data-gopen="'+g.id+'" style="padding:10px 0">'+gIcon(g,44)+'<span><b>'+esc(g.name)+'</b><span>'+g.members.length+' members'+(g.closed?' · closed':'')+'</span></span><b class="'+(n>0.49?'in':n<-0.49?'out':'mute')+'" style="margin-left:auto;text-align:right">'+(n>0.49?'you get '+money(n):n<-0.49?'you owe '+money(-n):'settled')+'</b></button>'};
+  var row=function(g){var n=gMyNet(g);return '<button class="mr" data-gopen="'+g.id+'" style="padding:10px 0">'+gIcon(g,44)+'<span><b>'+esc(g.name)+'</b><span><span class="gstk">'+g.members.slice(0,5).map(function(m){return mAv(g,m.user_id,22)}).join('')+'</span>'+g.members.length+' members'+(g.closed?' · closed':'')+'</span></span><b class="'+(n>0.49?'in':n<-0.49?'out':'mute')+'" style="margin-left:auto;text-align:right">'+(n>0.49?'you get '+money(n):n<-0.49?'you owe '+money(-n):'settled')+'</b></button>'};
   h+='<div class="card">'+(op.length?op.map(row).join(""):'<div class="empty"><span class="ei" style="opacity:1">🧳</span><b style="color:var(--ink);font-size:18px">No groups yet</b><div class="note" style="margin:4px 0 6px">Split trips, flat rent and shared bills with friends, then settle up.</div></div>')+'<button class="btn s" data-gnew="1" style="margin-top:10px">＋ Create group</button></div>';
   if(cl.length)h+='<h2>Closed</h2><div class="card">'+cl.map(row).join("")+'</div>';
   return h}
