@@ -398,7 +398,7 @@ function refreshSess(){
     saveSess(await r.json())}finally{S.refreshing=null}})();
   return S.refreshing}
 async function ensureToken(){if(S.auth&&S.auth.exp-60<Date.now()/1000)await refreshSess()}
-function logoutLocal(msg){try{if(typeof nativeSmsOK==="function"&&nativeSmsOK()){smsPlugin().disable();S.nsms=null}}catch(e){}S.auth=null;ls("sb","");ls("xc","");ls("ob","");S.profile=null;S.code="";S.name="";S.txns=[];S.budgets=[];S.fixed=[];S.goals=[];S.loans=[];S.gents=[];S.members=null;S.loaded=false;S.tab="home";S.view="login";S.amsg=msg||"";S.aok=false;if(typeof render==="function")render()}
+function logoutLocal(msg){try{var pgx=document.getElementById("pgate");if(pgx)pgx.remove()}catch(e){}try{ls("pvok","")}catch(e){}try{if(typeof nativeSmsOK==="function"&&nativeSmsOK()){smsPlugin().disable();S.nsms=null}}catch(e){}S.auth=null;ls("sb","");ls("xc","");ls("ob","");S.profile=null;S.code="";S.name="";S.txns=[];S.budgets=[];S.fixed=[];S.goals=[];S.loans=[];S.gents=[];S.members=null;S.loaded=false;S.tab="home";S.view="login";S.amsg=msg||"";S.aok=false;if(typeof render==="function")render()}
 async function loadMembers(){try{S.members=await api("members?select=user_id,display_name,role,created_at&order=created_at.asc")||[]}catch(e){S.members=[]}}
 async function enter(){
   var fresh=!S.loaded&&!S.offline;if(fresh)try{window.brandLoader(true)}catch(e){}
@@ -416,29 +416,33 @@ async function enter0(){
         S.profile=await api("rpc/my_profile",{method:"POST",body:"{}"});if(ps.c)toast("Welcome to the family!")}
       catch(e2){ls("pends","");S._fprefill={c:ps.c,n:ps.n};S._fm=1;S.fmode=ps.c?"join":"create";try{S.invites=await api("rpc/my_invites",{method:"POST",body:"{}"})||[]}catch(e){S.invites=[]}S.view="family";S.amsg=errText(e2);render();return}}
     if(!S.profile){try{S.invites=await api("rpc/my_invites",{method:"POST",body:"{}"})||[]}catch(e){S.invites=[]}S.view="family";S.amsg="";render();return}}
-  try{window.brandStep("Getting your money ready…")}catch(e){}S.code=S.profile.household_id;S.name=S.profile.display_name;ls("name","");ls("code","");S.view="";S.pf=ls("pf")||S.name;var qq=!!(S._cached&&S.loaded);S._cached=false;Promise.resolve(load(qq,pre)).then(function(){touch(true);setTimeout(phoneNudge,1500)},function(){touch(true)});api("rpc/my_invites",{method:"POST",body:"{}"}).then(function(r){S.invites=r||[];if(S.invites.length&&S.tab==="home")render()}).catch(function(){})}
+  try{window.brandStep("Getting your money ready…")}catch(e){}S.code=S.profile.household_id;S.name=S.profile.display_name;ls("name","");ls("code","");S.view="";S.pf=ls("pf")||S.name;var qq=!!(S._cached&&S.loaded);S._cached=false;Promise.resolve(load(qq,pre)).then(function(){touch(true);setTimeout(phoneNudge,800)},function(){touch(true)});api("rpc/my_invites",{method:"POST",body:"{}"}).then(function(r){S.invites=r||[];if(S.invites.length&&S.tab==="home")render()}).catch(function(){})}
 async function phoneNudge(force){
-  if(!S.auth||!S.code||S.view)return;if(S._pn&&!force)return;S._pn=1;
-  var mine=null;try{mine=await api("rpc/my_phone_norm",{method:"POST",body:"{}"})}catch(e){return}
-  S.myPhone=mine||"";if(mine){if(S.tab==="prof")render();return}
-  var st={};try{st=JSON.parse(ls("pvn")||"{}")||{}}catch(e){st={}}
-  var gap=(st.n||0)>=3?7:(st.n||0)>=1?2:0;
-  if(!force&&st.t&&Date.now()-st.t<gap*86400000)return;
-  var sh=document.getElementById("sheet"),tr=document.getElementById("tour");
-  if(!force&&((sh&&sh.innerHTML.trim())||(tr&&tr.innerHTML.trim())||S.view)){S._pn=0;setTimeout(phoneNudge,60000);return}
-  if(!force){st.n=(st.n||0)+1;st.t=Date.now();ls("pvn",JSON.stringify(st))}
-  phoneSheet()}
-function phoneSheet(){
+  /* Mandatory: every open, until this account has a verified mobile. Never blocks on a network error. */
+  if(!S.auth||!S.code||S.view)return;if(S._pn&&!force)return;
+  var key=String(S.auth.email||S.auth.phone||"");
+  if(!force&&key&&ls("pvok")===key){S.myPhone=S.myPhone||"ok";return}
+  S._pn=1;
+  var mine=null;try{mine=await api("rpc/my_phone_norm",{method:"POST",body:"{}"})}catch(e){S._pn=0;return}
+  S.myPhone=mine||"";
+  if(mine){if(key)ls("pvok",key);var g0=document.getElementById("pgate");if(g0)g0.remove();if(S.tab==="prof")render();return}
+  phoneSheet(!force)}
+function phoneSheet(must){
   var sh=document.getElementById("sheet");if(!sh||typeof gSheet!=="function")return;
   var ps={step:"num",ph:"",msg:""};
+  var hd=function(t){return must?'<div style="text-align:center;margin:8px 0 14px"><div style="font-size:40px">📱</div><b style="font-size:21px">'+t+'</b></div>':gHead(t)};
   function draw(){var h;
-    if(ps.step==="num")h=gHead("Verify your mobile")+'<div class="note" style="margin:0 0 10px">Log in with your mobile number and your current password, and get invited to groups by number. Your data stays exactly as it is.</div><div class="mobw"><span class="mcc">+91</span><input id="pvn" type="tel" inputmode="numeric" maxlength="14" placeholder="Mobile number" autocomplete="tel-national" value="'+esc(ps.ph)+'"></div><div class="amsg" id="pvm">'+esc(ps.msg)+'</div><button class="btn" id="pvs">Send Code</button><button class="btn ghost" style="margin-top:8px" id="pvl">Not Now</button>';
-    else if(ps.step==="otp")h=gHead("Enter the code")+'<div class="note" style="margin:0 0 10px">We sent a 6-digit code by SMS to <b>'+esc(phShow(ps.ph))+'</b>.</div><input id="pvc" class="otpin" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="······"><div class="amsg'+(ps.ok?' ok':'')+'" id="pvm">'+esc(ps.msg)+'</div><button class="btn" id="pvv">Verify</button><div style="text-align:center"><button class="alink" id="pvr">Send the code again</button> · <button class="alink" id="pvch">Change number</button></div>';
-    else h=gHead("Mobile verified")+'<div style="text-align:center;padding:6px 0 12px"><div style="font-size:44px">✅</div><div style="font-weight:700;margin:6px 0">'+esc(phShow(ps.ph))+'</div><div class="note">From now on you can log in with this number and your current password. Your email login still works too.</div></div><button class="btn" id="pvd">Done</button>';
-    var x=gSheet(h);gBindX(x);
+    if(ps.step==="num")h=hd("Verify your mobile")+'<div class="note" style="margin:0 0 10px">'+(must?'To keep using Gharwise, verify your mobile number once. ':'')+'Log in with your mobile number and your current password, and get invited to groups by number. Your data stays exactly as it is.</div><div class="mobw"><span class="mcc">+91</span><input id="pvn" type="tel" inputmode="numeric" maxlength="14" placeholder="Mobile number" autocomplete="tel-national" value="'+esc(ps.ph)+'"></div><div class="amsg" id="pvm">'+esc(ps.msg)+'</div><button class="btn" id="pvs">Send Code</button>'+(must?'':'<button class="btn ghost" style="margin-top:8px" id="pvl">Not Now</button>');
+    else if(ps.step==="otp")h=hd("Enter the code")+'<div class="note" style="margin:0 0 10px">We sent a 6-digit code by SMS to <b>'+esc(phShow(ps.ph))+'</b>.</div><input id="pvc" class="otpin" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="······"><div class="amsg'+(ps.ok?' ok':'')+'" id="pvm">'+esc(ps.msg)+'</div><button class="btn" id="pvv">Verify</button><div style="text-align:center"><button class="alink" id="pvr">Send the code again</button> · <button class="alink" id="pvch">Change number</button></div>';
+    else h=hd("Mobile verified")+'<div style="text-align:center;padding:6px 0 12px"><div style="font-size:44px">✅</div><div style="font-weight:700;margin:6px 0">'+esc(phShow(ps.ph))+'</div><div class="note">From now on you can log in with this number and your current password. Your email login still works too.</div></div><button class="btn" id="pvd">Done</button>';
+    if(must)h+='<div style="text-align:center;margin-top:14px"><button class="alink" id="pvhelp">Can’t receive the code?</button> · <button class="alink" id="pvout">Log out</button></div><div id="pvhelpt" class="note" style="display:none;margin-top:10px;text-align:center">Email <b>manoharb@gharwise.net</b> from the address you signed up with, and tell us your mobile number. We will help you get in.</div>';
+    var x;if(must){var ov=document.getElementById("pgate");if(!ov){ov=document.createElement("div");ov.id="pgate";ov.style.cssText="position:fixed;inset:0;z-index:9000;background:var(--bg);overflow:auto;-webkit-overflow-scrolling:touch";document.body.appendChild(ov)}
+      ov.innerHTML='<div style="max-width:460px;margin:0 auto;padding:max(28px,env(safe-area-inset-top)) 18px 40px">'+h+'</div>';x=ov}else{x=gSheet(h);gBindX(x)}
+    var hp=x.querySelector("#pvhelp");if(hp)hp.onclick=function(){x.querySelector("#pvhelpt").style.display="block"};
+    var lo=x.querySelector("#pvout");if(lo)lo.onclick=function(){var o=document.getElementById("pgate");if(o)o.remove();authAction("out")};
     var m=function(t,ok){ps.msg=t||"";ps.ok=!!ok;var e=x.querySelector("#pvm");if(e){e.textContent=ps.msg;e.className="amsg"+(ok?" ok":"")}};
     var l=x.querySelector("#pvl");if(l)l.onclick=gClose;
-    var d=x.querySelector("#pvd");if(d)d.onclick=function(){gClose();if(S.tab==="prof")render()};
+    var d=x.querySelector("#pvd");if(d)d.onclick=function(){if(must){var o=document.getElementById("pgate");if(o)o.remove()}else gClose();render()};
     var snd=async function(btn){var v=(x.querySelector("#pvn")||{}).value||ps.ph;ps.ph=v;if(!isMob(v))return m("Enter a 10-digit mobile number.");
       btn.disabled=true;btn.textContent="Sending…";
       try{var stt=await phoneStatus(phE164(v));if(stt==="confirmed"){btn.disabled=false;btn.textContent="Send Code";return m("This number is already used by another account.")}
@@ -1764,7 +1768,7 @@ function vSet(){
   h+='<div class="card"><button class="btn ghost" id="tourgo" style="margin:0">▶ Show app tour</button></div><div class="card">'+sxHead('📱','This phone','Saved on this phone only')+'<div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><div class="mute">Your month starts on day (1 = normal calendar month)</div><input id="ms" type="number" inputmode="numeric" min="1" max="31" value="'+(S.ms||1)+'"><button class="btn ghost s" id="msal" style="margin-bottom:10px">Use my salary credit day</button><div class="note" id="msn">Saved on this phone only. Set the same day on the other phone. Reports, budgets and forecasts all follow it.</div><button class="btn" id="sv">Save</button></div>';
   h+=aboutCard();
   return h}
-var WEBVER="5.51 · 18 Nov 2026";
+var WEBVER="5.52 · 18 Nov 2026";
 async function loadAinfo(){if(S._ainb)return;S._ainb=1;var P=smsPlugin();try{S.ainfo=P?await P.appInfo():null}catch(e){S.ainfo=null}S._ainb=0;if(S.tab==="set")render()}
 function aboutCard(){
   var d=remDiag(),rows=[];
