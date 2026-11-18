@@ -1775,7 +1775,7 @@ function vSet(){
   h+='<div class="card"><button class="btn ghost" id="tourgo" style="margin:0">▶ Show app tour</button></div><div class="card">'+sxHead('📱','This phone','Saved on this phone only')+'<div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><div class="mute">Your month starts on day (1 = normal calendar month)</div><input id="ms" type="number" inputmode="numeric" min="1" max="31" value="'+(S.ms||1)+'"><button class="btn ghost s" id="msal" style="margin-bottom:10px">Use my salary credit day</button><div class="note" id="msn">Saved on this phone only. Set the same day on the other phone. Reports, budgets and forecasts all follow it.</div><button class="btn" id="sv">Save</button></div>';
   h+=aboutCard();
   return h}
-var WEBVER="5.58 · 19 Nov 2026";
+var WEBVER="5.59 · 19 Nov 2026";
 async function loadAinfo(){if(S._ainb)return;S._ainb=1;var P=smsPlugin();try{S.ainfo=P?await P.appInfo():null}catch(e){S.ainfo=null}S._ainb=0;if(S.tab==="set")render()}
 function aboutCard(){
   var d=remDiag(),rows=[];
@@ -2472,7 +2472,7 @@ function ocrBusy(txt,pct){var o=document.getElementById("ocrbusy");
     o.innerHTML='<div class="card" style="width:100%;max-width:340px;text-align:center;margin:0"><div style="font-size:40px">🧾</div><b id="ocrt" style="display:block;margin:6px 0 10px"></b><div style="height:10px;border-radius:6px;background:var(--chip);overflow:hidden"><div id="ocrb" style="height:100%;width:0;background:var(--acc);transition:width .25s"></div></div><div class="note" id="ocrn" style="margin:10px 0 0">Your picture stays on this phone while it is read.</div></div>';document.body.appendChild(o)}
   document.getElementById("ocrt").textContent=txt;document.getElementById("ocrb").style.width=Math.max(4,Math.min(100,pct||0))+"%"}
 async function scanBillFile(f){var info=await billScanFile(f,function(t,p){ocrBusy(t,p)});ocrBusy();
-  if(info&&(info.amount||info.merchant||info.date)){toast("Filled from the bill. Please check it.");return info}
+  if(info&&(info.amount||info.date||info.category)){toast("Filled from the bill. Please check it.");return info}
   toast(navigator.onLine===false&&!OCR.w?"Reading a bill needs internet the first time. Type the details for now.":"Could not read this bill. Please type the details.");return null}
 function snapBill(cb){var i=document.createElement("input");i.type="file";i.accept="image/*";i.setAttribute("capture","environment");i.style.display="none";document.body.appendChild(i);
   i.oncancel=function(){i.remove()};
@@ -2491,13 +2491,13 @@ function billView(t,photo){var x=gSheet(gHead("Bill")+'<img src="'+photo+'" alt=
 function addSheet(pre,bill,scan){
   var sh=document.getElementById("sheet");
   var fp=(S.pf&&S.pf!=="__both")?S.pf:S.name;
-  var h='<div class="sheet"><div class="sx">'+sxHead("💵","Add cash payment","For money that did not come as a bank alert")+'<div class="sxs" data-for="xt"><button type="button" data-v="out" class="on">Money spent</button><button type="button" data-v="in">Money received</button></div><select id="xt" style="display:none"><option value="out">Money spent</option><option value="in">Money received</option></select><input id="xa" type="number" inputmode="decimal" placeholder="₹ Amount"><input id="xm" placeholder="Payee or note, e.g. vegetables">'+(bill?'<div class="row" style="justify-content:flex-start;gap:10px;margin:0 0 10px"><img src="'+bill+'" alt="" style="width:54px;height:54px;border-radius:10px;object-fit:cover"><span class="note" style="margin:0">'+(scan&&(scan.amount||scan.merchant)?'Bill photo attached. Details filled from the bill, please check them.':'Bill photo attached')+'</span></div>':'')+'<div class="sxc" data-for="xp">'+persons().map(function(n){return '<button type="button" data-v="'+esc(n)+'"'+(n===fp?' class="on"':'')+'>'+esc(n)+'</button>'}).join("")+'</div><select id="xp" style="display:none">'+persons().map(function(n){return '<option value="'+esc(n)+'"'+(n===fp?" selected":"")+'>'+esc(n)+'</option>'}).join("")+'</select><input id="xd" type="date" value="'+iso(new Date())+'"><select id="xc"><option value="">No category yet</option>';
+  var h='<div class="sheet"><div class="sx">'+sxHead("💵","Add cash payment","For money that did not come as a bank alert")+'<div class="sxs" data-for="xt"><button type="button" data-v="out" class="on">Money spent</button><button type="button" data-v="in">Money received</button></div><select id="xt" style="display:none"><option value="out">Money spent</option><option value="in">Money received</option></select><input id="xa" type="number" inputmode="decimal" placeholder="₹ Amount"><input id="xm" placeholder="Payee or note, e.g. vegetables">'+(bill?'<div class="row" style="justify-content:flex-start;gap:10px;margin:0 0 10px"><img src="'+bill+'" alt="" style="width:54px;height:54px;border-radius:10px;object-fit:cover"><span class="note" style="margin:0">'+(scan&&(scan.amount||scan.date||scan.category)?'Bill photo attached. Amount, date and category filled from the bill, please check them.':'Bill photo attached')+'</span></div>':'')+'<div class="sxc" data-for="xp">'+persons().map(function(n){return '<button type="button" data-v="'+esc(n)+'"'+(n===fp?' class="on"':'')+'>'+esc(n)+'</button>'}).join("")+'</div><select id="xp" style="display:none">'+persons().map(function(n){return '<option value="'+esc(n)+'"'+(n===fp?" selected":"")+'>'+esc(n)+'</option>'}).join("")+'</select><input id="xd" type="date" value="'+iso(new Date())+'"><select id="xc"><option value="">No category yet</option>';
   CATS.forEach(function(c){if(typeof gNames==="function"&&gNames().indexOf(c)>=0&&UNBUILT(c))return;h+='<option>'+esc(c)+'</option>'});
   var go_=typeof gOpen==="function"&&typeof gOKUI==="function"&&gOKUI()?gOpen():[];if(go_.length){h+='<optgroup label="Groups">';go_.forEach(function(g){h+='<option value="g:'+esc(g.id)+'"'+(g.id===pre?' selected':'')+'>'+esc(g.name)+'</option>'});h+='</optgroup>'}
   h+='</select><div class="note" style="margin:6px 0 10px">Lent money to someone, or borrowed? Choose <b>Lend out</b> or <b>Lend in</b> to track it under Lending.</div><button class="btn" id="xs">Save</button><button class="btn ghost" style="margin-top:8px" id="xx">Cancel</button></div></div>';
   sh.innerHTML=h;
   if(scan){var xa_=document.getElementById("xa"),xm_=document.getElementById("xm"),xd_=document.getElementById("xd"),xc_=document.getElementById("xc");
-    if(scan.amount&&xa_)xa_.value=String(scan.amount);if(scan.merchant&&xm_)xm_.value=scan.merchant;if(scan.date&&xd_)xd_.value=scan.date;
+    if(scan.amount&&xa_)xa_.value=String(scan.amount);if(scan.date&&xd_)xd_.value=scan.date;
     if(scan.category&&xc_&&[].some.call(xc_.options,function(o){return o.value===scan.category||o.text===scan.category}))xc_.value=scan.category}
   document.getElementById("xx").onclick=function(){sh.innerHTML=""};
   document.getElementById("xs").onclick=async function(){
@@ -3046,7 +3046,7 @@ function gExpSheet(o){var g=o.g,e=o.e,t=o.t,me=myId();if(!g)return;
   var canEdit=!e||(e.created_by===me||e.paid_by===me||(g.owner||g.created_by)===me);
   var st={payer:e?e.paid_by:me,mode:e?e.split_mode:"equal",amt:e?Number(e.amount):(t?Number(t.amount):0),title:e?e.title:(t&&t.merchant)||"",date:e?String(e.txn_date).slice(0,10):(t&&t.txn_date)||iso(new Date()),cat:e?(e.cat||""):"",note:e?(e.note||""):((t&&t.note)||""),photo:e?e.photo:(o.photo||null),
     sel:{},val:{},fx:!!(e&&e.orig_cur),cur:e&&e.orig_cur||"",orig:e&&e.orig_amount||"",rate:e&&e.rate||""};
-  function fillScan(sc){if(!sc)return;if(sc.amount)st.amt=sc.amount;if(sc.merchant)st.title=sc.merchant;if(sc.date)st.date=sc.date;if(sc.category&&!st.cat)st.cat=sc.category}
+  function fillScan(sc){if(!sc)return;if(sc.amount)st.amt=sc.amount;if(sc.date)st.date=sc.date;if(sc.category&&!st.cat)st.cat=sc.category}
   if(!e&&o.scan)fillScan(o.scan);
   g.members.forEach(function(m){st.sel[m.user_id]=e?(e.shares&&e.shares[m.user_id]!=null&&Number(e.shares[m.user_id])>0):true});
   if(e&&e.split_mode!=="equal")g.members.forEach(function(m){var a=Number((e.shares||{})[m.user_id]||0);st.val[m.user_id]=e.split_mode==="percent"?String(r2(a/Number(e.amount)*100)):String(a||"")});
