@@ -1772,7 +1772,7 @@ function vSet(){
   h+='<div class="card"><button class="btn ghost" id="tourgo" style="margin:0">▶ Show app tour</button></div><div class="card">'+sxHead('📱','This phone','Saved on this phone only')+'<div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><div class="mute">Your month starts on day (1 = normal calendar month)</div><input id="ms" type="number" inputmode="numeric" min="1" max="31" value="'+(S.ms||1)+'"><button class="btn ghost s" id="msal" style="margin-bottom:10px">Use my salary credit day</button><div class="note" id="msn">Saved on this phone only. Set the same day on the other phone. Reports, budgets and forecasts all follow it.</div><button class="btn" id="sv">Save</button></div>';
   h+=aboutCard();
   return h}
-var WEBVER="5.53 · 18 Nov 2026";
+var WEBVER="5.54 · 18 Nov 2026";
 async function loadAinfo(){if(S._ainb)return;S._ainb=1;var P=smsPlugin();try{S.ainfo=P?await P.appInfo():null}catch(e){S.ainfo=null}S._ainb=0;if(S.tab==="set")render()}
 function aboutCard(){
   var d=remDiag(),rows=[];
@@ -2104,7 +2104,8 @@ function spTot(P){var X=0,F=0,SV=0;P.fix.forEach(function(x){X+=x.a;if(x.cat==="
 function salaryGuess(){var m={};(S.txns||[]).forEach(function(t){if(t.type==="in"&&t.category==="Salary / Income"&&isCount(t)){var k=pkey(t.txn_date);m[k]=(m[k]||0)+Number(t.amount)}});
   var v=Object.keys(m).sort().slice(-3).map(function(k){return m[k]}).sort(function(a,b){return a-b});return v.length?Math.round(v[Math.floor(v.length/2)]):0}
 function starterCard(){
-  if((S.budgets||[]).length||(S.fixed||[]).length||ls("bpdis")||(S.profile&&S.profile.can_edit===false))return "";
+  if((S.budgets||[]).length||(S.profile&&S.profile.can_edit===false))return "";
+  if(ls("bpdis"))return '<button class="btn ghost" id="bplan" style="margin:0 0 12px">✨ Get a Starter Plan</button>';
   return '<div class="dc" style="border:1.5px solid var(--acc)"><b style="font-size:18px">✨ Get a starter plan</b><div class="note" style="margin:6px 0 10px;font-size:14px">Tell us your household and salary. We fill in budgets and bills for you. You can change every amount.</div><button class="btn" id="bplan" style="margin:0 0 8px">Create my plan</button><button class="btn ghost s" id="bpx" style="margin:0">Not now</button></div>'}
 function starterSheet(){
   var sh=document.getElementById("sheet"),st=S.sp=S.sp||{step:1,hh:"couple",ct:"metro",sal:salaryGuess()||""};st.step=1;
