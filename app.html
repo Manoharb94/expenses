@@ -421,10 +421,12 @@ async function phoneNudge(force){
   /* Mandatory: every open, until this account has a verified mobile. Never blocks on a network error. */
   if(!S.auth||!S.code||S.view)return;if(S._pn&&!force)return;
   var key=String(S.auth.email||S.auth.phone||"");
-  if(!force&&key&&ls("pvok")===key){S.myPhone=S.myPhone||"ok";return}
+  if(!force&&key&&ls("pvok")===key){
+    if(!S.myPhone&&!S._pfx){S._pfx=1;api("rpc/my_phone_norm",{method:"POST",body:"{}"}).then(function(m){if(m&&/^\d{10,13}$/.test(String(m))){S.myPhone=String(m);if(S.tab==="prof"||S.tab==="menu")render()}}).catch(function(){S._pfx=0})}
+    return}
   S._pn=1;
   var mine=null;try{mine=await api("rpc/my_phone_norm",{method:"POST",body:"{}"})}catch(e){S._pn=0;return}
-  S.myPhone=mine||"";
+  S.myPhone=mine&&/^\d{10,13}$/.test(String(mine))?String(mine):"";
   if(mine){if(key)ls("pvok",key);var g0=document.getElementById("pgate");if(g0)g0.remove();if(S.tab==="prof")render();return}
   phoneSheet(!force)}
 function phoneSheet(must){
@@ -979,8 +981,8 @@ function donut(by,total,pby,pl){
   svg+='</svg>';
   var ctr='<div id="dnctr" style="position:absolute;left:50%;top:50%;width:33%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;cursor:pointer;line-height:1.2"><small id="dnl" class="mute" style="font-size:11px">Total spent</small><b id="dna" data-t="'+esc(money(Math.round(total)))+'" style="font-size:16px">'+money(Math.round(total))+'</b><small id="dnp" class="mute" style="font-size:10.5px"></small><small id="dnc" style="font-size:10.5px;font-weight:600"></small></div>';
   return '<div style="position:relative;width:100%;max-width:380px;margin:4px auto 20px">'+svg+btns+ctr+'</div>'+(by[UNC]?'<button class="obtn" data-go="list" data-ltab="none" style="margin-top:0">Sort payments with no category →</button>':'')}
-function catBars(){
-  var all=S.txns.filter(function(t){return personOK(t)&&t.category&&isCount(t)&&t.txn_date}),tot={};
+function catBars(off){
+  off=off||0;var all=txIn(monthKey(off)).filter(function(t){return personOK(t)&&t.category&&isCount(t)&&t.txn_date&&t.type==="out"}),tot={};
   all.forEach(function(t){tot[t.category]=(tot[t.category]||0)+Number(t.amount)});
   var cats=Object.keys(tot).sort(function(a,b){return tot[b]-tot[a]});
   if(!cats.length)return '';
@@ -988,7 +990,7 @@ function catBars(){
   var L=all.filter(function(t){return t.category===sel}).sort(function(a,b){return a.txn_date<b.txn_date?-1:a.txn_date>b.txn_date?1:0});
   var mx=Math.max.apply(null,L.map(function(t){return Number(t.amount)}))||1,sm=L.reduce(function(a,t){return a+Number(t.amount)},0);
   var fd=function(d){return new Date(d+"T00:00:00").toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"})};
-  var h='<div class="card">'+sxHead('<span style="font-size:22px">'+ci(sel)+'</span>','Category history','Every payment in one category')+'<select id="cbsel" style="margin:0 0 12px">'+cats.map(function(c){return '<option'+(c===sel?' selected':'')+'>'+esc(c)+'</option>'}).join('')+'</select>';
+  var h='<div class="card">'+sxHead('<span style="font-size:22px">'+ci(sel)+'</span>','Category Spending','Every payment in one category · '+esc(plabel(off)))+'<select id="cbsel" style="margin:0 0 12px">'+cats.map(function(c){return '<option'+(c===sel?' selected':'')+'>'+esc(c)+'</option>'}).join('')+'</select>';
   h+='<div class="cbst"><div><small>Total</small><b>'+money(Math.round(sm))+'</b></div><div><small>Payments</small><b>'+L.length+'</b></div><div><small>Average</small><b>'+money(Math.round(sm/L.length))+'</b></div></div>';
   h+='<div id="cbd" class="note" style="min-height:20px;margin:8px 0 6px">Tap a bar to see the date and amount.</div>';
   h+='<div id="cbs" style="overflow-x:auto"><div style="display:flex;align-items:flex-end;gap:5px;height:150px;min-width:100%;width:max-content">';
@@ -1493,7 +1495,7 @@ function vReports(){
   var tot=ks.reduce(function(a,k){return a+by[k]},0);
   if(tot>0)h+='<h2>Where the money goes</h2><div class="card">'+donut(by,tot,pby,off===0?"last month":"the month before")+'</div>';
   h+=loanBlocks();
-  h+=catBars();
+  h+=catBars(off);
   h+=compareMonths();
   h+=whoSpent(Lc,RX,{X:{by:pby}});
   h+=topPayees(RX);
@@ -1773,7 +1775,7 @@ function vSet(){
   h+='<div class="card"><button class="btn ghost" id="tourgo" style="margin:0">▶ Show app tour</button></div><div class="card">'+sxHead('📱','This phone','Saved on this phone only')+'<div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><div class="mute">Your month starts on day (1 = normal calendar month)</div><input id="ms" type="number" inputmode="numeric" min="1" max="31" value="'+(S.ms||1)+'"><button class="btn ghost s" id="msal" style="margin-bottom:10px">Use my salary credit day</button><div class="note" id="msn">Saved on this phone only. Set the same day on the other phone. Reports, budgets and forecasts all follow it.</div><button class="btn" id="sv">Save</button></div>';
   h+=aboutCard();
   return h}
-var WEBVER="5.56 · 19 Nov 2026";
+var WEBVER="5.57 · 19 Nov 2026";
 async function loadAinfo(){if(S._ainb)return;S._ainb=1;var P=smsPlugin();try{S.ainfo=P?await P.appInfo():null}catch(e){S.ainfo=null}S._ainb=0;if(S.tab==="set")render()}
 function aboutCard(){
   var d=remDiag(),rows=[];
@@ -2854,6 +2856,43 @@ function gHead(t){return '<div class="row" style="margin-bottom:8px"><b style="f
 function gBindX(sh){var x=sh.querySelector("#gx");if(x)x.onclick=gClose}
 function gv(sh,id){var e=sh.querySelector("#"+id);return e?e.value:""}
 async function gCall(fn,body,okMsg){try{var r=await api("rpc/"+fn,{method:"POST",body:JSON.stringify(body||{})});await loadGroups(true);if(okMsg)toast(okMsg);return {ok:true,r:r}}catch(e){toast(errText(e));return {ok:false,e:e}}}
+/* Move and zoom a picture inside a round window, then save exactly what is inside it. Used for profile and group photos. */
+function cropSheet(file,size,limit,cb){
+  var url=URL.createObjectURL(file),im=new Image();
+  im.onerror=function(){URL.revokeObjectURL(url);toast("That is not a picture")};
+  im.onload=function(){
+    var old=document.getElementById("crp");if(old)old.remove();
+    var V=Math.round(Math.min(window.innerWidth*.8,320)),iw=im.naturalWidth,ih=im.naturalHeight,s0=V/Math.min(iw,ih),z=1,s=s0,ox=0,oy=0,pts={},pd=0;
+    var o=document.createElement("div");o.id="crp";o.style.cssText="position:fixed;inset:0;z-index:9500;background:rgba(15,8,30,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:20px;-webkit-user-select:none;user-select:none";
+    o.innerHTML='<b style="color:#fff;font-size:18px">Adjust Your Photo</b><div style="color:#d9d2ee;font-size:14px;margin-top:-8px;text-align:center">Drag to move. Pinch or use the slider to zoom.</div>'+
+      '<div id="crpv" style="width:'+V+'px;height:'+V+'px;border-radius:50%;overflow:hidden;position:relative;background:#222;touch-action:none;box-shadow:0 0 0 3px rgba(255,255,255,.85)"><img id="crpi" src="'+url+'" alt="" draggable="false" style="position:absolute;left:0;top:0;max-width:none;transform-origin:0 0;pointer-events:none"></div>'+
+      '<input id="crpz" type="range" min="1" max="4" step="0.01" value="1" style="width:'+Math.min(V,280)+'px" aria-label="Zoom">'+
+      '<div style="display:flex;gap:10px;width:'+Math.min(V,320)+'px"><button class="btn ghost" id="crpn" style="margin:0;flex:1">Cancel</button><button class="btn" id="crpo" style="margin:0;flex:1">Use Photo</button></div>';
+    document.body.appendChild(o);
+    var img=o.querySelector("#crpi"),box=o.querySelector("#crpv"),zr=o.querySelector("#crpz");
+    function clamp(){var w=iw*s,h=ih*s;ox=Math.min(0,Math.max(V-w,ox));oy=Math.min(0,Math.max(V-h,oy))}
+    function draw(){clamp();img.style.width=iw+"px";img.style.height=ih+"px";img.style.transform="translate("+ox+"px,"+oy+"px) scale("+s+")"}
+    function zoomTo(nz,cx,cy){nz=Math.max(1,Math.min(4,nz));var ix=(cx-ox)/s,iy=(cy-oy)/s;z=nz;s=s0*z;ox=cx-ix*s;oy=cy-iy*s;zr.value=String(z);draw()}
+    /* start with the head in view: centre sideways, and for tall pictures look at the upper part */
+    ox=(V-iw*s)/2;oy=ih>iw?V/2-.33*ih*s:(V-ih*s)/2;draw();
+    box.onpointerdown=function(e){try{box.setPointerCapture(e.pointerId)}catch(x){}pts[e.pointerId]={x:e.clientX,y:e.clientY};pd=0};
+    box.onpointermove=function(e){var q=pts[e.pointerId];if(!q)return;var ids=Object.keys(pts);
+      if(ids.length===2){var a=pts[ids[0]],b=pts[ids[1]];if(e.pointerId==ids[0])a={x:e.clientX,y:e.clientY};else b={x:e.clientX,y:e.clientY};
+        var d=Math.hypot(a.x-b.x,a.y-b.y);if(pd){var r=box.getBoundingClientRect();zoomTo(z*d/pd,(a.x+b.x)/2-r.left,(a.y+b.y)/2-r.top)}pd=d}
+      else{ox+=e.clientX-q.x;oy+=e.clientY-q.y;draw()}
+      pts[e.pointerId]={x:e.clientX,y:e.clientY}};
+    function up(e){delete pts[e.pointerId];pd=0}
+    box.onpointerup=up;box.onpointercancel=up;
+    box.onwheel=function(e){e.preventDefault();var r=box.getBoundingClientRect();zoomTo(z*(e.deltaY<0?1.08:.92),e.clientX-r.left,e.clientY-r.top)};
+    zr.oninput=function(){zoomTo(parseFloat(zr.value)||1,V/2,V/2)};
+    function close(){o.remove();URL.revokeObjectURL(url)}
+    o.querySelector("#crpn").onclick=close;
+    o.querySelector("#crpo").onclick=function(){
+      var c=document.createElement("canvas");c.width=c.height=size;var x=c.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,size,size);
+      x.drawImage(im,-ox/s,-oy/s,V/s,V/s,0,0,size,size);
+      var q=.85,d=c.toDataURL("image/jpeg",q);while(d.length>(limit||60000)&&q>.3){q-=.1;d=c.toDataURL("image/jpeg",q)}
+      close();if(d.length>(limit||60000)){toast("The picture is too big");return}cb(d)}};
+  im.src=url}
 function imgToData(file,max,crop,limit){return new Promise(function(res,rej){var fr=new FileReader();fr.onerror=function(){rej(new Error("Could not read the picture"))};
   fr.onload=function(){var im=new Image();im.onerror=function(){rej(new Error("That is not a picture"))};
     im.onload=function(){var w=im.width,h=im.height,sx=0,sy=0,sw=w,sh=h,cw,ch;
@@ -2867,28 +2906,27 @@ function gWhen(d){return d?dayLabel(String(d).slice(0,10)):""}
 function gSplitLabel(e){return e.split_mode==="percent"?"Percent split":e.split_mode==="manual"?"Manual split":"Equal split"}
 
 /* ----- F1: profile ----- */
-function profCard(){var em=(S.profile&&S.profile.email)||(S.auth&&S.auth.email)||(S.myPhone?phShow(S.myPhone):"");
+function profCard(){var em=(S.profile&&S.profile.email)||(S.auth&&S.auth.email)||(/^\d{10,13}$/.test(String(S.myPhone||""))?phShow(S.myPhone):"");
   return '<button class="mr" data-go="prof" style="border:1px solid var(--line);border-radius:16px;margin:0 0 6px;padding:14px;background:var(--card)">'+'<span class="pring">'+famAv(S.name,56)+'</span><span><b style="font-size:17px">'+esc(S.name)+'</b><span>'+esc(em)+'</span><span><em class="pchip">Edit profile</em></span></span><span class="go">›</span></button>'}
-function vProfile(){var em=(S.profile&&S.profile.email)||(S.auth&&S.auth.email)||"",pm=S.myPhone||(S.auth&&S.auth.phone)||"",ph=GR.ex&&GR.ex.photo,up=(GR.ex&&GR.ex.upis)||[];
+function vProfile(){var em=(S.profile&&S.profile.email)||(S.auth&&S.auth.email)||"",pm=S.myPhone||(S.auth&&S.auth.phone)||"",ph=GR.ex&&GR.ex.photo;
+  if(!/^\+?\d[\d\s]{8,}$/.test(String(pm)))pm="";
+  var pvDone=!pm&&String((S.auth&&(S.auth.email||S.auth.phone))||"")&&ls("pvok")===String((S.auth&&(S.auth.email||S.auth.phone))||"");
   var h=topbar("Profile","menu");
   h+='<div class="card" style="text-align:center">'+famAv(S.name,120);
   if(GR.exok){h+='<div class="note" style="margin:8px 0 12px">'+(ph?'Your photo is visible to your family and to people in your groups.':'No photo yet. Your initial is shown instead.')+'</div>'+
     '<div class="row" style="gap:8px;justify-content:center;flex-wrap:wrap"><button class="btn s" id="pcam">📷 Take Photo</button><button class="btn ghost s" id="pfc">🖼️ Choose Photo</button>'+(ph?'<button class="btn ghost s out" id="pfr">Remove</button>':'')+'</div>'+
     '<input type="file" id="pfile" accept="image/*" style="display:none"><input type="file" id="pfile2" accept="image/*" capture="user" style="display:none">'}
   else h+='<div class="note" style="margin-top:10px">Profile pictures will be available after the next update.</div>';
-  h+='</div><div class="card">'+sxHead('👤','Your details','Your name, mobile and email')+'<div class="mute">Name</div><div style="font-weight:600;margin-bottom:10px">'+esc(S.name)+'</div><div class="mute">Mobile</div><div style="font-weight:600;margin-bottom:10px">'+(pm?esc(phShow(pm))+'<span class="vpill">Verified</span>':'<button class="btn s" id="pvb" style="margin-top:4px">Verify Mobile</button>')+'</div><div class="mute">Email</div><div style="font-weight:600">'+(esc(em)||'<span class="mute" style="font-weight:400">Not added</span>')+'</div></div>';
-  if(GR.exok)h+='<h2>My UPI ID <span class="mute" style="font-weight:400;font-size:12px">optional</span></h2><div class="card"><input id="pupi" placeholder="e.g. name@okhdfc (separate several with commas)" value="'+esc(up.join(", "))+'" autocapitalize="off" autocomplete="off"><div class="note" style="margin:6px 0 10px">Used only to match settlements inside your groups. People in your groups can see it. Nobody else can.</div><button class="btn s" id="pupis">Save UPI ID</button></div>';
+  h+='</div><div class="card">'+sxHead('👤','Your details','Your name, mobile and email')+'<div class="mute">Name</div><div style="font-weight:600;margin-bottom:10px">'+esc(S.name)+'</div><div class="mute">Mobile</div><div style="font-weight:600;margin-bottom:10px">'+(pm?esc(phShow(pm))+'<span class="vpill">Verified</span>':pvDone?'<span class="vpill" style="margin-left:0">Verified</span>':'<button class="btn s" id="pvb" style="margin-top:4px">Verify Mobile</button>')+'</div><div class="mute">Email</div><div style="font-weight:600">'+(esc(em)||'<span class="mute" style="font-weight:400">Not added</span>')+'</div></div>';
   h+='<h2>Security</h2><div class="card" style="padding:0 12px"><button class="mr" id="chpw"><i>🔑</i><span><b>Change password</b><span>Choose a new password for '+esc(em||phShow(pm))+'</span></span><span class="go">›</span></button></div>';
   return h}
 function bindProfile(el){
-  var pick=function(inp){inp.onchange=async function(){var f=inp.files&&inp.files[0];inp.value="";if(!f)return;
-    try{toast("Saving…");var d=await imgToData(f,256,true,60000);await api("rpc/set_my_photo",{method:"POST",body:JSON.stringify({p_photo:d})});GR.ex=GR.ex||{};GR.ex.photo=d;await loadGroups(true);render();toast("Photo saved")}catch(e){toast(errText(e))}}};
+  var pick=function(inp){inp.onchange=function(){var f=inp.files&&inp.files[0];inp.value="";if(!f)return;
+    cropSheet(f,256,60000,async function(d){try{toast("Saving…");await api("rpc/set_my_photo",{method:"POST",body:JSON.stringify({p_photo:d})});GR.ex=GR.ex||{};GR.ex.photo=d;await loadGroups(true);render();toast("Photo saved")}catch(e){toast(errText(e))}})}};
   var a=el.querySelector("#pfile");if(a){pick(a);el.querySelector("#pfc").onclick=function(){a.click()}}
   var a2=el.querySelector("#pfile2");if(a2){pick(a2);el.querySelector("#pcam").onclick=function(){a2.click()}}
   var pv=el.querySelector("#pvb");if(pv)pv.onclick=function(){phoneSheet()};
-  var r=el.querySelector("#pfr");if(r)r.onclick=async function(){try{await api("rpc/set_my_photo",{method:"POST",body:JSON.stringify({p_photo:""})});GR.ex.photo=null;await loadGroups(true);render();toast("Photo removed")}catch(e){toast(errText(e))}};
-  var u=el.querySelector("#pupis");if(u)u.onclick=async function(){var v=(el.querySelector("#pupi").value||"").split(/[,\s]+/).filter(Boolean);
-    try{await api("rpc/set_my_upis",{method:"POST",body:JSON.stringify({p_upis:v})});GR.ex.upis=v.map(function(x){return x.toLowerCase()});await loadGroups(true);toast("UPI ID saved")}catch(e){toast(errText(e))}}}
+  var r=el.querySelector("#pfr");if(r)r.onclick=async function(){try{await api("rpc/set_my_photo",{method:"POST",body:JSON.stringify({p_photo:""})});GR.ex.photo=null;await loadGroups(true);render();toast("Photo removed")}catch(e){toast(errText(e))}};}
 
 /* ----- Home: groups block, suggestions ----- */
 function groupsBlock(){if(!gOKUI()){return GR.err?'<h2>Groups</h2><div class="card"><div class="note" style="margin:0 0 8px">Groups could not load: '+esc(GR.err)+'</div><button class="btn ghost s" data-gretry="1">Try again</button></div>':''}
@@ -2972,7 +3010,7 @@ function gEditSheet(id,preset){var g=id?gGet(id):null,me=myId(),isC=!g||(g.owner
   h+='<button class="btn" id="gok" style="margin-top:10px">'+(g?'Save':'Create group')+'</button>';
   var sh=gSheet(h);gBindX(sh);var f=sh.querySelector("#gfile");
   var ch=function(){f.click()};sh.querySelector("#gph").onclick=ch;sh.querySelector("#gphl").onclick=ch;
-  f.onchange=async function(){var x=f.files&&f.files[0];if(!x)return;try{st.photo=await imgToData(x,256,true,60000);st.change=true;sh.querySelector("#gph").innerHTML='<img class="gic" src="'+st.photo+'" style="width:92px;height:92px">'}catch(e){toast(errText(e))}};
+  f.onchange=function(){var x=f.files&&f.files[0];f.value="";if(!x)return;cropSheet(x,256,60000,function(d){st.photo=d;st.change=true;var ph=sh.querySelector("#gph");if(ph)ph.innerHTML='<img class="gic" src="'+st.photo+'" style="width:92px;height:92px">'})};
   sh.querySelector("#gok").onclick=async function(){var nm=gv(sh,"gnm").trim();if(!nm){toast("Enter a group name");return}
     var sd=isC?(gv(sh,"gsd")||null):null,ed=isC?(gv(sh,"ged")||null):null,sm=isC?!!sh.querySelector("#gsm").checked:true;
     if(sd&&ed&&ed<sd){toast("The end date is before the start date");return}
