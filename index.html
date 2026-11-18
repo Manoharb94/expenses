@@ -416,7 +416,7 @@ async function enter0(){
         S.profile=await api("rpc/my_profile",{method:"POST",body:"{}"});if(ps.c)toast("Welcome to the family!")}
       catch(e2){ls("pends","");S._fprefill={c:ps.c,n:ps.n};S._fm=1;S.fmode=ps.c?"join":"create";try{S.invites=await api("rpc/my_invites",{method:"POST",body:"{}"})||[]}catch(e){S.invites=[]}S.view="family";S.amsg=errText(e2);render();return}}
     if(!S.profile){try{S.invites=await api("rpc/my_invites",{method:"POST",body:"{}"})||[]}catch(e){S.invites=[]}S.view="family";S.amsg="";render();return}}
-  try{window.brandStep("Getting your money ready…")}catch(e){}S.code=S.profile.household_id;S.name=S.profile.display_name;ls("name","");ls("code","");S.view="";S.pf=ls("pf")||S.name;var qq=!!(S._cached&&S.loaded);S._cached=false;Promise.resolve(load(qq,pre)).then(function(){touch(true);setTimeout(phoneNudge,800)},function(){touch(true)});api("rpc/my_invites",{method:"POST",body:"{}"}).then(function(r){S.invites=r||[];if(S.invites.length&&S.tab==="home")render()}).catch(function(){})}
+  try{window.brandStep("Getting your money ready…")}catch(e){}S.code=S.profile.household_id;S.name=S.profile.display_name;ls("name","");ls("code","");S.view="";S.pf=ls("pf")||S.name;var qq=!!(S._cached&&S.loaded);S._cached=false;Promise.resolve(load(qq,pre)).then(function(){touch(true);setTimeout(phoneNudge,800)},function(){touch(true);setTimeout(phoneNudge,800)});api("rpc/my_invites",{method:"POST",body:"{}"}).then(function(r){S.invites=r||[];if(S.invites.length&&S.tab==="home")render()}).catch(function(){})}
 async function phoneNudge(force){
   /* Mandatory: every open, until this account has a verified mobile. Never blocks on a network error. */
   if(!S.auth||!S.code||S.view)return;if(S._pn&&!force)return;
@@ -461,6 +461,10 @@ function phoneSheet(must){
 function touch(first){if(!S.auth||Date.now()-(S._tt||0)<30*60000)return;S._tt=Date.now();var pwa=false;try{pwa=nativeApp()||window.matchMedia("(display-mode: standalone)").matches||navigator.standalone===true}catch(e){}
   api("rpc/touch",{method:"POST",body:JSON.stringify({p_os:phoneOS(),p_pwa:pwa,p_ms:first&&!S._ttm?Math.round(performance.now()):null})}).catch(function(){});S._ttm=1}
 document.addEventListener("visibilitychange",function(){if(!document.hidden&&S.code)touch()});
+function phoneRecheck(){if(document.hidden||!S.auth||!S.code||document.getElementById("pgate"))return;S._pn=0;phoneNudge()}
+document.addEventListener("visibilitychange",function(){if(!document.hidden)setTimeout(phoneRecheck,600)});
+window.addEventListener("pageshow",function(){setTimeout(phoneRecheck,600)});
+window.addEventListener("focus",function(){setTimeout(phoneRecheck,600)});
 var APP_URL="https://gharwise.net/",PLAY_URL="";
 function joinLink(c){return APP_URL+"?join="+encodeURIComponent(c)}
 function joinMsg(c,nm){return (nm||"I")+" invited you to share family expenses on Gharwise.\n\n1) Open this link and install the app: "+joinLink(c)+"\n2) Create your account. Your invite code "+c+" is filled in for you."+(PLAY_URL?"\n\nAndroid app: "+PLAY_URL:"")}
@@ -1768,7 +1772,7 @@ function vSet(){
   h+='<div class="card"><button class="btn ghost" id="tourgo" style="margin:0">▶ Show app tour</button></div><div class="card">'+sxHead('📱','This phone','Saved on this phone only')+'<div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><div class="mute">Your month starts on day (1 = normal calendar month)</div><input id="ms" type="number" inputmode="numeric" min="1" max="31" value="'+(S.ms||1)+'"><button class="btn ghost s" id="msal" style="margin-bottom:10px">Use my salary credit day</button><div class="note" id="msn">Saved on this phone only. Set the same day on the other phone. Reports, budgets and forecasts all follow it.</div><button class="btn" id="sv">Save</button></div>';
   h+=aboutCard();
   return h}
-var WEBVER="5.52 · 18 Nov 2026";
+var WEBVER="5.53 · 18 Nov 2026";
 async function loadAinfo(){if(S._ainb)return;S._ainb=1;var P=smsPlugin();try{S.ainfo=P?await P.appInfo():null}catch(e){S.ainfo=null}S._ainb=0;if(S.tab==="set")render()}
 function aboutCard(){
   var d=remDiag(),rows=[];
