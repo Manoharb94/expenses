@@ -1775,7 +1775,7 @@ function vSet(){
   h+='<div class="card"><button class="btn ghost" id="tourgo" style="margin:0">▶ Show app tour</button></div><div class="card">'+sxHead('📱','This phone','Saved on this phone only')+'<div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><div class="mute">Your month starts on day (1 = normal calendar month)</div><input id="ms" type="number" inputmode="numeric" min="1" max="31" value="'+(S.ms||1)+'"><button class="btn ghost s" id="msal" style="margin-bottom:10px">Use my salary credit day</button><div class="note" id="msn">Saved on this phone only. Set the same day on the other phone. Reports, budgets and forecasts all follow it.</div><button class="btn" id="sv">Save</button></div>';
   h+=aboutCard();
   return h}
-var WEBVER="5.57 · 19 Nov 2026";
+var WEBVER="5.58 · 19 Nov 2026";
 async function loadAinfo(){if(S._ainb)return;S._ainb=1;var P=smsPlugin();try{S.ainfo=P?await P.appInfo():null}catch(e){S.ainfo=null}S._ainb=0;if(S.tab==="set")render()}
 function aboutCard(){
   var d=remDiag(),rows=[];
@@ -2914,8 +2914,8 @@ function vProfile(){var em=(S.profile&&S.profile.email)||(S.auth&&S.auth.email)|
   var h=topbar("Profile","menu");
   h+='<div class="card" style="text-align:center">'+famAv(S.name,120);
   if(GR.exok){h+='<div class="note" style="margin:8px 0 12px">'+(ph?'Your photo is visible to your family and to people in your groups.':'No photo yet. Your initial is shown instead.')+'</div>'+
-    '<div class="row" style="gap:8px;justify-content:center;flex-wrap:wrap"><button class="btn s" id="pcam">📷 Take Photo</button><button class="btn ghost s" id="pfc">🖼️ Choose Photo</button>'+(ph?'<button class="btn ghost s out" id="pfr">Remove</button>':'')+'</div>'+
-    '<input type="file" id="pfile" accept="image/*" style="display:none"><input type="file" id="pfile2" accept="image/*" capture="user" style="display:none">'}
+    '<div class="row" style="gap:8px;justify-content:center;flex-wrap:wrap"><button class="btn s" id="pfc">🖼️ Upload Profile Photo</button></div>'+
+    '<input type="file" id="pfile" accept="image/*" style="display:none">'}
   else h+='<div class="note" style="margin-top:10px">Profile pictures will be available after the next update.</div>';
   h+='</div><div class="card">'+sxHead('👤','Your details','Your name, mobile and email')+'<div class="mute">Name</div><div style="font-weight:600;margin-bottom:10px">'+esc(S.name)+'</div><div class="mute">Mobile</div><div style="font-weight:600;margin-bottom:10px">'+(pm?esc(phShow(pm))+'<span class="vpill">Verified</span>':pvDone?'<span class="vpill" style="margin-left:0">Verified</span>':'<button class="btn s" id="pvb" style="margin-top:4px">Verify Mobile</button>')+'</div><div class="mute">Email</div><div style="font-weight:600">'+(esc(em)||'<span class="mute" style="font-weight:400">Not added</span>')+'</div></div>';
   h+='<h2>Security</h2><div class="card" style="padding:0 12px"><button class="mr" id="chpw"><i>🔑</i><span><b>Change password</b><span>Choose a new password for '+esc(em||phShow(pm))+'</span></span><span class="go">›</span></button></div>';
@@ -2924,9 +2924,7 @@ function bindProfile(el){
   var pick=function(inp){inp.onchange=function(){var f=inp.files&&inp.files[0];inp.value="";if(!f)return;
     cropSheet(f,256,60000,async function(d){try{toast("Saving…");await api("rpc/set_my_photo",{method:"POST",body:JSON.stringify({p_photo:d})});GR.ex=GR.ex||{};GR.ex.photo=d;await loadGroups(true);render();toast("Photo saved")}catch(e){toast(errText(e))}})}};
   var a=el.querySelector("#pfile");if(a){pick(a);el.querySelector("#pfc").onclick=function(){a.click()}}
-  var a2=el.querySelector("#pfile2");if(a2){pick(a2);el.querySelector("#pcam").onclick=function(){a2.click()}}
-  var pv=el.querySelector("#pvb");if(pv)pv.onclick=function(){phoneSheet()};
-  var r=el.querySelector("#pfr");if(r)r.onclick=async function(){try{await api("rpc/set_my_photo",{method:"POST",body:JSON.stringify({p_photo:""})});GR.ex.photo=null;await loadGroups(true);render();toast("Photo removed")}catch(e){toast(errText(e))}};}
+  var pv=el.querySelector("#pvb");if(pv)pv.onclick=function(){phoneSheet()}}
 
 /* ----- Home: groups block, suggestions ----- */
 function groupsBlock(){if(!gOKUI()){return GR.err?'<h2>Groups</h2><div class="card"><div class="note" style="margin:0 0 8px">Groups could not load: '+esc(GR.err)+'</div><button class="btn ghost s" data-gretry="1">Try again</button></div>':''}
