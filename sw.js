@@ -1,11 +1,11 @@
 /* Gharwise service worker: opens the app instantly from the phone's own copy,
    then quietly checks for a newer version. Never touches login or data requests. */
-var CACHE="gharwise-v3";
-var SHELL=["./","index.html","manifest.json","icon-192.png","icon.png","apple-touch-icon.png","favicon-32.png","logo.svg"];
+var CACHE="gharwise-v4",OCRC="gharwise-ocr-v1";
+var SHELL=["app.html","manifest.json","icon-192.png","icon.png","apple-touch-icon.png","favicon-32.png","logo.svg"];
 self.addEventListener("install",function(e){
   e.waitUntil(caches.open(CACHE).then(function(c){return Promise.all(SHELL.map(function(u){return c.add(new Request(u,{cache:"reload"})).catch(function(){})}))}).then(function(){return self.skipWaiting()}))});
 self.addEventListener("activate",function(e){
-  e.waitUntil(caches.keys().then(function(ks){return Promise.all(ks.filter(function(k){return k!==CACHE}).map(function(k){return caches.delete(k)}))}).then(function(){return self.clients.claim()}))});
+  e.waitUntil(caches.keys().then(function(ks){return Promise.all(ks.filter(function(k){return k!==CACHE&&k!==OCRC}).map(function(k){return caches.delete(k)}))}).then(function(){return self.clients.claim()}))});
 function tell(msg){self.clients.matchAll({type:"window"}).then(function(cs){cs.forEach(function(c){c.postMessage(msg)})})}
 function revalidate(req,cache,key,notify){
   return fetch(req,{cache:"no-cache"}).then(function(res){
@@ -22,10 +22,16 @@ self.addEventListener("fetch",function(e){
   if(/(^|\.)(cdn\.jsdelivr\.net|cdnjs\.cloudflare\.com)$/.test(url.hostname)){
     e.respondWith(caches.open(CACHE).then(function(c){return c.match(req).then(function(hit){return hit||fetch(req).then(function(r){if(r&&(r.ok||r.type==="opaque"))c.put(req,r.clone());return r})})}));return}
   if(url.origin!==self.location.origin)return;
-  if(/admin\.html$|privacy\.html$|delete\.html$|get\.html$|sw\.js$/.test(url.pathname)||/^\/get\/?$/.test(url.pathname))return;
-  if(req.mode==="navigate"&&/\.html$/.test(url.pathname)&&!/index\.html$/.test(url.pathname))return;
-  var isPage=req.mode==="navigate"||/(\/|index\.html)$/.test(url.pathname);
-  var key=isPage?new Request(new URL("index.html",self.registration.scope).href):req;
+  /* bill reader files (about 11 MB, downloaded only the first time someone scans a bill): keep forever */
+  if(/\/ocr\/v\d+\//.test(url.pathname)){
+    e.respondWith(caches.open(OCRC).then(function(c){return c.match(req).then(function(hit){return hit||fetch(req).then(function(r){if(r&&r.ok)c.put(req,r.clone());return r})})}));return}
+  /* the home page (features) is only a front door: always fresh, and offline it falls back to the app itself */
+  if(req.mode==="navigate"&&(/\/$/.test(url.pathname)||/index\.html$/.test(url.pathname))){
+    e.respondWith(fetch(req).catch(function(){return caches.match(new Request(new URL("app.html",self.registration.scope).href),{ignoreSearch:true}).then(function(h){return h||new Response("Offline",{status:503,headers:{"Content-Type":"text/plain"}})})}));return}
+  if(/admin\.html$|privacy\.html$|delete\.html$|get\.html$|features\.html$|sw\.js$/.test(url.pathname)||/^\/get\/?$/.test(url.pathname))return;
+  if(req.mode==="navigate"&&/\.html$/.test(url.pathname)&&!/app\.html$/.test(url.pathname))return;
+  var isPage=req.mode==="navigate"||/app\.html$/.test(url.pathname);
+  var key=isPage?new Request(new URL("app.html",self.registration.scope).href):req;
   e.respondWith(caches.open(CACHE).then(function(c){
     return c.match(key,{ignoreSearch:true}).then(function(hit){
       var net=revalidate(req.mode==="navigate"?key:req,c,key,isPage);
