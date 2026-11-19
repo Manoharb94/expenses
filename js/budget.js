@@ -46,7 +46,7 @@ function remDays(){var ids=remList(),out=[],now=new Date();
   return out}
 var remBusy=false;
 async function schedRem(){var P=lnPlugin();if(!P||remBusy)return;remBusy=true;
-  try{var pend=await P.getPending();if(pend&&pend.notifications&&pend.notifications.length)await P.cancel({notifications:pend.notifications.map(function(n){return{id:n.id}})});
+  try{var pend=await P.getPending();if(pend&&pend.notifications&&pend.notifications.filter(function(n){return n.id!==9501&&n.id!==9502}).length)await P.cancel({notifications:pend.notifications.filter(function(n){return n.id!==9501&&n.id!==9502}).map(function(n){return{id:n.id}})});
     if(!remList().length||!(await remPermit(false)))return;
     var days=remDays();if(!days.length)return;
     await P.schedule({notifications:days.map(function(x,i){var tot=x.items.reduce(function(a,f){return a+Number(f.amount||0)},0),body=x.items.length===1?x.items[0].name+" · "+money(x.items[0].amount)+" is due today":x.items.length+" bills due today: "+x.items.map(function(f){return f.name+" "+money(f.amount)}).join(", ");

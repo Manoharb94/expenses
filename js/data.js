@@ -22,7 +22,7 @@ function startFetch(){
     catch(e){if(isNet(e)&&S.loaded)return;try{S.txns=withPending(await api(q0)||[]);S.err="";S.loaded=true}catch(e2){if(isNet(e2)&&S.loaded)return;S.err="Could not load: "+e2.message}}})();
   return Promise.all([tx,side])}
 async function load(quiet,pre){
-  await (pre||startFetch());S._full=Date.now();try{postLoad()}catch(e){}
+  await (pre||startFetch());S._full=Date.now();try{postLoad()}catch(e){}try{if(typeof nativeAfterLoad==="function")nativeAfterLoad()}catch(e){}
   try{window.brandLoader(false)}catch(e){}
   if(S.loaded&&!S.pf)S.pf=S.name;
   var sig=dataSig();

@@ -5,7 +5,12 @@ so a changed file is always fetched fresh and old/new files never mix."""
 import hashlib,re,os
 root=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 h=open(root+'/app.html',encoding='utf-8').read()
-urls=[]
+import subprocess,sys
+subprocess.check_call([sys.executable,root+'/tools/build_hi.py'])
+hd=hashlib.sha1(open(root+'/js/hi.js','rb').read()).hexdigest()[:8]
+ip=root+'/js/i18n.js';it=open(ip,encoding='utf-8').read()
+it=re.sub(r'var HI_SRC="[^"]*";','var HI_SRC="js/hi.js?v=%s";'%hd,it);open(ip,'w',encoding='utf-8').write(it)
+urls=['js/hi.js?v=%s'%hd]
 def fix(m):
     f=m.group(1); d=hashlib.sha1(open(root+'/js/'+f,'rb').read()).hexdigest()[:8]
     urls.append('js/%s?v=%s'%(f,d)); return '<script src="js/%s?v=%s"></script>'%(f,d)

@@ -8,11 +8,12 @@ function vMenu(){
     '<div class="msec">Automation & sharing</div><div class="card" style="padding:0 12px">'+row("track","💬","Automated tracking","SMS & Email","rgba(60,130,255,.20)")+row("fam","👥","Family Sync","Share expenses with family","rgba(140,100,255,.20)")+(typeof gOKUI==="function"&&gOKUI()?row("grps","🧳","Groups","Trips, flats and shared payments","rgba(40,170,230,.20)",nG?'<em class="mbd bg">'+nG+'</em>':''):'')+row("goals","🎯","Goals","Save for things together","rgba(240,80,150,.20)")+row("home","🤝","Lending","Money you lent or borrowed","rgba(40,180,100,.20)",lbad,' data-lend="1"')+'</div>'+
     '<div class="msec">Account</div><div class="card" style="padding:0 12px"><a class="mr" href="privacy.html" target="_blank" rel="noopener" style="text-decoration:none"><i class="mt" style="background:rgba(120,130,150,.20)">🔒</i><span><b>Privacy policy</b><span>What the app stores and why</span></span><span class="go">›</span></a><button class="mr" id="lo"><i class="mt" style="background:rgba(120,130,150,.20)">⏻</i><span><b>Log out</b><span>'+esc(em)+'</span></span></button><button class="mr" id="delacc"><i class="mt" style="background:rgba(230,70,70,.18)">🗑️</i><span><b class="out">Delete my account</b><span>Removes your login and your payments</span></span></button></div><div class="note" style="text-align:center;margin:14px 0">Gharwise version 2.0 (build 44)</div>'}
 function vSet(){
-  var h=topbar("Settings","menu")+lookCard();
+  var h=topbar("Settings","menu")+(typeof langCard==="function"?langCard():"")+lookCard();
   h+='<div class="card"><button class="btn ghost" id="tourgo" style="margin:0">▶ Show app tour</button></div><div class="card">'+sxHead('📱','This phone','Saved on this phone only')+'<div class="mute">Currency symbol</div><input id="cu" maxlength="3" value="'+esc(S.cur)+'"><div class="mute">Your month starts on day (1 = normal calendar month)</div><input id="ms" type="number" inputmode="numeric" min="1" max="31" value="'+(S.ms||1)+'"><button class="btn ghost s" id="msal" style="margin-bottom:10px">Use my salary credit day</button><div class="note" id="msn">Saved on this phone only. Set the same day on the other phone. Reports, budgets and forecasts all follow it.</div><button class="btn" id="sv">Save</button></div>';
+  h+=(typeof nativeCard==="function"?nativeCard():"");
   h+=aboutCard();
   return h}
-var WEBVER="5.61 · 19 Nov 2026";
+var WEBVER="5.62 · 19 Nov 2026";
 async function loadAinfo(){if(S._ainb)return;S._ainb=1;var P=smsPlugin();try{S.ainfo=P?await P.appInfo():null}catch(e){S.ainfo=null}S._ainb=0;if(S.tab==="set")render()}
 function aboutCard(){
   var d=remDiag(),rows=[];
