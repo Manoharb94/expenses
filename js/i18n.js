@@ -1,7 +1,7 @@
 /* Language (English / Hindi). English is the source language; Hindi is applied on top by translating what is shown.
    The dictionary lives in js/hi.js and is only loaded when Hindi is chosen. Category names stay English in the data. */
 var LANG=(function(){var l=ls("lang");if(l==="hi"||l==="en")return l;try{if(/^hi\b/i.test(navigator.language||""))return "hi"}catch(e){}return "en"})();
-var HI_SRC="js/hi.js?v=16b4b928";
+var HI_SRC="js/hi.js?v=918d2650";
 if(LANG==="hi"&&!window.HI)document.write('<script src="'+HI_SRC+'"><\/script>');
 var HIM=null,HIMN=null;
 function i18nPrep(){
@@ -86,5 +86,5 @@ function i18nStart(){
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",i18nStart);else i18nStart();
 function langCard(){
   var b=function(c,l){return '<button class="'+(LANG===c?"btn":"btn ghost")+'" data-lang="'+c+'" data-notr style="flex:1;margin:0">'+l+'</button>'};
-  return '<div class="card"><div class="note" style="margin:0 0 8px;font-weight:600" data-notr>Language / भाषा</div><div style="display:flex;gap:8px">'+b("en","English")+b("hi","हिन्दी")+'</div></div>'}
+  return '<div class="card"><div style="display:flex;gap:8px">'+b("en","English")+b("hi","हिन्दी")+'</div></div>'}
 document.addEventListener("click",function(e){var t=e.target.closest&&e.target.closest("[data-lang]");if(!t)return;var c=t.getAttribute("data-lang");if(c===LANG)return;ls("lang",c);location.reload()});

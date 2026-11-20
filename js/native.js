@@ -45,11 +45,16 @@ document.addEventListener("change",async function(e){
 /* ---------- reminders you choose (both off until switched on) ---------- */
 function wkOn(){return ls("wkon")==="1"}
 function baOn(){return ls("baon")==="1"}
+function wkDay(){var d=parseInt(ls("wkday"),10);return d>=0&&d<=6?d:0}            /* 0 = Sunday */
+function wkTime(){return /^\d\d:\d\d$/.test(ls("wktime")||"")?ls("wktime"):"19:00"}
+function baPct(){var p=parseInt(ls("bapct"),10);return p>=10&&p<=100?p:80}
+function baTime(){return /^\d\d:\d\d$/.test(ls("batime")||"")?ls("batime"):"09:00"}
+function hm(t){var a=t.split(":");return[parseInt(a[0],10)||0,parseInt(a[1],10)||0]}
 function budgetHot(){
   var key=monthKey(0),sp={};
   txIn(key).forEach(function(t){if(t.type==="out"&&isCount(t)&&t.category)sp[t.category]=(sp[t.category]||0)+Number(t.amount)});
   return (S.budgets||[]).filter(function(b){return Number(b.amount)>0}).map(function(b){return{c:b.category,a:Number(b.amount),s:sp[b.category]||0}})
-    .filter(function(x){return x.s/x.a>=0.8}).sort(function(a,b){return b.s/b.a-a.s/a.a})}
+    .filter(function(x){return x.s/x.a>=baPct()/100}).sort(function(a,b){return b.s/b.a-a.s/a.a})}
 async function schedInsights(){
   var P=lnPlugin();if(!P)return;
   try{
@@ -57,9 +62,9 @@ async function schedInsights(){
     if(!(wkOn()||baOn()))return;
     if(!(await remPermit(false)))return;
     var list=[],now=new Date();
-    if(wkOn()){var d=new Date(now.getFullYear(),now.getMonth(),now.getDate(),19,0,0);d.setDate(d.getDate()+((7-d.getDay())%7));if(d<=now)d.setDate(d.getDate()+7);
+    if(wkOn()){var w=hm(wkTime()),d=new Date(now.getFullYear(),now.getMonth(),now.getDate(),w[0],w[1],0);d.setDate(d.getDate()+((wkDay()-d.getDay()+7)%7));if(d<=now)d.setDate(d.getDate()+7);
       list.push({id:9501,title:gwT("Your week in Gharwise"),body:gwT("See where this week’s money went and how your budgets are doing."),schedule:{at:d,allowWhileIdle:true}})}
-    if(baOn()){var hot=budgetHot();if(hot.length){var h=hot[0],pct=Math.round(h.s/h.a*100),t=new Date(now.getFullYear(),now.getMonth(),now.getDate(),9,0,0);if(t<=now)t.setDate(t.getDate()+1);
+    if(baOn()){var hot=budgetHot();if(hot.length){var h=hot[0],pct=Math.round(h.s/h.a*100),bt=hm(baTime()),t=new Date(now.getFullYear(),now.getMonth(),now.getDate(),bt[0],bt[1],0);if(t<=now)t.setDate(t.getDate()+1);
       list.push({id:9502,title:pct>=100?gwT("{c} budget is over",{c:gwT(h.c)}):gwT("{c} budget is {p}% used",{c:gwT(h.c),p:pct}),body:gwT("{s} of {a} spent this month",{s:money(h.s),a:money(h.a)}),schedule:{at:t,allowWhileIdle:true}})}}
     if(list.length)await P.schedule({notifications:list})}catch(e){}}
 document.addEventListener("change",async function(e){
@@ -67,19 +72,20 @@ document.addEventListener("change",async function(e){
   if(t.checked){var dg=remDiag();if(!dg.app||!dg.plugin){t.checked=false;toast(gwT("Please update the Gharwise app to use reminders"));return}
     if(!(await remPermit(true))){t.checked=false;toast(remMsg());return}}
   ls(t.id==="wkt"?"wkon":"baon",t.checked?"1":"0");schedInsights();
-  toast(t.checked?gwT("Reminder on"):gwT("Reminder off"))});
+  toast(t.checked?gwT("Reminder on"):gwT("Reminder off"));if(S.tab==="set")render()});
+
+document.addEventListener("change",function(e){
+  var t=e.target;if(!t)return;var m={wkd:"wkday",wkh:"wktime",bap:"bapct",bah:"batime"}[t.id];if(!m)return;
+  if(!t.value)return;ls(m,t.value);schedInsights();toast(gwT("Saved"))});
 
 /* ---------- widget: key, balance and language handed to the native widget ---------- */
 function widgetLeft(){
   var L=S.txns.filter(inRange),Lc=L.filter(isCount),pdt=periodDates(),X=expenseSplit(Lc,pdt.from,pdt.to),F=flowCalc(L,Lc,X);
   return F.rec-X.total}
-async function pushWidget(){
+async function pushWidget(){   /* the widget only needs who you are; it never shows your money */
   var P=gwNative();if(!P||!(await gwProbe()))return;
   try{if(!S.sc)await loadSc();var key=S.sc&&S.sc.key;if(!key)return;
-    if(S.range!=="month")preset("month");
-    var left=widgetLeft(),d=new Date();
-    await P.setWidget({key:key,url:URLB+"rpc/",apikey:KEY,title:gwT("Left this month"),big:money(Math.round(left)),
-      small:gwT("Updated {t}",{t:d.toLocaleTimeString("en-IN",{hour:"numeric",minute:"2-digit"})}),left:Math.round(left),lang:(typeof LANG!=="undefined"?LANG:"en")})}
+    await P.setWidget({key:key,url:URLB+"rpc/",apikey:KEY,lang:(typeof LANG!=="undefined"?LANG:"en")})}
   catch(e){}}
 function nativeAfterLoad(){try{gwProbe();pushWidget();schedInsights()}catch(e){}}
 
@@ -90,13 +96,25 @@ function nativeCard(){
   if(GWN.ok===undefined){gwProbe();return ""}
   var ios=false;try{ios=Capacitor.getPlatform()==="ios"}catch(e){}
   var row=function(i,b,s,id,on){return '<div class="dc trk"><i style="background:rgba(60,130,255,.20)">'+i+'</i><div class="m"><b>'+gwT(b)+'</b><span>'+gwT(s)+'</span></div><label class="tgl"><input type="checkbox" id="'+id+'"'+(on?' checked':'')+'><span></span></label></div>'};
-  var h='<div class="card">'+sxHead('🔒','App lock and reminders','Saved on this phone')+'<div class="note" style="margin:0 0 8px">'+gwT("Everything here is off until you switch it on.")+'</div>';
+  var h='<div class="msec">'+gwT("Security and reminders")+'</div><div class="card"><div class="note" style="margin:0 0 8px">'+gwT("Everything here is off until you switch it on. Saved on this phone only.")+'</div>';
   if(GWN.ok)h+=row("🔒",ios?"Lock with Face ID":"Lock with fingerprint or face","Ask for it every time you open Gharwise","lkt",lkOn());
   else h+='<div class="note">'+gwT("Update the Gharwise app to use app lock.")+'</div>';
-  if(lnPlugin()){h+=row("📅","Weekly summary","Sunday 7 pm: see where the week’s money went","wkt",wkOn());
-    h+=row("⚠️","Budget alerts","9 am when a budget is 80% used or more","bat",baOn())}
+  if(lnPlugin()){
+    var dn=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],opt=function(v,t,sel){return '<option value="'+v+'"'+(sel?' selected':'')+'>'+gwT(t)+'</option>'};
+    h+=row("📅","Weekly summary","Pick the day and time to see where the week’s money went","wkt",wkOn());
+    if(wkOn())h+='<div class="ropt"><label><span>'+gwT("Day")+'</span><select id="wkd">'+dn.map(function(n,k){return opt(k,n,k===wkDay())}).join('')+'</select></label><label><span>'+gwT("Time")+'</span><input type="time" id="wkh" value="'+wkTime()+'"></label></div>';
+    h+=row("⚠️","Budget alerts","Get a reminder when a budget has used up the percentage you choose","bat",baOn());
+    if(baOn())h+='<div class="ropt"><label><span>'+gwT("When used")+'</span><select id="bap">'+[50,60,70,75,80,90,100].map(function(p){return '<option value="'+p+'"'+(p===baPct()?' selected':'')+'>'+p+'%</option>'}).join('')+'</select></label><label><span>'+gwT("Time")+'</span><input type="time" id="bah" value="'+baTime()+'"></label></div>'}
   h+='</div>';
   h+='<div class="card">'+sxHead('🎤','Add an expense by voice','Say it, it is saved')+'<div class="note" style="margin:0">'+(ios
     ?gwT("Double-tap the back of your iPhone, say “Grocery 120”, and it is saved. Set it up in 2 steps:")+'<p style="margin:10px 0 4px"><b>1.</b> '+gwT("Add the shortcut. Tap Add Shortcut, then allow every permission.")+'</p><a class="btn" style="display:block;text-align:center;text-decoration:none" href="'+esc(QUICK_SHORTCUT_LINK)+'" target="_blank" rel="noopener">'+gwT("Add Quick Expense shortcut")+'</a><p style="margin:10px 0 0"><b>2.</b> '+gwT("Open Settings → Accessibility → Touch → Back Tap → Double Tap, and choose Quick Expense.")+'</p><p class="note" style="margin:8px 0 0">'+gwT("You can also say “Hey Siri, add expense in Gharwise”.")+'</p>'
     :gwT("Press and hold an empty spot on your home screen, choose Widgets, then Gharwise. Tap the microphone on the widget and say, for example, “Grocery 120”."))+'</div></div>';
   return h}
+
+/* ---------- Android back button: close a pop-up, then go back to Home, and only then let the app close ---------- */
+window.gwBack=function(){
+  try{
+    var sh=document.getElementById("sheet");if(sh&&sh.querySelector(".sheet")){sh.innerHTML="";return true}
+    if(S&&!S.view&&S.code&&S.tab&&S.tab!=="home"){go(S.tab==="grpo"?"grpv":S.tab==="grpv"&&typeof gBack==="function"?gBack():"home");return true}
+  }catch(e){}
+  return false};

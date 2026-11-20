@@ -5,17 +5,14 @@ var NOBUD={"Salary / Income":1};NOBUD[TRF]=1;NOBUD[SELF]=1;NOBUD[IGN]=1;NOBUD[CC
 var NOBUDGET={};for(var k in NOBUD)NOBUDGET[k]=1;["Rent / EMI","Education","Home loan EMI","Kid education","Kid day care","Maid","Cook","Car cleaning","Electricity bill","Gas bill","Family donation","Family & Friends","House Rent","EMI"].forEach(function(c){NOBUDGET[c]=1});
 var S={tab:"home",range:"month",from:"",to:"",rp:"this",hf:"all",pf:"",txns:[],budgets:[],fixed:[],planErr:"",goals:[],gents:[],lrows:{},goalErr:"",cur:"₹",code:"",name:"",err:"",loaded:false};
 var ACC={emerald:["Emerald","#1f6f5c"],ocean:["Ocean","#2563eb"],violet:["Violet","#7c3aed"],sunset:["Sunset","#d9622b"],rose:["Rose","#be3a6a"],graphite:["Graphite","#334155"]};
-function applyLook(){var r=document.documentElement,t=ls("theme")||"light",a=ls("accent")||"violet";
-  if(t==="light"||t==="dark")r.setAttribute("data-theme",t);else r.removeAttribute("data-theme");
-  if(a&&a!=="emerald"&&ACC[a])r.setAttribute("data-accent",a);else r.removeAttribute("data-accent");
+function applyLook(){var r=document.documentElement,t=ls("theme")==="dark"?"dark":"light";   /* Light or Dark only; the colour is always violet */
+  r.setAttribute("data-theme",t);r.setAttribute("data-accent","violet");
   var m=document.querySelector('meta[name=theme-color]');if(!m){m=document.createElement("meta");m.name="theme-color";document.head.appendChild(m)}
   m.content=getComputedStyle(r).getPropertyValue("--bg").trim()||"#151514"}
-function lookCard(){var t=ls("theme")||"light",a=ls("accent")||"violet";
-  var h='<div class="card">'+sxHead('🎨','Look','Mode and colour')+'<div class="mute">Mode</div><div class="look">';
-  [["auto","Auto"],["light","☀️ Light"],["dark","🌙 Dark"]].forEach(function(x){h+='<button data-theme="'+x[0]+'"'+(t===x[0]?' class="on"':'')+'>'+x[1]+'</button>'});
-  h+='</div><div class="mute">Colour</div><div class="sw">';
-  Object.keys(ACC).forEach(function(k){h+='<div><button data-accent="'+k+'" title="'+ACC[k][0]+'" style="background:'+ACC[k][1]+'"'+(a===k?' class="on"':'')+'></button><span>'+ACC[k][0]+'</span></div>'});
-  return h+'</div><div class="note">This is saved on this phone only, so you and your family can each pick your own.</div></div>'}
+function lookCard(){var t=ls("theme")==="dark"?"dark":"light";
+  var h='<div class="card"><div class="look" style="margin:0 0 8px">';
+  [["light","☀️ Light"],["dark","🌙 Dark"]].forEach(function(x){h+='<button data-theme="'+x[0]+'"'+(t===x[0]?' class="on"':'')+'>'+x[1]+'</button>'});
+  return h+'</div><div class="note" style="margin:0">Saved on this phone only, so you and your family can each pick your own.</div></div>'}
 function ls(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
 function money(n){n=Number(n);return (n<0?"−":"")+S.cur+Math.abs(n).toLocaleString("en-IN",{maximumFractionDigits:2})}

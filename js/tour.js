@@ -36,7 +36,7 @@ window.addEventListener("popstate",function(){if(S.tab!=="home"&&S.code){_pop=1;
 document.addEventListener("visibilitychange",function(){if(!document.hidden)refreshSoon()});
 setInterval(refreshSoon,6000);
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
-S.pf=ls("pf")||"";S.cur=ls("cur")||"₹";S.ms=parseInt(ls("ms"),10)||1;
+S.pf=ls("pf")||"";S.cur="₹";S.ms=parseInt(ls("ms"),10)||1;
 try{S.auth=JSON.parse(ls("sb")||"null")}catch(e){S.auth=null}
 setInterval(function(){if((S.tab==="track"||S.tab==="mail")&&!document.hidden&&S.code)refreshSc()},6000);
 window.addEventListener("hashchange",function(){if(/access_token|error_description/.test(location.hash))boot()});
