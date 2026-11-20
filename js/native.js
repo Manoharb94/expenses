@@ -84,6 +84,7 @@ async function pushWidget(){
 function nativeAfterLoad(){try{gwProbe();pushWidget();schedInsights()}catch(e){}}
 
 /* ---------- Settings cards ---------- */
+var QUICK_SHORTCUT_LINK="https://www.icloud.com/shortcuts/e6dd0738d1ef485ba0fc73d8621e1440";
 function nativeCard(){
   if(!nativeApp())return "";
   if(GWN.ok===undefined){gwProbe();return ""}
@@ -96,6 +97,6 @@ function nativeCard(){
     h+=row("⚠️","Budget alerts","9 am when a budget is 80% used or more","bat",baOn())}
   h+='</div>';
   h+='<div class="card">'+sxHead('🎤','Add an expense by voice','Say it, it is saved')+'<div class="note" style="margin:0">'+(ios
-    ?gwT("Say “Hey Siri, add expense in Gharwise”, then speak, for example “Grocery 120”. You can also set Back Tap or the Action Button to run it: Settings → Accessibility → Touch → Back Tap.")
+    ?gwT("Double-tap the back of your iPhone, say “Grocery 120”, and it is saved. Set it up in 2 steps:")+'<p style="margin:10px 0 4px"><b>1.</b> '+gwT("Add the shortcut. Tap Add Shortcut, then allow every permission.")+'</p><a class="btn" style="display:block;text-align:center;text-decoration:none" href="'+esc(QUICK_SHORTCUT_LINK)+'" target="_blank" rel="noopener">'+gwT("Add Quick Expense shortcut")+'</a><p style="margin:10px 0 0"><b>2.</b> '+gwT("Open Settings → Accessibility → Touch → Back Tap → Double Tap, and choose Quick Expense.")+'</p><p class="note" style="margin:8px 0 0">'+gwT("You can also say “Hey Siri, add expense in Gharwise”.")+'</p>'
     :gwT("Press and hold an empty spot on your home screen, choose Widgets, then Gharwise. Tap the microphone on the widget and say, for example, “Grocery 120”."))+'</div></div>';
   return h}
