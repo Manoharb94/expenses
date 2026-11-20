@@ -123,5 +123,5 @@ document.addEventListener("click",async function(e){
   var b=e.target&&e.target.closest&&e.target.closest("#pinw");if(!b)return;
   var P=gwNative();
   try{var r=P&&P.pinWidget?await P.pinWidget():null;
-    if(!r||!r.supported)toast(gwT("Press and hold an empty spot on your home screen, choose Widgets, then Gharwise."))}
+    if(!r||!r.supported)toast(gwT("Press and hold an empty spot on your home screen, choose Widgets, then Gharwise.")+(r&&r.why?" ("+r.why+")":""))}
   catch(er){toast(gwT("Press and hold an empty spot on your home screen, choose Widgets, then Gharwise."))}});
