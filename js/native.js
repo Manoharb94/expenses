@@ -5,8 +5,8 @@ var GWN={ok:undefined,bio:false,busy:false,t:0};
 function gwT(s,v){return typeof T==="function"?T(s,v):s}
 async function gwProbe(){
   if(GWN.ok!==undefined)return GWN.ok;
-  var P=gwNative();if(!P){GWN.ok=false;return false}
-  try{var r=await P.lockStatus();GWN.ok=true;GWN.bio=!!(r&&r.available)}catch(e){GWN.ok=false}
+  var P=gwNative();if(!P){GWN.ok=false;GWN.err="no-plugin";return false}
+  try{var r=await P.lockStatus();GWN.ok=true;GWN.bio=!!(r&&r.available)}catch(e){GWN.ok=false;GWN.err=String(e&&(e.message||e.code||e)).slice(0,80)}
   if(S.tab==="set"&&typeof render==="function")render();
   return GWN.ok}
 
@@ -98,7 +98,7 @@ function nativeCard(){
   var row=function(i,b,s,id,on){return '<div class="dc trk"><i style="background:rgba(60,130,255,.20)">'+i+'</i><div class="m"><b>'+gwT(b)+'</b><span>'+gwT(s)+'</span></div><label class="tgl"><input type="checkbox" id="'+id+'"'+(on?' checked':'')+'><span></span></label></div>'};
   var h='<div class="msec">'+gwT("Security and reminders")+'</div><div class="card"><div class="note" style="margin:0 0 8px">'+gwT("Everything here is off until you switch it on. Saved on this phone only.")+'</div>';
   if(GWN.ok)h+=row("🔒",ios?"Lock with Face ID":"Lock with fingerprint or face","Ask for it every time you open Gharwise","lkt",lkOn());
-  else h+='<div class="note">'+gwT("Update the Gharwise app to use app lock.")+'</div>';
+  else h+='<div class="note">'+gwT("Update the Gharwise app to use app lock.")+(GWN.err?" ["+esc(GWN.err)+"]":"")+'</div>';
   if(lnPlugin()){
     var dn=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],opt=function(v,t,sel){return '<option value="'+v+'"'+(sel?' selected':'')+'>'+gwT(t)+'</option>'};
     h+=row("📅","Weekly summary","Pick the day and time to see where the week’s money went","wkt",wkOn());
