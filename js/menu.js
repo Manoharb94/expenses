@@ -16,8 +16,10 @@ function vSet(){
   h+=aboutCard();
   return h}
 var WEBVER="5.63 · 21 Nov 2026";
-async function loadAinfo(){if(S._ainb)return;S._ainb=1;var P=smsPlugin();try{S.ainfo=P?await P.appInfo():null}catch(e){S.ainfo=null}
-  if(!S.ainfo){try{var G=typeof gwNative==="function"?gwNative():null;if(G&&G.appInfo)S.ainfo=await G.appInfo()}catch(e){}}S._ainb=0;if(S.tab==="set")render()}
+function _tmo(p,ms){return Promise.race([p,new Promise(function(_,j){setTimeout(function(){j(new Error("timeout"))},ms)})])}
+async function loadAinfo(){if(S._ainb)return;S._ainb=1;var P=smsPlugin();try{S.ainfo=P&&P.appInfo?await _tmo(P.appInfo(),2500):null}catch(e){S.ainfo=null}
+  if(!S.ainfo){try{var G=typeof gwNative==="function"?gwNative():null;if(G&&G.appInfo)S.ainfo=await _tmo(G.appInfo(),2500)}catch(e){}}
+  if(!S.ainfo)S.ainfo=null;S._ainb=0;if(S.tab==="set")render()}
 function aboutCard(){
   var d=remDiag(),v="";
   if(!d.app)v="Web app in your browser · "+WEBVER;
