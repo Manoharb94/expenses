@@ -26,7 +26,7 @@ function wz(title,steps,cur,doneTo){
   return h}
 function kv(label,val){return '<div class="mute" style="margin-top:10px">'+label+'</div><div class="kv"><span>'+esc(val)+'</span><button class="btn ghost s" data-copy="'+esc(val)+'">Copy</button></div>'}
 /* Paste the iCloud link of the shared "Gharwise SMS" shortcut here (see setup notes). Empty = step-by-step instructions instead. */
-var SMS_SHORTCUT_LINK="https://www.icloud.com/shortcuts/3c0b6d54763b4919bc97fc1a511dbbff";
+var SMS_SHORTCUT_LINK="https://www.icloud.com/shortcuts/521cc0457b594587b9172633f6a21ba5";
 var SMS_SHORTCUT_NAME="Gharwise SMS";
 var SMS_PAST=true;
 var SMS_MONTHS_IN_URL=true;  /* true once the shortcut reads 'HISTORY <months>' (no question asked) */   /* true once the shared shortcut also reads past SMS */
