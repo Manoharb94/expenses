@@ -108,7 +108,7 @@ function nativeCard(){
   h+='</div>';
   h+='<div class="card">'+sxHead('🎤','Add an expense by voice','Say it, it is saved')+'<div class="note" style="margin:0">'+(ios
     ?gwT("Double-tap the back of your iPhone, say “Grocery 120”, and it is saved. Set it up in 2 steps:")+'<p style="margin:10px 0 4px"><b>1.</b> '+gwT("Add the shortcut. Tap Add Shortcut, then allow every permission.")+'</p><a class="btn" style="display:block;text-align:center;text-decoration:none" href="'+esc(QUICK_SHORTCUT_LINK)+'" target="_blank" rel="noopener">'+gwT("Add Quick Expense shortcut")+'</a><p style="margin:10px 0 0"><b>2.</b> '+gwT("Open Settings → Accessibility → Touch → Back Tap → Double Tap, and choose Quick Expense.")+'</p><p class="note" style="margin:8px 0 0">'+gwT("You can also say “Hey Siri, add expense in Gharwise”.")+'</p>'
-    :gwT("Press and hold an empty spot on your home screen, choose Widgets, then Gharwise. Tap the microphone on the widget and say, for example, “Grocery 120”."))+'</div></div>';
+    :gwT("Add the Gharwise widget to your home screen. Then tap the microphone on it and say, for example, “Grocery 120”.")+'<button class="btn" id="pinw" style="margin:10px 0 4px">'+gwT("Add widget to home screen")+'</button><div class="note" style="margin:0">'+gwT("If nothing opens: press and hold an empty spot on your home screen, choose Widgets, then Gharwise.")+'</div>')+'</div></div>';
   return h}
 
 /* ---------- Android back button: close a pop-up, then go back to Home, and only then let the app close ---------- */
@@ -118,3 +118,10 @@ window.gwBack=function(){
     if(S&&!S.view&&S.code&&S.tab&&S.tab!=="home"){go(S.tab==="grpo"?"grpv":S.tab==="grpv"&&typeof gBack==="function"?gBack():"home");return true}
   }catch(e){}
   return false};
+
+document.addEventListener("click",async function(e){
+  var b=e.target&&e.target.closest&&e.target.closest("#pinw");if(!b)return;
+  var P=gwNative();
+  try{var r=P&&P.pinWidget?await P.pinWidget():null;
+    if(!r||!r.supported)toast(gwT("Press and hold an empty spot on your home screen, choose Widgets, then Gharwise."))}
+  catch(er){toast(gwT("Press and hold an empty spot on your home screen, choose Widgets, then Gharwise."))}});
