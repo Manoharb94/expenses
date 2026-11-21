@@ -4,7 +4,7 @@ function vMenu(){
   var nG=0;try{nG=gList().length}catch(e){}
   var lb=0;try{lendBal().forEach(function(r){lb+=r.get-r.owe})}catch(e){}
   var lbad=lb?'<em class="mbd" style="color:'+(lb>0?'var(--acc)':'var(--out)')+'">'+(lb>0?'+':'−')+money(Math.abs(Math.round(lb)))+'</em>':'';
-  return topbar("Menu","home")+(typeof profCard==="function"?profCard():'')+'<div class="msec">App settings</div><div class="card" style="padding:0 12px">'+row("set","⚙️","Settings","Theme, colour, currency, month start","rgba(120,130,150,.20)")+row("cats","🗂️","Categories","What each category has this month","rgba(255,150,40,.22)")+'</div>'+
+  return topbar("Menu","home")+(typeof profCard==="function"?profCard():'')+'<div class="msec">App settings</div><div class="card" style="padding:0 12px">'+row("set","⚙️","Settings","Language, look, lock and reminders","rgba(120,130,150,.20)")+row("cats","🗂️","Categories","What each category has this month","rgba(255,150,40,.22)")+'</div>'+
     '<div class="msec">Automation & sharing</div><div class="card" style="padding:0 12px">'+row("track","💬","Automated tracking","SMS & Email","rgba(60,130,255,.20)")+row("fam","👥","Family Sync","Share expenses with family","rgba(140,100,255,.20)")+(typeof gOKUI==="function"&&gOKUI()?row("grps","🧳","Groups","Trips, flats and shared payments","rgba(40,170,230,.20)",nG?'<em class="mbd bg">'+nG+'</em>':''):'')+row("goals","🎯","Goals","Save for things together","rgba(240,80,150,.20)")+row("home","🤝","Lending","Money you lent or borrowed","rgba(40,180,100,.20)",lbad,' data-lend="1"')+'</div>'+
     '<div class="msec">Account</div><div class="card" style="padding:0 12px"><a class="mr" href="privacy.html" target="_blank" rel="noopener" style="text-decoration:none"><i class="mt" style="background:rgba(120,130,150,.20)">🔒</i><span><b>Privacy policy</b><span>What the app stores and why</span></span><span class="go">›</span></a><button class="mr" id="lo"><i class="mt" style="background:rgba(120,130,150,.20)">⏻</i><span><b>Log out</b><span>'+esc(em)+'</span></span></button><button class="mr" id="delacc"><i class="mt" style="background:rgba(230,70,70,.18)">🗑️</i><span><b class="out">Delete my account</b><span>Removes your login and your payments</span></span></button></div><div class="note" style="text-align:center;margin:14px 0">Gharwise version 2.0 (build 44)</div>'}
 function vSet(){
@@ -15,7 +15,7 @@ function vSet(){
   h+=(typeof nativeCard==="function"?nativeCard():"");
   h+=aboutCard();
   return h}
-var WEBVER="5.63 · 21 Nov 2026";
+var WEBVER="5.64 · 21 Nov 2026";
 function _tmo(p,ms){return Promise.race([p,new Promise(function(_,j){setTimeout(function(){j(new Error("timeout"))},ms)})])}
 async function loadAinfo(){if(S._ainb)return;S._ainb=1;var P=smsPlugin();try{S.ainfo=P&&P.appInfo?await _tmo(P.appInfo(),2500):null}catch(e){S.ainfo=null}
   if(!S.ainfo){try{var G=typeof gwNative==="function"?gwNative():null;if(G&&G.appInfo)S.ainfo=await _tmo(G.appInfo(),2500)}catch(e){}}

@@ -8,6 +8,7 @@ function vDash(){
   (S.invites||[]).forEach(function(x){h+='<div class="dc" style="border:2px solid var(--acc)"><b>👪 '+esc(x.by)+' invited you to '+esc(x.family)+'</b><div class="note" style="margin:4px 0 12px">Joining moves your own payments into that family, and you’ll see each other’s spending'+(x.can_edit?'':' (view only)')+'.</div><div class="row" style="gap:8px;justify-content:flex-start"><button class="btn s" data-inv="acc|'+x.id+'|'+esc(x.family)+'">Join</button><button class="btn ghost s" data-inv="dec|'+x.id+'|">Decline</button></div></div>'});
   if(pendN)h+='<button class="dc warnc tap" data-go="list" data-ltab="none" style="width:100%;border:0;font:inherit;color:var(--ink)"><span>🏷️ <b>'+pendN+'</b> payment'+(pendN>1?'s need':' needs')+' a category</span><span class="arr">→</span></button>';
   if(typeof suggestBlock==="function")h+=suggestBlock();
+  if(typeof gsCard==="function")h+=gsCard();
   h+=expCard(X,P,F);
   h+=insightBlock(X,Lc,pdt);
   var rec=S.txns.filter(function(t){return personOK(t)&&privOK(t)}).slice().sort(byNew).slice(0,5);
