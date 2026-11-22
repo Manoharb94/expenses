@@ -26,7 +26,8 @@ function render(){
   var ma=q("msal");if(ma)ma.onclick=function(){var r=salaryDay(),n=q("msn");
     if(!r){n.textContent="No salary credit found yet. Mark your salary payee as Salary / Income in History first.";return}
     q("ms").value=r.day;n.textContent="Found "+money(r.amount)+" credited on "+r.date+". Day "+r.day+" filled in. Press Save."};
-  var sv=q("sv");if(sv)sv.onclick=function(){S.ms=Math.min(31,Math.max(1,parseInt(g("ms"),10)||1));ls("ms",S.ms);if(S.range==="month"||S.range==="last")preset(S.range);S.cur="₹";S.tab="home";load()};
+  var sv=q("sv");if(sv)sv.onclick=function(){S.ms=Math.min(31,Math.max(1,parseInt(g("ms"),10)||1));ls("ms",S.ms);if(S.range==="month"||S.range==="last")preset(S.range);S.cur="₹";S.tab=S.tab==="plan"?"plan":"home";load()};
+  var mnd=q("mnd");if(mnd)mnd.ontoggle=function(){S.mndOpen=mnd.open};
   bindSc();bindStmt();bindV2(el);try{bindGroups(el)}catch(e){try{console.warn(e)}catch(x){}}
   var lo=q("lo");if(lo)lo.onclick=function(){authAction("out")};
   var cpy=q("cpy");if(cpy)cpy.onclick=async function(){toast(await copyText(S.profile.invite_code)?"Code copied":"Press and hold the code to copy")};

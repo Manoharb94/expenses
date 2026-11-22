@@ -1,7 +1,7 @@
 /* Language (English / Hindi). English is the source language; Hindi is applied on top by translating what is shown.
    The dictionary lives in js/hi.js and is only loaded when Hindi is chosen. Category names stay English in the data. */
 var LANG=(function(){var l=ls("lang");if(l==="hi"||l==="en")return l;try{if(/^hi\b/i.test(navigator.language||""))return "hi"}catch(e){}return "en"})();
-var HI_SRC="js/hi.js?v=97278561";
+var HI_SRC="js/hi.js?v=c430831d";
 if(LANG==="hi"&&!window.HI)document.write('<script src="'+HI_SRC+'"><\/script>');
 var HIM=null,HIMN=null;
 function i18nPrep(){

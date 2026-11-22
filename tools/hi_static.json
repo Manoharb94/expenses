@@ -1472,5 +1472,21 @@
 "settings → accessibility → touch → back tap → double tap. choose gharwise sms.": "Settings → Accessibility → Touch → Back Tap → Double Tap में जाएँ। Gharwise SMS चुनें।",
 "you can also say “hey siri, gharwise sms”.": "आप “Hey Siri, Gharwise SMS” भी बोल सकते हैं।",
 "read your old messages": "अपने पुराने मैसेज पढ़ें",
-"tap ▶ on gharwise sms.": "Gharwise SMS पर ▶ दबाएँ।"
+"tap ▶ on gharwise sms.": "Gharwise SMS पर ▶ दबाएँ।",
+"tap a category to set its budget.": "बजट सेट करने के लिए श्रेणी दबाएँ।",
+"tap a payment to set its category.": "श्रेणी चुनने के लिए पेमेंट दबाएँ।",
+"everyone in the family sees these budgets.": "परिवार में सभी ये बजट देखते हैं।",
+"only payments with a category count against a budget.": "सिर्फ़ श्रेणी वाले पेमेंट बजट में गिने जाते हैं।",
+"fixed items feed your forecast.": "तय खर्च आपके अनुमान में जुड़ते हैं।",
+"goals are shared. the app only tracks savings. it does not move money.": "लक्ष्य साझा होते हैं। ऐप सिर्फ़ बचत का हिसाब रखता है, पैसे नहीं भेजता।",
+"lending is never counted as spending or income.": "उधार को कभी खर्च या आमदनी में नहीं गिना जाता।",
+"included in total expenses.": "कुल खर्च में शामिल।",
+"compared on the same number of days.": "उतने ही दिनों से तुलना की गई है।",
+"fixed bills like emis are kept out of daily expense.": "ईएमआई जैसे तय बिल रोज़ के खर्च में नहीं गिने जाते।",
+"all off until you switch them on.": "जब तक आप चालू न करें, सब बंद रहता है।",
+"lent or borrowed? choose": "उधार दिया या लिया? चुनें",
+"more categories": "और श्रेणियाँ",
+"income, loans and transfers": "आमदनी, उधार और ट्रांसफ़र",
+"your month starts on day": "आपका महीना इस दिन से शुरू होता है:",
+"reports and budgets follow this day. set it on each phone.": "रिपोर्ट और बजट इसी दिन के हिसाब से चलते हैं। हर फ़ोन पर सेट करें।"
 }

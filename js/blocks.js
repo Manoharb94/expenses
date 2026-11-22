@@ -68,7 +68,7 @@ function lendBlock(){
     if(o.e.length>10)h+='<div class="note">'+(o.e.length-10)+' older entries not shown.</div>';
     h+='</div></div></div>'});
   if(!shown)h+='<div class="note" style="margin:10px 0">'+(lf==="pend"?'Nothing pending. Everyone is settled.':lf==="done"?'Nothing settled yet.':'No lending yet.')+'</div>';
-  return h+'<div class="note">Lent or borrowed money is not counted as spending or income. Part payments are fine. Tap Tally beside any entry to subtract or add an amount with a comment. Swipe a person to the left to delete them. To link a repayment to the same person, tap it, choose Lend out or Lend in, and type the same name. This covers all dates.</div></div>';
+  return h+'<div class="note">Lending is never counted as spending or income. To link a repayment to the same person, tap it, choose Lend out or Lend in, and type the same name. This covers all dates.</div></div>';
 }
 function unplannedBlock(Lc){
   var l=Lc.filter(function(t){return t.type==="out"&&t.category===UNPL});if(!l.length)return '';
@@ -239,5 +239,5 @@ function mandBlock(x){
   if(!x.useM)return '';
   var h='<div class="card">'+sxHead('📌','Mandatory expenses','Bills and fixed costs')+'';
   x.rows.forEach(function(r){h+='<div class="row" style="margin:5px 0"><span>'+esc(r.f.name)+'</span><b>'+(r.amt>0?money(r.amt):'<span class="mute">not due</span>')+'</b></div>'});
-  return h+'<div class="row" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line)"><b>Total mandatory</b><b class="out">'+money(x.mand)+'</b></div><div class="note">Included in Total expenses. Payments filed under these same categories (for example your EMI payee as Home loan EMI) are not counted a second time.</div></div>';
+  return h+'<div class="row" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line)"><b>Total mandatory</b><b class="out">'+money(x.mand)+'</b></div><div class="note">Included in Total expenses.</div></div>';
 }

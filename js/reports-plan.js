@@ -32,7 +32,7 @@ function vPlan(){
   var h='<h1>Plan</h1>';
   if(S.planErr)h+='<div class="card out">'+esc(S.planErr)+'<div class="note">Run the setup SQL in Supabase, then reload this page.</div></div>';
   var bm={};S.budgets.forEach(function(b){bm[b.category]=Number(b.amount)});var sp=spentThisMonth(),spp=spentByPerson();
-  h+='<div class="card">'+sxHead('👛','Monthly budgets','Shared with your family · this month')+'<div class="note" style="margin:0 0 10px">When either of you changes a budget, the other sees it. Each bar shows who spent how much.</div>';
+  h+='<div class="card">'+sxHead('👛','Monthly budgets','Shared with your family · this month')+'<div class="note" style="margin:0 0 10px">Everyone in the family sees these budgets.</div>';
   S.newBud=S.newBud||{};
   var bl=CATS.filter(function(c){return !NOBUDGET[c]&&(bm[c]>0||S.newBud[c]!=null)});
   if(!bl.length)h+='<div class="empty"><span class="ei">👛</span>No budgets yet<div class="note">Tap Add Budget to set a monthly limit for a category.</div></div>';
@@ -41,7 +41,7 @@ function vPlan(){
     h+='<div class="swp" style="margin-bottom:10px;border-radius:0"><div class="swa" data-sw="bud|'+encodeURIComponent(c)+'|'+encodeURIComponent(c)+'">Delete</div><div class="swc"><div class="row"><span style="display:flex;align-items:center"><span class="ico" style="background:'+tint(c)+'">'+ci(c)+'</span>'+esc(c)+'</span><input data-bud="'+esc(c)+'" type="number" inputmode="numeric" placeholder="Budget" value="'+a+'" style="width:120px;margin:0"></div>';
     if(a)h+=budBar(Number(a),spp[c]||{});
     h+='</div></div>'});
-  h+='<button class="btn ghost" id="addbud" style="margin-top:6px">＋ Add Budget</button>'+(bl.length?'<button class="btn" id="svb">Save Budget</button>':'<span id="svb" style="display:none"></span>')+'<div class="note">Only payments that have a category count against a budget. Press and hold a budget to delete it.</div></div>';
+  h+='<button class="btn ghost" id="addbud" style="margin-top:6px">＋ Add Budget</button>'+(bl.length?'<button class="btn" id="svb">Save Budget</button>':'<span id="svb" style="display:none"></span>')+'<div class="note">Only payments with a category count against a budget.</div></div>';
   h+='<div class="card">'+sxHead('📌','Fixed expenses','Home loan, school fees…');
   if(!S.fixed.length)h+='<span class="mute">None added yet.</span>';
   S.fixed.forEach(function(f){h+='<div class="swp" style="margin:6px 0"><div class="swa" data-sw="fixed|'+f.id+'|'+encodeURIComponent(f.name)+'">Delete</div><div class="swc"><div class="row" style="padding:4px 0"><span style="display:flex;align-items:center;min-width:0"'+(S.fxe?' data-fedit="'+f.id+'"':'')+'><span class="ico" style="background:'+tint(f.category||f.name)+'">'+ci(f.category||f.name)+'</span><span>'+esc(f.name)+'<div class="mute">'+(f.freq==="monthly"?"monthly":f.freq)+', day '+f.day+(f.category?' · '+esc(f.category):'')+'</div></span></span><span style="display:flex;align-items:center;gap:8px"><b>'+money(f.amount)+'</b>'+(S.fxe?'<span class="go" style="color:var(--acc);font-size:22px;line-height:1">›</span>':'')+'<button class="alink" data-rem="'+f.id+'" aria-label="Reminder" style="font-size:20px;line-height:1;opacity:'+(remOn(f.id)?'1':'.35')+'">'+(remOn(f.id)?'🔔':'🔕')+'</button></span></div></div></div>'});
@@ -50,7 +50,7 @@ function vPlan(){
   for(var m=1;m<=12;m++)h+='<option value="'+m+'">'+new Date(2026,m-1,1).toLocaleString("en-IN",{month:"long"})+'</option>';
   h+='</select></div><div class="mute">Category</div><select id="fc"><option value="">No category</option>';
   CATS.filter(function(c){return !NOBUD[c]}).forEach(function(c){h+='<option>'+esc(c)+'</option>'});
-  h+='</select><label style="display:flex;align-items:center;gap:8px;margin:2px 0 10px"><input type="checkbox" id="fr" style="width:auto;margin:0"> <span>Remind me on the due day</span></label><button class="btn" id="fadd">Add Fixed Expenses</button>'+(S.fixed.length?'<button class="btn ghost" id="fxe" style="margin-top:8px">'+(S.fxe?'Done Editing':'Edit Fixed Expenses')+'</button>'+(S.fxe?'<div class="note">Tap an expense above to change it.</div>':''):'')+'<div class="note">Fixed items feed the forecast. Everyday spending in the same category is left out of the average, so nothing is counted twice.</div></div>';
+  h+='</select><label style="display:flex;align-items:center;gap:8px;margin:2px 0 10px"><input type="checkbox" id="fr" style="width:auto;margin:0"> <span>Remind me on the due day</span></label><button class="btn" id="fadd">Add Fixed Expenses</button>'+(S.fixed.length?'<button class="btn ghost" id="fxe" style="margin-top:8px">'+(S.fxe?'Done Editing':'Edit Fixed Expenses')+'</button>'+(S.fxe?'<div class="note">Tap an expense above to change it.</div>':''):'')+'<div class="note">Fixed items feed your forecast.</div></div>';
   return h;
 }
 function salaryDay(){
@@ -110,6 +110,6 @@ function vGoals(){
     var cur=0,ck=ym(new Date());(S.gents||[]).forEach(function(e){if(e.goal_id===g.id&&String(e.created_at||"").slice(0,7)===ck)cur+=Number(e.amount)});
     if(c.mt>0&&!done)h+='<div class="note">This month: saved '+money(cur)+' of '+money(c.mt)+(cur>=c.mt?' ✓':' · <b>'+money(c.mt-cur)+'</b> to go')+'</div><div class="note">'+(c.behind>1?'Behind plan by <b class="out">'+money(c.behind)+'</b> so far':(c.behind<-1?'Ahead of plan by <b class="in">'+money(-c.behind)+'</b>':'On plan'))+' · the monthly amount stays '+money(c.mt)+'</div>';
     h+=goalMonthly(g)+'<button class="btn ghost s" style="margin-top:8px" data-gm="'+g.id+'">+ Add money</button></div></div></div>'});
-  h+='<div class="card">'+sxHead('➕','New goal','Name it, set a target, save towards it')+'<input id="gn" placeholder="Goal name (e.g. Car, Goa trip)"><input id="gt" type="number" inputmode="decimal" placeholder="Target amount"><input id="gs" type="number" inputmode="decimal" placeholder="Already saved (optional)"><div class="mute">Target date (optional)</div><input id="gdt" type="date"><button class="btn" id="gadd">Add goal</button><div class="note">Goals are shared. You both see them and can add money. Add money when you set savings aside; the app does not move any real money.</div></div>';
+  h+='<div class="card">'+sxHead('➕','New goal','Name it, set a target, save towards it')+'<input id="gn" placeholder="Goal name (e.g. Car, Goa trip)"><input id="gt" type="number" inputmode="decimal" placeholder="Target amount"><input id="gs" type="number" inputmode="decimal" placeholder="Already saved (optional)"><div class="mute">Target date (optional)</div><input id="gdt" type="date"><button class="btn" id="gadd">Add goal</button><div class="note">Goals are shared. The app only tracks savings. It does not move money.</div></div>';
   return h;
 }

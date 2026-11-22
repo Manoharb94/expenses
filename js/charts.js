@@ -116,7 +116,7 @@ function compareMonths(){
   var ch=Object.keys(keys).map(function(k){return {k:k,a:A.by[k]||0,b:B.by[k]||0,d:(B.by[k]||0)-(A.by[k]||0)}});
   var up=ch.filter(function(x){return x.d>0}).sort(function(x,y){return y.d-x.d}).slice(0,3),dn=ch.filter(function(x){return x.d<0}).sort(function(x,y){return x.d-y.d}).slice(0,3);
   var rows=function(l,cl,sg){var mxd=Math.max.apply(null,l.map(function(x){return Math.abs(x.d)}).concat([1]));return l.length?l.map(function(x){return '<div class="cmr"><span>'+esc(x.k===UNC?"No category yet":x.k)+'</span><span class="cmb"><i style="width:'+Math.max(6,Math.round(Math.abs(x.d)/mxd*100))+'%;background:var(--'+cl+')"></i></span><b class="'+cl+'">'+(sg==="▲"?'+':'−')+money(Math.round(Math.abs(x.d)))+'</b></div>'}).join(''):'<div class="mute" style="margin:6px 2px">Nothing</div>'};
-  h+=cmChart(a,b,A,B,(capA!=null||capB!=null?'<div class="note">This month is still running, so the other month is compared on the same number of days.</div>':'')+'<div class="note">Fixed bills such as EMIs are kept out of “Daily expense” and the lists below.</div>');
+  h+=cmChart(a,b,A,B,(capA!=null||capB!=null?'<div class="note">Compared on the same number of days.</div>':'')+'<div class="note">Fixed bills like EMIs are kept out of Daily expense.</div>');
   h+='<div class="cmh">WENT UP</div>'+rows(up,"out","▲")+'<div class="cmh">WENT DOWN</div>'+rows(dn,"in","▼");
   return h+'</div>'}
 function pie(by,total){

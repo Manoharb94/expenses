@@ -95,7 +95,7 @@ function nativeCard(){
   if(GWN.ok===undefined){gwProbe();return ""}
   var ios=false;try{ios=Capacitor.getPlatform()==="ios"}catch(e){}
   var row=function(i,b,s,id,on){return '<div class="dc trk"><i style="background:rgba(60,130,255,.20)">'+i+'</i><div class="m"><b>'+gwT(b)+'</b><span>'+gwT(s)+'</span></div><label class="tgl"><input type="checkbox" id="'+id+'"'+(on?' checked':'')+'><span></span></label></div>'};
-  var h='<div class="msec">'+gwT("Security and reminders")+'</div><div class="card"><div class="note" style="margin:0 0 8px">'+gwT("Everything here is off until you switch it on. Saved on this phone only.")+'</div>';
+  var h='<div class="msec">'+gwT("Security and reminders")+'</div><div class="card"><div class="note" style="margin:0 0 8px">'+gwT("All off until you switch them on.")+'</div>';
   if(GWN.ok)h+=row("🔒",ios?"Lock with Face ID":"Lock with fingerprint or face","Ask for it every time you open Gharwise","lkt",lkOn());
   else h+='<div class="note">'+gwT("Update the Gharwise app to use app lock.")+(GWN.err?" ["+esc(GWN.err)+"]":"")+'</div>';
   if(lnPlugin()){

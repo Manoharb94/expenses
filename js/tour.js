@@ -35,8 +35,7 @@ var STOURS={
  set:[
   {sel:"@msec:0",t:"Language",d:"Use Gharwise in English or हिन्दी."},
   {sel:"@msec:1",t:"Light or dark",d:"Choose the look you like."},
-  {sel:"@msec:2",t:"Your month",d:"If your salary comes on the 25th, start your month on the 25th so reports and budgets match."},
-  {sel:"@msec:3",n:1,t:"Lock, summary and alerts",d:"Lock the app with your fingerprint or face, pick the day and time of your weekly summary, and the percentage for budget alerts. Everything is off until you turn it on."},
+  {sel:"@msec:2",n:1,t:"Lock, summary and alerts",d:"Lock the app with your fingerprint or face, pick the day and time of your weekly summary, and the percentage for budget alerts. Everything is off until you turn it on."},
   {sel:"@sxh:0",n:1,if:function(){return nativeApp()},t:"Speak to add an expense",d:function(){return phoneOS()==="ios"?VOICE_IOS:VOICE_AND}},
   {sel:"#tourgo",t:"Replay the tours",d:"Tap here any time to see these tips again."}]};
 function stEl(sel){if(!sel)return null;try{
