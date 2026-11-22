@@ -5,7 +5,7 @@ function vCatsP(){
   return h+'</div></div><div class="note" style="text-align:center">Need a new category? Ask for it to be added to the app.</div>'}
 function trackStat(){var c=S.sc;if(!c||c.err)return '';
   return c.alert_count>0?'<div class="note" style="margin-top:10px">✓ '+c.alert_count+' payment'+(c.alert_count>1?'s':'')+' received automatically · last '+ago(c.last_alert)+'</div>':'<div class="note" style="margin-top:10px">No payments received automatically yet.</div>'}
-function trkTabs(t){return '<div class="seg2 trkt">'+[["live","Live Tracking"],["sms","Import SMS"],["stmt","Import Bank Statement"]].map(function(x){return '<button data-trk="'+x[0]+'"'+(t===x[0]?' class="on"':'')+'>'+x[1]+'</button>'}).join('')+'</div>'}
+function trkTabs(t){return '<div class="seg2 trkt">'+[["live","Live Tracking"],["sms","Import SMS"],["stmt","Import Bank"]].map(function(x){return '<button data-trk="'+x[0]+'"'+(t===x[0]?' class="on"':'')+'>'+x[1]+'</button>'}).join('')+'</div>'}
 function vTrack(){
   var tab=S.trkTab||"live",h=topbar("Automated Tracking","menu")+trkTabs(tab);
   if(tab==="sms")return h+vImportSms();
@@ -21,7 +21,7 @@ function vTrack(){
     '<p style="margin:0">Use both if you like. The same payment arriving by SMS and by email is saved once. OTPs and offers are ignored.</p></div>';
   return h}
 /* ---- Import SMS tab: pick a start date (last 3 months only), then read the messages from that date ---- */
-var SMS_IMPORT_NAME="Gharwise Import", SMS_IMPORT_LINK="", SMS_IMPORT_FROM_DATE=false;  /* set the link (and true) once the separate "Gharwise Import" shortcut exists; until then the existing shortcut is used with whole months */
+var SMS_IMPORT_NAME="Gharwise Import", SMS_IMPORT_LINK="https://www.icloud.com/shortcuts/e11b06ee68054632ab37695db9e0ff4c", SMS_IMPORT_FROM_DATE=true;  /* set the link (and true) once the separate "Gharwise Import" shortcut exists; until then the existing shortcut is used with whole months */
 function isoD(d){var m=d.getMonth()+1,x=d.getDate();return d.getFullYear()+"-"+(m<10?"0":"")+m+"-"+(x<10?"0":"")+x}
 function impMin(){var d=new Date();d.setHours(0,0,0,0);d.setMonth(d.getMonth()-3);return d}
 function impDef(){var d=new Date();d.setHours(0,0,0,0);d.setMonth(d.getMonth()-1);return d}
@@ -31,8 +31,8 @@ function impHref(v){var m=Math.min(3,Math.max(1,Math.ceil((impDays(v)-1)/31))),t
   return "shortcuts://run-shortcut?name="+encodeURIComponent(SMS_IMPORT_LINK?SMS_IMPORT_NAME:SMS_SHORTCUT_NAME)+"&input=text&text="+encodeURIComponent(tx)}
 function vImportSms(){
   var os=phoneOS(),h='<h2 style="margin:14px 0 2px">Import SMS</h2><div class="mute" style="margin-bottom:12px">Add older bank messages missing in Gharwise.</div>';
-  if(os==="desk")return h+'<div class="card"><b>Open this on your phone</b><div class="note" style="margin-top:6px">Bank messages are read on the phone that receives them. Open the app on that phone, or use the Import Bank Statement tab here.</div></div>';
-  if(os==="and"&&!nativeSmsOK())return h+'<div class="card"><b>Use the Gharwise app</b><div class="note" style="margin-top:6px">Reading older SMS needs the Gharwise app from the Play Store. You can also use the Import Bank Statement tab.</div></div>';
+  if(os==="desk")return h+'<div class="card"><b>Open this on your phone</b><div class="note" style="margin-top:6px">Bank messages are read on the phone that receives them. Open the app on that phone, or use the Import Bank tab here.</div></div>';
+  if(os==="and"&&!nativeSmsOK())return h+'<div class="card"><b>Use the Gharwise app</b><div class="note" style="margin-top:6px">Reading older SMS needs the Gharwise app from the Play Store. You can also use the Import Bank tab.</div></div>';
   var ns=nativeSmsOK();if(ns&&S.nsms===null){nsmsRefresh();return h+'<div class="card mute">Checking…</div>'}
   if(ns&&!(S.nsms&&S.nsms.enabled))return h+'<div class="card"><b>Turn on SMS tracking first</b><div class="note" style="margin:6px 0 12px">Gharwise needs your permission to read bank SMS on this phone.</div><button class="btn" data-go="sms">Turn on SMS tracking</button></div>';
   if(ns&&S.nimp)return h+nimpUI();
@@ -43,7 +43,7 @@ function vImportSms(){
   if(os==="ios"){
     if(SMS_IMPORT_LINK)h+='<div class="note" style="margin:0 0 6px">First time? Add the import shortcut, and allow Messages when iPhone asks.</div><a class="btn ghost" style="display:block;text-align:center;text-decoration:none;margin-bottom:12px" href="'+esc(SMS_IMPORT_LINK)+'" target="_blank" rel="noopener">Add the import shortcut</a>';
     h+='<div class="warnbox"><b>Importing a lot? Go in small steps.</b><br>iPhone may stop a long import (timeout). Pick a start date within the last 1 month first. Run it again for older dates. Messages already added are skipped.</div>'+
-      '<details class="impd" id="imph"'+(S.impHelp?' open':'')+'><summary>Import not working?</summary><div class="impb"><b>Only a few messages came in, or none?</b><br>Your iPhone’s message search may need refreshing. Do this once:<ol><li>Open Settings → Search → Messages.</li><li>Turn “Show Content in Search” off, then on again.</li><li>Wait 24 hours while your iPhone rebuilds its message index.</li><li>Come back and import again.</li></ol><a href="#" data-trk="stmt" style="color:var(--acc)">Don’t want to wait? Use the Import Bank Statement tab.</a></div></details>'}
+      '<details class="impd" id="imph"'+(S.impHelp?' open':'')+'><summary>Import not working?</summary><div class="impb"><b>Only a few messages came in, or none?</b><br>Your iPhone’s message search may need refreshing. Do this once:<ol><li>Open Settings → Search → Messages.</li><li>Turn “Show Content in Search” off, then on again.</li><li>Wait 24 hours while your iPhone rebuilds its message index.</li><li>Come back and import again.</li></ol><a href="#" data-trk="stmt" style="color:var(--acc)">Don’t want to wait? Use the Import Bank tab.</a></div></details>'}
   return h}
 function bindImpSms(){
   var di=document.getElementById("impd"),go=document.getElementById("impgo"),hp=document.getElementById("imph");
@@ -59,7 +59,7 @@ function wz(title,steps,cur,doneTo){
   return h}
 function kv(label,val){return '<div class="mute" style="margin-top:10px">'+label+'</div><div class="kv"><span>'+esc(val)+'</span><button class="btn ghost s" data-copy="'+esc(val)+'">Copy</button></div>'}
 /* Paste the iCloud link of the shared "Gharwise SMS" shortcut here (see setup notes). Empty = step-by-step instructions instead. */
-var SMS_SHORTCUT_LINK="https://www.icloud.com/shortcuts/521cc0457b594587b9172633f6a21ba5";
+var SMS_SHORTCUT_LINK="https://www.icloud.com/shortcuts/9793021ee7dd4400a1dd1defc5c37f6c";
 var SMS_SHORTCUT_NAME="Gharwise SMS";
 var SMS_PAST=true;
 var SMS_MONTHS_IN_URL=true;  /* true once the shortcut reads 'HISTORY <months>' (no question asked) */   /* true once the shared shortcut also reads past SMS */

@@ -1424,10 +1424,7 @@
 "Turn “Show Content in Search” off, then on again.": "“Show Content in Search” बंद करें, फिर दोबारा चालू करें।",
 "Wait 24 hours while your iPhone rebuilds its message index.": "iPhone को मैसेज इंडेक्स दोबारा बनाने के लिए 24 घंटे दें।",
 "Come back and import again.": "वापस आकर फिर इम्पोर्ट करें।",
-"Don’t want to wait? Use the Import Bank Statement tab.": "इंतज़ार नहीं करना? बैंक स्टेटमेंट इम्पोर्ट टैब इस्तेमाल करें।",
-"Bank messages are read on the phone that receives them. Open the app on that phone, or use the Import Bank Statement tab here.": "बैंक मैसेज उसी फ़ोन पर पढ़े जाते हैं जिस पर वे आते हैं। उस फ़ोन पर ऐप खोलें, या यहाँ बैंक स्टेटमेंट इम्पोर्ट टैब इस्तेमाल करें।",
 "Use the Gharwise app": "Gharwise ऐप इस्तेमाल करें",
-"Reading older SMS needs the Gharwise app from the Play Store. You can also use the Import Bank Statement tab.": "पुराने SMS पढ़ने के लिए Play Store से Gharwise ऐप चाहिए। आप बैंक स्टेटमेंट इम्पोर्ट टैब भी इस्तेमाल कर सकते हैं।",
 "Turn on SMS tracking first": "पहले SMS ट्रैकिंग चालू करें",
 "Gharwise needs your permission to read bank SMS on this phone.": "इस फ़ोन पर बैंक SMS पढ़ने के लिए Gharwise को आपकी अनुमति चाहिए।",
 "Turn on SMS tracking": "SMS ट्रैकिंग चालू करें",
@@ -1439,5 +1436,9 @@
 "Open the Shortcuts app.": "Shortcuts ऐप खोलें।",
 "Tap ▶ on Gharwise SMS.": "Gharwise SMS पर ▶ दबाएँ।",
 "Tap Always Allow on every question.": "हर सवाल पर Always Allow दबाएँ।",
-"Without this, tracking stops whenever your phone is locked.": "इसके बिना, फ़ोन लॉक होने पर ट्रैकिंग रुक जाती है।"
+"Without this, tracking stops whenever your phone is locked.": "इसके बिना, फ़ोन लॉक होने पर ट्रैकिंग रुक जाती है।",
+"Don’t want to wait? Use the Import Bank tab.": "इंतज़ार नहीं करना? बैंक इम्पोर्ट टैब इस्तेमाल करें।",
+"Bank messages are read on the phone that receives them. Open the app on that phone, or use the Import Bank tab here.": "बैंक मैसेज उसी फ़ोन पर पढ़े जाते हैं जिस पर वे आते हैं। उस फ़ोन पर ऐप खोलें, या यहाँ बैंक इम्पोर्ट टैब इस्तेमाल करें।",
+"Reading older SMS needs the Gharwise app from the Play Store. You can also use the Import Bank tab.": "पुराने SMS पढ़ने के लिए Play Store से Gharwise ऐप चाहिए। आप बैंक इम्पोर्ट टैब भी इस्तेमाल कर सकते हैं।",
+"Import Bank": "बैंक इम्पोर्ट"
 }
