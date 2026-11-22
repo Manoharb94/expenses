@@ -36,12 +36,14 @@ function vImportSms(){
   var ns=nativeSmsOK();if(ns&&S.nsms===null){nsmsRefresh();return h+'<div class="card mute">Checking…</div>'}
   if(ns&&!(S.nsms&&S.nsms.enabled))return h+'<div class="card"><b>Turn on SMS tracking first</b><div class="note" style="margin:6px 0 12px">Gharwise needs your permission to read bank SMS on this phone.</div><button class="btn" data-go="sms">Turn on SMS tracking</button></div>';
   if(ns&&S.nimp)return h+nimpUI();
-  var d=impDateOK(S.impDate)?S.impDate:isoD(impDef());S.impDate=d;
-  h+='<div class="card"><div class="mute">Import from this date</div><input type="date" id="impd" value="'+d+'" min="'+isoD(impMin())+'" max="'+isoD(new Date())+'" style="width:100%;margin:6px 0 4px;min-height:46px"><div class="note" style="margin-bottom:14px">You can pick any date in the last 3 months.</div>'+
+  var d=impDateOK(S.impDate)?S.impDate:isoD(impDef());S.impDate=d,hasLink=os==="ios"&&!!SMS_IMPORT_LINK;
+  var sh=function(n,t){return '<div class="wzh" style="margin-bottom:10px"><em>'+n+'</em><b>'+t+'</b></div>'};
+  if(hasLink)h+='<div class="card">'+sh(1,"Add the shortcut")+'<div class="note" style="margin:0 0 12px">Tap the button, then Add Shortcut in the Shortcuts app, and come back here. Do this once.</div><a class="btn" style="display:block;text-align:center;text-decoration:none" href="'+esc(SMS_IMPORT_LINK)+'" target="_blank" rel="noopener">Add the import shortcut</a></div>';
+  h+='<div class="card">'+(hasLink?sh(2,"Read your old messages"):'')+'<div class="mute">Import from this date</div><input type="date" id="impd" value="'+d+'" min="'+isoD(impMin())+'" max="'+isoD(new Date())+'" style="display:block;width:100%;max-width:100%;min-width:0;box-sizing:border-box;margin:6px 0 4px;min-height:46px"><div class="note" style="margin-bottom:14px">You can pick any date in the last 3 months.</div>'+
     (ns?'<button class="btn" id="impgo">Import SMS</button>':'<a class="btn" id="impgo" style="display:block;text-align:center;text-decoration:none" href="'+esc(impHref(d))+'">Import SMS</a>')+
+    (hasLink?'<div class="note" style="margin-top:10px">The first time, iPhone asks to allow Messages. Tap Allow.</div>':'')+
     '<div class="note" style="margin-top:10px">Messages already processed are ignored.</div></div>';
   if(os==="ios"){
-    if(SMS_IMPORT_LINK)h+='<div class="note" style="margin:0 0 6px">First time? Add the import shortcut, and allow Messages when iPhone asks.</div><a class="btn ghost" style="display:block;text-align:center;text-decoration:none;margin-bottom:12px" href="'+esc(SMS_IMPORT_LINK)+'" target="_blank" rel="noopener">Add the import shortcut</a>';
     h+='<div class="warnbox"><b>Importing a lot? Go in small steps.</b><br>iPhone may stop a long import (timeout). Pick a start date within the last 1 month first. Run it again for older dates. Messages already added are skipped.</div>'+
       '<details class="impd" id="imph"'+(S.impHelp?' open':'')+'><summary>Import not working?</summary><div class="impb"><b>Only a few messages came in, or none?</b><br>Your iPhone’s message search may need refreshing. Do this once:<ol><li>Open Settings → Search → Messages.</li><li>Turn “Show Content in Search” off, then on again.</li><li>Wait 24 hours while your iPhone rebuilds its message index.</li><li>Come back and import again.</li></ol><a href="#" data-trk="stmt" style="color:var(--acc)">Don’t want to wait? Use the Import Bank tab.</a></div></details>'}
   return h}
