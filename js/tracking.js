@@ -23,7 +23,7 @@ function vTrack(){
   return h}
 /* ---- Import SMS tab: pick a start date (last 3 months only), then read the messages from that date ---- */
 /* ONE shortcut does live bank SMS, import (text "FROM yyyy-mm-dd") and voice. Its name must match exactly: the app opens it by name. */
-var SMS_SHORTCUT_LINK="https://www.icloud.com/shortcuts/7fbc4d6863cb4863bb452d48fe2a05a0";
+var SMS_SHORTCUT_LINK="https://www.icloud.com/shortcuts/5b486d26dfc445a6af5877feed7de0ce";
 var SMS_SHORTCUT_NAME="Gharwise SMS";
 var SMS_IMPORT_NAME=SMS_SHORTCUT_NAME, SMS_IMPORT_LINK=SMS_SHORTCUT_LINK, SMS_IMPORT_FROM_DATE=true;
 /* older key-based flow used by the web (non-app) iPhone steps; unchanged */
