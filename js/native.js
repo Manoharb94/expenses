@@ -87,7 +87,46 @@ async function pushWidget(){   /* the widget only needs who you are; it never sh
   try{if(!S.sc)await loadSc();var key=S.sc&&S.sc.key;if(!key)return;
     await P.setWidget({key:key,url:URLB+"rpc/",apikey:KEY,lang:(typeof LANG!=="undefined"?LANG:"en")})}
   catch(e){}}
-function nativeAfterLoad(){try{gwProbe();pushWidget();schedInsights();ndInit()}catch(e){}}
+function nativeAfterLoad(){try{gwProbe();pushWidget();schedInsights();ndInit();ndiListen();ndiSched()}catch(e){}}
+
+/* ---------- iPhone: reminder when payments are still uncategorised (planned from the app each time it is opened) ---------- */
+function ndiOn(){return ls("ndion")!=="0"}
+function ndiIos(){try{return nativeApp()&&Capacitor.getPlatform()==="ios"&&!!lnPlugin()}catch(e){return false}}
+function ndiMake(){
+  var u=(S.txns||[]).filter(function(t){return !t.category&&t.type==="out"&&canEditT(t)});if(!u.length)return null;
+  var now=new Date(),m0=new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10),mc=u.filter(function(t){return (t.txn_date||"")>=m0}).length;
+  var top=u.slice().sort(function(a,b){return (b.amount||0)-(a.amount||0)})[0],o=[];
+  if(mc>1)o.push(gwT("This month {n} payments are uncategorised",{n:mc}));
+  if(u.length>1)o.push(gwT("{n} payments are waiting for a category",{n:u.length}));
+  if(top&&top.amount>0)o.push(gwT("Your biggest uncategorised payment: {a}",{a:money(top.amount)}));
+  if(!o.length)o.push(gwT("A payment is waiting for a category"));
+  return o}
+async function ndiSched(force){
+  var P=lnPlugin();if(!P||!ndiIos())return;
+  try{
+    await P.cancel({notifications:[{id:9511},{id:9512},{id:9513}]});
+    if(!ndiOn()||!S.loaded)return;
+    if(!(await remPermit(false)))return;
+    var o=ndiMake();if(!o)return;
+    var list=[],d=new Date(),r=function(a,b){return a+Math.floor(Math.random()*(b-a+1))},day=r(1,2);
+    for(var i=0;i<3;i++){
+      var at=new Date(d.getFullYear(),d.getMonth(),d.getDate()+day,r(18,20),r(0,59),0);
+      list.push({id:9511+i,title:"Gharwise",body:o[(i+r(0,o.length-1))%o.length]+". "+gwT("Tap to sort them."),schedule:{at:at,allowWhileIdle:true},extra:{nd:1}});
+      day+=r(2,3)}
+    await P.schedule({notifications:list})}catch(e){}}
+function ndiListen(){if(S._ndil)return;var P=lnPlugin();if(!P||!P.addListener)return;S._ndil=1;
+  try{P.addListener("localNotificationActionPerformed",function(a){var n=a&&a.notification;if(n&&n.id>=9511&&n.id<=9513)ndOpen()})}catch(e){}}
+async function ndiTest(){
+  var P=lnPlugin();if(!P)return;
+  if(!(await remPermit(true))){toast(remMsg());return}
+  var o=ndiMake();if(!o){toast(gwT("Everything is categorised, so no reminder would be sent"));return}
+  await P.schedule({notifications:[{id:9519,title:"Gharwise",body:o[0]+". "+gwT("Tap to sort them."),schedule:{at:new Date(Date.now()+8000)},extra:{nd:1}}]});
+  toast(gwT("Reminder in a few seconds. Leave the app now."))}
+document.addEventListener("change",async function(e){
+  var t=e.target;if(!t||t.id!=="ndit")return;
+  if(t.checked){if(!(await remPermit(true))){t.checked=false;toast(remMsg());return}}
+  ls("ndion",t.checked?"1":"0");ndiSched();toast(t.checked?gwT("Reminder on"):gwT("Reminder off"));if(S.tab==="set")render()});
+document.addEventListener("click",function(e){var b=e.target&&e.target.closest&&e.target.closest("#nditest");if(b)ndiTest()});
 
 /* ---------- Android: evening reminder when payments are still uncategorised ---------- */
 function ndPlugin(){try{if(!nativeApp()||Capacitor.getPlatform()!=="android")return null;var P=smsPlugin();return P&&P.nudgeStatus?P:null}catch(e){return null}}
@@ -95,6 +134,7 @@ function ndInit(){var P=ndPlugin();if(!P)return;
   if(!S._ndl){S._ndl=1;P.nudgeStatus().then(function(r){S.nd=r;if(S.tab==="set")render()}).catch(function(){})}
   if(P.takeNudgeTap)P.takeNudgeTap().then(function(r){if(r&&r.tap)ndOpen()}).catch(function(){})}
 function ndOpen(){try{go("home");setTimeout(catFlow,300)}catch(e){}}
+document.addEventListener("DOMContentLoaded",function(){try{ndiListen()}catch(e){}});
 window.gwNudgeOpen=function(){var P=ndPlugin();if(P&&P.takeNudgeTap)P.takeNudgeTap().then(function(){ndOpen()}).catch(function(){ndOpen()})};
 document.addEventListener("click",async function(e){
   var b=e.target&&e.target.closest&&e.target.closest("#ndtest");if(!b)return;var P=ndPlugin();if(!P||!P.testNudge)return;
@@ -120,6 +160,8 @@ function nativeCard(){
     if(wkOn())h+='<div class="ropt"><label><span>'+gwT("Day")+'</span><select id="wkd">'+dn.map(function(n,k){return opt(k,n,k===wkDay())}).join('')+'</select></label><label><span>'+gwT("Time")+'</span><input type="time" id="wkh" value="'+wkTime()+'"></label></div>';
     h+=row("⚠️","Budget alerts","Get a reminder when a budget has used up the percentage you choose","bat",baOn());
     if(baOn())h+='<div class="ropt"><label><span>'+gwT("When used")+'</span><select id="bap">'+[50,60,70,75,80,90,100].map(function(p){return '<option value="'+p+'"'+(p===baPct()?' selected':'')+'>'+p+'%</option>'}).join('')+'</select></label><label><span>'+gwT("Time")+'</span><input type="time" id="bah" value="'+baTime()+'"></label></div>'}
+  if(ndiIos()){h+=row("🔔","Remind me to categorise","A reminder every couple of days in the evening, only when payments are waiting","ndit",ndiOn());
+    h+='<button class="btn ghost s" id="nditest" style="margin:6px 0 2px">'+gwT("Send a test reminder now")+'</button>'}
   if(ndPlugin()&&S.nd)h+=row("🔔","Remind me to categorise","An evening nudge every day or two, only when payments are waiting","ndt",!!S.nd.on&&!!S.nd.allowed);
   if(ndPlugin()&&S.nd&&ndPlugin().testNudge)h+='<button class="btn ghost s" id="ndtest" style="margin:6px 0 2px">'+gwT("Send a test reminder now")+'</button>';
   h+='</div>';
