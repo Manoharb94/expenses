@@ -115,7 +115,7 @@ function addSheet(pre,bill,scan){
   var sh=document.getElementById("sheet");
   var fp=(S.pf&&S.pf!=="__both")?S.pf:S.name;
   var h='<div class="sheet"><div class="sx">'+sxHead("💵","Add cash payment","For money that did not come as a bank alert")+'<div class="sxs" data-for="xt"><button type="button" data-v="out" class="on">Money spent</button><button type="button" data-v="in">Money received</button></div><select id="xt" style="display:none"><option value="out">Money spent</option><option value="in">Money received</option></select><input id="xa" type="number" inputmode="decimal" placeholder="₹ Amount"><input id="xm" placeholder="Payee or note, e.g. vegetables">'+(bill?'<div class="row" style="justify-content:flex-start;gap:10px;margin:0 0 10px"><img src="'+bill+'" alt="" style="width:54px;height:54px;border-radius:10px;object-fit:cover"><span class="note" style="margin:0">'+(scan&&(scan.amount||scan.date||scan.category)?'Bill photo attached. Amount, date and category filled from the bill, please check them.':'Bill photo attached')+'</span></div>':'')+'<div class="sxc" data-for="xp">'+persons().map(function(n){return '<button type="button" data-v="'+esc(n)+'"'+(n===fp?' class="on"':'')+'>'+esc(n)+'</button>'}).join("")+'</div><select id="xp" style="display:none">'+persons().map(function(n){return '<option value="'+esc(n)+'"'+(n===fp?" selected":"")+'>'+esc(n)+'</option>'}).join("")+'</select><input id="xd" type="date" value="'+iso(new Date())+'"><select id="xc"><option value="">No category yet</option>';
-  var EVERY=["Groceries","Food","Shopping","Transport","Fuel","Bills & Utilities","House Rent","EMI","Health","Education","Entertainment","Travel"],OTYPES=[UNPL,"Salary / Income",RENT,LOUT,LIN,TRF,PASS,SELF,CCB,IGN];
+  var EVERY=EVERYDAY,OTYPES=[UNPL,"Salary / Income",RENT,LOUT,LIN,TRF,PASS,SELF,CCB,IGN];
   var okc=function(c){return !(typeof gNames==="function"&&gNames().indexOf(c)>=0&&UNBUILT(c))};
   EVERY.forEach(function(c){if(okc(c)&&CATS.indexOf(c)>=0)h+='<option>'+esc(c)+'</option>'});
   var moreC=CATS.filter(function(c){return EVERY.indexOf(c)<0&&OTYPES.indexOf(c)<0&&okc(c)}),typC=OTYPES.filter(function(c){return CATS.indexOf(c)>=0&&okc(c)});
@@ -124,6 +124,8 @@ function addSheet(pre,bill,scan){
   var go_=typeof gOpen==="function"&&typeof gOKUI==="function"&&gOKUI()?gOpen():[];if(go_.length){h+='<optgroup label="Groups">';go_.forEach(function(g){h+='<option value="g:'+esc(g.id)+'"'+(g.id===pre?' selected':'')+'>'+esc(g.name)+'</option>'});h+='</optgroup>'}
   h+='</select><div class="note" style="margin:6px 0 10px">Lent or borrowed? Choose <b>Lend out</b> or <b>Lend in</b>.</div><div class="row" id="xbr" style="justify-content:flex-start;gap:10px;margin:6px 0 10px;flex-wrap:wrap"></div><input type="file" id="xpf" accept="image/*" style="display:none"><input type="file" id="xpf2" accept="image/*" capture="environment" style="display:none"><button class="btn" id="xs">Save</button><button class="btn ghost" style="margin-top:8px" id="xx">Cancel</button></div></div>';
   sh.innerHTML=h;
+  var QUICK=!pre&&!bill&&!scan&&!S._qaFull;
+  if(QUICK){try{quickAddUI(sh)}catch(e){try{console.warn(e)}catch(x){}}}
   function fillBill(sc){if(!sc)return;var xa=document.getElementById("xa"),xd=document.getElementById("xd"),xc=document.getElementById("xc");
     if(sc.amount&&xa)xa.value=String(sc.amount);if(sc.date&&xd)xd.value=sc.date;
     if(sc.category&&xc&&[].some.call(xc.options,function(o){return o.value===sc.category||o.text===sc.category}))xc.value=sc.category}
@@ -163,3 +165,36 @@ document.addEventListener("click",function(e){
   catch(x){showErr(x.message)}
 });
 
+
+/* ---------- Quick add: amount + payee, with one-tap chips. "More details" shows the full form. ---------- */
+function quickAddUI(sh){
+  var $=function(i){return document.getElementById(i)},xa=$("xa"),xm=$("xm"),xc=$("xc"),xd=$("xd"),xp=$("xp");
+  var hide=[xd,xc,sh.querySelector('.sxc[data-for="xp"]'),sh.querySelector("#xbr"),sh.querySelector(".sx > .note")];
+  hide.forEach(function(e){if(e)e.dataset.qh="1"});
+  var title=sh.querySelector(".sxh b"),sub=sh.querySelector(".sxh small"),ic=sh.querySelector(".sxh .t");
+  if(title)title.textContent="Quick add";if(sub)sub.textContent="Amount and payee. Nothing else needed.";if(ic)ic.textContent="⚡";
+  var q=document.createElement("div");q.id="xq";
+  var chipH=function(t,attr,on){return '<button type="button" class="fchip'+(on?' qon':'')+'" '+attr+'>'+esc(t)+'</button>'};
+  var rp=recentPayees(5);
+  q.innerHTML=(rp.length?'<div class="qlab">Recent</div><div class="qrow" id="qrec">'+rp.map(function(r,i){return chipH(r.label,'data-qp="'+i+'"')}).join("")+'</div>':'')+
+    '<div class="qlab">Category <span id="qknown" class="mute"></span></div><div class="qrow" id="qcat"></div>'+
+    '<div class="qlab">Date</div><div class="qrow" id="qdate">'+chipH("Today",'data-qd="0"',1)+chipH("Yesterday",'data-qd="1"')+chipH("Pick date",'data-qd="p"')+'</div>';
+  xm.parentNode.insertBefore(q,xm.nextSibling);
+  var more=document.createElement("div");more.style.cssText="text-align:center;margin-top:12px";more.innerHTML='<a class="alink" id="qmore" style="font-size:14px">More details · photo · scan bill</a>';
+  var xs=$("xs");xs.parentNode.insertBefore(more,xs.nextSibling);
+  var drawCats=function(){
+    var key=mk(xm.value.trim()||"x"),sg=sugCats(xm.value.trim()?key:"",4),cur=xc.value;
+    $("qcat").innerHTML=sg.list.map(function(c){return chipH(c,'data-qc="'+esc(c)+'"',cur===c)}).join("")+chipH("More",'data-qc="__more"');
+    $("qknown").textContent=sg.known&&xm.value.trim()?"· "+sg.list[0]+" last time":""};
+  var setDate=function(off){var d=new Date();d.setDate(d.getDate()-off);xd.value=iso(d)};
+  drawCats();
+  xm.addEventListener("input",function(){var key=mk(xm.value.trim()||"x"),sg=sugCats(xm.value.trim()?key:"",4);xc.value=sg.known?sg.list[0]:"";drawCats()});
+  q.addEventListener("click",function(e){
+    var b=e.target.closest&&e.target.closest("button");if(!b)return;
+    if(b.dataset.qp!==undefined){var r=rp[+b.dataset.qp];xm.value=r.name;var sg=sugCats(r.key,4);xc.value=sg.known?sg.list[0]:"";drawCats();return}
+    if(b.dataset.qc!==undefined){if(b.dataset.qc==="__more"){showFull();return}xc.value=xc.value===b.dataset.qc?"":b.dataset.qc;drawCats();return}
+    if(b.dataset.qd!==undefined){q.querySelectorAll("[data-qd]").forEach(function(x){x.classList.toggle("qon",x===b)});
+      if(b.dataset.qd==="p"){xd.style.display="";xd.focus&&xd.focus()}else{xd.style.display="none";setDate(+b.dataset.qd)}}});
+  var showFull=function(){hide.forEach(function(e){if(e){e.style.display="";delete e.dataset.qh}});q.style.display="none";more.style.display="none";if(title)title.textContent="Add cash payment";if(sub)sub.textContent="For money that did not come as a bank alert";if(ic)ic.textContent="💵"};
+  more.querySelector("#qmore").onclick=showFull;
+  hide.forEach(function(e){if(e)e.style.display="none"})}

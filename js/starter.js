@@ -38,9 +38,9 @@ function starterSheet(){
           +'<button class="btn" id="spnx">Review and edit amounts</button><button class="btn ghost" id="spbk" style="margin-top:8px">Back</button>'}
       else{
         h+='<b>Your starter plan</b> <span class="mute" style="float:right">3 of 3</span><div style="font-weight:700;margin:12px 0 4px">Everyday spending</div>'
-          +P.flex.map(function(x,i){return '<div class="row" style="gap:8px;margin:0 0 8px"><span style="flex:1;min-width:0">'+ci(x.c)+' '+esc(x.c)+'<div class="mute" style="font-size:11.5px">'+esc(SP_HINT[x.c]||"")+'</div></span><input data-spf="'+i+'" type="number" inputmode="numeric" value="'+x.a+'" style="width:100px;margin:0;text-align:right"></div>'}).join('')
+          +P.flex.map(function(x,i){return '<div class="row" style="gap:8px;margin:0 0 8px"><span style="flex:1;min-width:0">'+ci(x.c)+' '+esc(x.c)+'<div class="mute" style="font-size:12px">'+esc(SP_HINT[x.c]||"")+'</div></span><input data-spf="'+i+'" type="number" inputmode="numeric" value="'+x.a+'" style="width:100px;margin:0;text-align:right"></div>'}).join('')
           +'<div style="font-weight:700;margin:14px 0 4px">Fixed bills and savings</div><div class="note" style="margin:0 0 8px">Set an amount to 0 to skip it. Add your real home loan or EMI later.</div>'
-          +P.fix.map(function(x,i){return '<div class="row" style="gap:8px;margin:0 0 8px"><span style="flex:1;min-width:0">'+esc(x.name)+'<div class="mute" style="font-size:11.5px">every month, day '+x.day+'</div></span><input data-spx="'+i+'" type="number" inputmode="numeric" value="'+x.a+'" style="width:100px;margin:0;text-align:right"></div>'}).join('')
+          +P.fix.map(function(x,i){return '<div class="row" style="gap:8px;margin:0 0 8px"><span style="flex:1;min-width:0">'+esc(x.name)+'<div class="mute" style="font-size:12px">every month, day '+x.day+'</div></span><input data-spx="'+i+'" type="number" inputmode="numeric" value="'+x.a+'" style="width:100px;margin:0;text-align:right"></div>'}).join('')
           +'<button class="btn" id="spok">Save my plan</button><button class="btn ghost" id="spbk" style="margin-top:8px">Back</button>'}}
     h+='</div></div>';sh.innerHTML=h;wire()}
   function wire(){
@@ -265,3 +265,36 @@ function unsplit(t){
     for(var i=0;i<kids.length;i++)await api("transactions?id=eq."+encodeURIComponent(kids[i].id),{method:"DELETE"});
     await api("transactions?id=eq."+encodeURIComponent(t.id),{method:"PATCH",headers:{Prefer:"return=minimal"},body:JSON.stringify({category:null,note:null})});
     load()})}
+
+/* ---------- Categorise one by one: suggested categories, one tap files the payment and moves to the next ---------- */
+function catFlow(){
+  var ids=(S.txns||[]).filter(function(t){return personOK(t)&&!t.category&&t.type==="out"&&canEditT(t)}).sort(byNew).map(function(t){return t.id});
+  if(!ids.length){toast("Nothing to categorise");return}
+  S._cf={ids:ids,i:0,total:ids.length,dirty:false};catFlowDraw()}
+function catFlowDraw(){
+  var f=S._cf,sh=document.getElementById("sheet");if(!f||!sh)return;
+  var t=null;while(f.i<f.ids.length&&!(t=S.txns.filter(function(x){return x.id===f.ids[f.i]&&!x.category})[0]))f.i++;
+  if(!t){sh.innerHTML="";S._cf=null;toast("All done. Nothing left to categorise.");if(f.dirty)load();return}
+  var key=t.merchant_key,ok=key&&key!=="unknown",sg=sugCats(ok?key:"",4);
+  var h='<div class="sheet"><div class="sx sxp"><div style="display:flex;align-items:center;justify-content:space-between"><b style="font-size:18px">Categorise</b><button id="cfx" aria-label="Close" style="background:transparent;border:0;color:inherit;font-size:24px;line-height:1;padding:4px 8px;cursor:pointer">✕</button></div>'+
+    '<div class="mute" style="margin:2px 0 10px"><b>'+(f.total-f.i)+'</b> '+(f.total-f.i===1?'payment needs a category':'payments need a category')+'</div><div class="qbar"><i style="width:'+Math.max(4,Math.round(f.i/f.total*100))+'%"></i></div>'+
+    '<div class="card qcard"><div class="mute">'+esc(t.txn_date||"")+(t.person?' · '+esc(t.person):'')+'</div><div style="font-size:34px;font-weight:800;margin:6px 0" class="out">−'+money(Number(t.amount))+'</div><div style="font-size:19px;font-weight:700">'+esc(t.merchant||"Payment")+'</div></div>'+
+    '<div class="qlab">Suggested</div><div class="qgrid">'+sg.list.map(function(c,i){return '<button class="btn'+(i===0?'':' ghost')+'" data-cfc="'+esc(c)+'"><span>'+ci(c)+'</span> '+esc(c)+'</button>'}).join("")+'</div>'+
+    '<div style="display:flex;justify-content:space-between;margin-top:14px"><a class="alink" id="cfs">Skip</a><a class="alink" id="cfa">All categories</a></div>'+
+    (ok?'<div class="note" style="margin-top:12px;text-align:center">Next time, '+esc(t.merchant)+' is filed in the same category automatically.</div>':'')+'</div></div>';
+  sh.innerHTML=h;
+  document.getElementById("cfx").onclick=function(){sh.innerHTML="";S._cf=null;if(f.dirty)load()};
+  document.getElementById("cfs").onclick=function(){f.i++;catFlowDraw()};
+  document.getElementById("cfa").onclick=function(){sh.innerHTML="";S._cf=null;if(f.dirty)load();pick(t)};
+  sh.querySelectorAll("[data-cfc]").forEach(function(b){b.onclick=async function(){
+    var cat=b.dataset.cfc;b.disabled=true;
+    try{
+      if(ok){
+        await api("merchants?on_conflict=household_id,merchant_key",{method:"POST",headers:{Prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify({merchant_key:key,name:t.merchant,category:cat})});
+        await api("transactions?merchant_key=eq."+encodeURIComponent(key),{method:"PATCH",headers:{Prefer:"return=minimal"},body:JSON.stringify({category:cat})});
+        S.txns.forEach(function(x){if(x.merchant_key===key&&!x.category)x.category=cat})}
+      else{await api("transactions?id=eq."+t.id,{method:"PATCH",headers:{Prefer:"return=minimal"},body:JSON.stringify({category:cat})});t.category=cat}
+      f.dirty=true;f.i++;catFlowDraw()}
+    catch(e){b.disabled=false;alert("Could not save: "+e.message)}}});
+}
+document.addEventListener("click",function(e){var b=e.target&&e.target.closest&&e.target.closest("[data-catflow]");if(b){e.preventDefault();catFlow()}});

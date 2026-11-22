@@ -65,3 +65,18 @@ async function api(path,opt){
   if(!r.ok)throw new Error(r.status+" "+t);return t?JSON.parse(t):null;
 }
 
+
+/* ---- quick-access helpers: everyday categories, suggestions from history, recent payees ---- */
+var EVERYDAY=["Groceries","Food","Shopping","Transport","Fuel","Bills & Utilities","House Rent","EMI","Health","Education","Entertainment","Travel"];
+function sugCats(key,n){
+  var out=[],by={},all={};
+  (S.txns||[]).forEach(function(t){if(!t.category||t.type!=="out"||EVERYDAY.indexOf(t.category)<0)return;all[t.category]=(all[t.category]||0)+1;if(key&&t.merchant_key===key)by[t.category]=(by[t.category]||0)+1});
+  Object.keys(by).sort(function(a,b){return by[b]-by[a]}).forEach(function(c){out.push(c)});
+  Object.keys(all).sort(function(a,b){return all[b]-all[a]}).forEach(function(c){if(out.indexOf(c)<0)out.push(c)});
+  EVERYDAY.forEach(function(c){if(out.indexOf(c)<0)out.push(c)});
+  return {list:out.slice(0,n),known:!!(key&&Object.keys(by).length&&out[0]&&by[out[0]])}}
+function recentPayees(n){
+  var seen={},out=[];
+  (S.txns||[]).slice().sort(byNew).forEach(function(t){if(out.length>=n||t.type!=="out"||!t.merchant||!t.merchant_key||t.merchant_key==="unknown"||seen[t.merchant_key])return;seen[t.merchant_key]=1;
+    var nm=String(t.merchant);if(nm.length>16)nm=nm.slice(0,15)+"…";out.push({name:String(t.merchant),label:nm,key:t.merchant_key})});
+  return out}

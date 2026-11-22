@@ -6,7 +6,8 @@ function vDash(){
   if((S.jrs||[]).length)h+='<div class="dc" style="border:1.5px solid var(--acc)"><b style="font-size:17px">👥 '+esc(S.jrs[0].name||"Someone")+(S.jrs.length>1?' and '+(S.jrs.length-1)+' more want':' wants')+' to join your family</b><div class="note" style="margin:6px 0 10px">Review the request in Family Sync.</div><button class="btn" data-go="fam" style="margin:0">Review Request</button></div>';
   if(S.err)h+='<div class="card out">'+esc(S.err)+'</div>';
   (S.invites||[]).forEach(function(x){h+='<div class="dc" style="border:2px solid var(--acc)"><b>👪 '+esc(x.by)+' invited you to '+esc(x.family)+'</b><div class="note" style="margin:4px 0 12px">Joining moves your own payments into that family, and you’ll see each other’s spending'+(x.can_edit?'':' (view only)')+'.</div><div class="row" style="gap:8px;justify-content:flex-start"><button class="btn s" data-inv="acc|'+x.id+'|'+esc(x.family)+'">Join</button><button class="btn ghost s" data-inv="dec|'+x.id+'|">Decline</button></div></div>'});
-  if(pendN)h+='<button class="dc warnc tap" data-go="list" data-ltab="none" style="width:100%;border:0;font:inherit;color:var(--ink)"><span>🏷️ <b>'+pendN+'</b> payment'+(pendN>1?'s need':' needs')+' a category</span><span class="arr">→</span></button>';
+  if(pendN)h+='<button class="dc warnc tap" data-catflow="1" style="width:100%;border:0;font:inherit;color:var(--ink)"><span>🏷️ <b>'+pendN+'</b> payment'+(pendN>1?'s need':' needs')+' a category</span><span class="arr">→</span></button>';
+  h+=trackLine()+budgetLine();
   if(typeof suggestBlock==="function")h+=suggestBlock();
   if(typeof gsCard==="function")h+=gsCard();
   h+=expCard(X,P,F);
@@ -66,3 +67,21 @@ function vBudget(){
   var pl=vPlan().replace('<h1>Plan</h1>','');
   if(S.profile&&S.profile.can_edit===false){pl=pl.replace(/<input /g,'<input disabled ').replace(/<select /g,'<select disabled ').replace('id="svb"','id="svb" style="display:none"').replace('id="addbud"','id="addbud" style="display:none"').replace('id="fadd"','id="fadd" style="display:none"').replace(/data-fedit="/g,'data-nofedit="').replace(/data-sw="fixed\|/g,'data-nosw="');h+='<div class="card" style="text-align:center">👁 View only. Ask the family owner for edit access to change budgets and bills.</div>'}
   return h+heroB+pl+ch+'<button class="obtn" data-go="rep" data-rp="next">See next month’s forecast →</button>'+monthCard()}
+
+/* ---- Home: live-tracking status line and one-line budget ---- */
+function trackLine(){
+  var sc=S.sc,nat=false;try{nat=nativeSmsOK()}catch(e){}
+  if(sc===undefined&&!S._tll){S._tll=1;try{quiet(loadSc())}catch(e){}}
+  var on=!!((sc&&sc.alert_count>0)||(S.nsms&&S.nsms.enabled)||(phoneOS()==="ios"&&nativeApp()&&scAdded()));
+  if(!on||!S.loaded)return "";
+  var last=sc&&sc.last_alert?new Date(sc.last_alert).getTime():0,days=last?Math.floor((Date.now()-last)/864e5):-1;
+  if(!last)return '<button class="dc stl" data-go="track"><span><i class="dot g"></i><b>Live tracking is on</b></span><span class="note" style="margin:0">Waiting for the first SMS ›</span></button>';
+  if(days>=3)return '<button class="dc stl" data-go="track" style="border:1.5px solid #e0a020;display:block"><span style="display:flex;justify-content:space-between;width:100%"><span><i class="dot r"></i><b>Live tracking stopped</b></span><span class="note" style="margin:0;color:var(--acc)">Fix it ›</span></span><div class="note" style="margin:6px 0 0">No SMS received for '+days+' days. Tap to check the shortcut.</div></button>';
+  return '<button class="dc stl" data-go="track"><span><i class="dot"></i><b>Live tracking is on</b></span><span class="note" style="margin:0">Last SMS '+esc(ago(sc.last_alert))+' ›</span></button>'}
+function budgetLine(){
+  if(!S.loaded)return "";
+  var bm={};(S.budgets||[]).forEach(function(b){bm[b.category]=Number(b.amount)});
+  var sp=spentThisMonth(),tb=0,ts=0;Object.keys(bm).forEach(function(c){if(bm[c]>0){tb+=bm[c];ts+=sp[c]||0}});
+  if(!tb)return "";
+  var dl=Math.max(0,Math.ceil((pend(0)-new Date())/864e5)),over=ts>tb,pc=Math.min(100,Math.round(ts/tb*100));
+  return '<button class="dc bgl" data-go="plan" style="width:100%;border:0;font:inherit;color:var(--ink);text-align:left"><div class="row" style="padding:0 0 6px"><b>Monthly budget</b><span class="note" style="margin:0'+(over?';color:var(--out)':'')+'">'+(over?'Over by '+money(Math.round(ts-tb)):dl+' day'+(dl===1?'':'s')+' left')+'</span></div><div style="font-size:24px;font-weight:800"'+(over?' class="out"':'')+'>'+money(Math.round(Math.abs(tb-ts)))+' <span style="font-size:14px;font-weight:600" class="mute">'+(over?'over':'left of')+' '+money(tb)+'</span></div><div class="bar"><i'+(over?' class="ov"':'')+' style="width:'+pc+'%"></i></div></button>'}
