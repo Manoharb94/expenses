@@ -16,7 +16,6 @@ function vDash(){
   if(!rec.length&&!S.loaded)h+=skBox(6);
   else if(!rec.length)h+='<div class="empty"><span class="ei">🧾</span>'+(S.loaded?'No transactions yet':'')+'<button class="obtn" data-go="track">Set up automatic tracking</button></div>';
   else h+='<div style="margin-top:6px">'+rec.map(miniRow).join('')+'</div>';
-  if(S.loaded)h+='<button class="obtn" data-go="stmt" style="display:flex;align-items:center;justify-content:center;gap:8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg>Import</button>';
   h+='</div>';
   var ps=(S.pf&&S.pf!=="__both")?[S.pf]:persons(),bals=ps.map(acctBal).filter(Boolean),bt=0;bals.forEach(function(b){bt+=b.bal});
   var bd=billsDue(30);

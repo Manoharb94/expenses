@@ -41,13 +41,14 @@ function personChips(){
   return h+'<button data-pf="__both" class="'+(cur==="__both"?'on':'')+'">Family</button></div>'}
 var _pop=0;
 function go(t){try{window.brandLoader(false)}catch(e){}
+  if(t==="stmt"){t="track";S.trkTab="stmt"}else if(t==="track")S.trkTab="live";
   try{if(t!=="home"){if(!(history.state&&history.state.g))history.pushState({g:1},"")}else if(history.state&&history.state.g&&!_pop)history.back()}catch(e){}
   S.tab=t;if(t==="sms"){S.smsStep=0;if(nativeSmsOK())S.nsms=null}if(t==="mail"){S.mailStep=0;S._mailInit=0}if(t==="set")S.ainfo=undefined;
   render();window.scrollTo(0,0);
   if(t==="plan"||t==="goals")quiet(loadPlan());
   if(t==="fam"||t==="set"||t==="menu")quiet(loadMembers());if(t==="fam")quiet(loadFam());
   if(t==="track"||t==="sms"||t==="mail")quiet(loadSc());
-  if(t==="stmt")quiet(loadImports())}
+  if(S.tab==="track"&&S.trkTab==="stmt")quiet(loadImports())}
 function tAt(t){return Date.parse(t.txn_at||t.created_at||"")||0}
 function byNew(a,b){return (a.txn_date||"")<(b.txn_date||"")?1:(a.txn_date||"")>(b.txn_date||"")?-1:(tAt(a)<tAt(b)?1:tAt(a)>tAt(b)?-1:(String(a.created_at||"")<String(b.created_at||"")?1:-1))}
 function dayLabel(ds){if(!ds)return "No date";var t=iso(new Date()),y=new Date();y.setDate(y.getDate()-1);

@@ -5,9 +5,12 @@ function vCatsP(){
   return h+'</div></div><div class="note" style="text-align:center">Need a new category? Ask for it to be added to the app.</div>'}
 function trackStat(){var c=S.sc;if(!c||c.err)return '';
   return c.alert_count>0?'<div class="note" style="margin-top:10px">✓ '+c.alert_count+' payment'+(c.alert_count>1?'s':'')+' received automatically · last '+ago(c.last_alert)+'</div>':'<div class="note" style="margin-top:10px">No payments received automatically yet.</div>'}
+function trkTabs(t){return '<div class="seg2 trkt">'+[["live","Live Tracking"],["sms","Import SMS"],["stmt","Import Bank Statement"]].map(function(x){return '<button data-trk="'+x[0]+'"'+(t===x[0]?' class="on"':'')+'>'+x[1]+'</button>'}).join('')+'</div>'}
 function vTrack(){
+  var tab=S.trkTab||"live",h=topbar("Automated Tracking","menu")+trkTabs(tab);
+  if(tab==="sms")return h+vImportSms();
+  if(tab==="stmt")return h+vStmt();
   var c=S.sc,mail=c&&c.last_run?((Date.now()-new Date(c.last_run).getTime())<30*60000?'<span class="in">✓ Connected</span>':'<span class="out">⚠ Stopped</span>'):'Not set up';
-  var h=topbar("Automated Tracking","menu")+'<div class="sec">✨ Live Tracking</div>';
   var ns=nativeSmsOK();if(ns&&S.nsms===null)nsmsRefresh();
   h+='<div class="dc trk"><i style="background:rgba(60,130,255,.20)">💬</i><div class="m"><b>SMS Tracking</b><span>Capture spends from bank SMS, seconds after you pay'+(ns&&S.nsms&&S.nsms.enabled?' · <span class="in">✓ On</span>':'')+'</span></div><button class="sbtn" data-go="sms">'+(ns&&S.nsms&&S.nsms.enabled?'Manage':ns?'Turn On':'Set Up')+'</button></div>';
   h+='<div class="dc trk"><i style="background:rgba(255,150,40,.22)">✉️</i><div class="m"><b>Email Tracking</b><span>Capture spends from bank emails · '+mail+'</span></div><button class="sbtn" data-go="mail">'+(c&&c.last_run?'Manage':'Set Up')+'</button></div>';
@@ -17,6 +20,36 @@ function vTrack(){
     '<p style="margin:0 0 8px"><b>Email</b> is the back-up. A small script in your own Gmail checks for bank alerts every 2 minutes.</p>'+
     '<p style="margin:0">Use both if you like. The same payment arriving by SMS and by email is saved once. OTPs and offers are ignored.</p></div>';
   return h}
+/* ---- Import SMS tab: pick a start date (last 3 months only), then read the messages from that date ---- */
+var SMS_IMPORT_NAME="Gharwise Import", SMS_IMPORT_LINK="", SMS_IMPORT_FROM_DATE=false;  /* set the link (and true) once the separate "Gharwise Import" shortcut exists; until then the existing shortcut is used with whole months */
+function isoD(d){var m=d.getMonth()+1,x=d.getDate();return d.getFullYear()+"-"+(m<10?"0":"")+m+"-"+(x<10?"0":"")+x}
+function impMin(){var d=new Date();d.setHours(0,0,0,0);d.setMonth(d.getMonth()-3);return d}
+function impDef(){var d=new Date();d.setHours(0,0,0,0);d.setMonth(d.getMonth()-1);return d}
+function impDateOK(v){return /^\d{4}-\d\d-\d\d$/.test(v||"")&&v>=isoD(impMin())&&v<=isoD(new Date())}
+function impDays(v){var a=new Date();a.setHours(0,0,0,0);var n=Math.round((a-new Date(v+"T00:00:00"))/864e5)+1;return Math.max(1,Math.min(95,n))}
+function impHref(v){var m=Math.min(3,Math.max(1,Math.ceil((impDays(v)-1)/31))),tx=SMS_IMPORT_FROM_DATE?("FROM "+v):("HISTORY "+m);
+  return "shortcuts://run-shortcut?name="+encodeURIComponent(SMS_IMPORT_LINK?SMS_IMPORT_NAME:SMS_SHORTCUT_NAME)+"&input=text&text="+encodeURIComponent(tx)}
+function vImportSms(){
+  var os=phoneOS(),h='<h2 style="margin:14px 0 2px">Import SMS</h2><div class="mute" style="margin-bottom:12px">Add older bank messages missing in Gharwise.</div>';
+  if(os==="desk")return h+'<div class="card"><b>Open this on your phone</b><div class="note" style="margin-top:6px">Bank messages are read on the phone that receives them. Open the app on that phone, or use the Import Bank Statement tab here.</div></div>';
+  if(os==="and"&&!nativeSmsOK())return h+'<div class="card"><b>Use the Gharwise app</b><div class="note" style="margin-top:6px">Reading older SMS needs the Gharwise app from the Play Store. You can also use the Import Bank Statement tab.</div></div>';
+  var ns=nativeSmsOK();if(ns&&S.nsms===null){nsmsRefresh();return h+'<div class="card mute">Checking…</div>'}
+  if(ns&&!(S.nsms&&S.nsms.enabled))return h+'<div class="card"><b>Turn on SMS tracking first</b><div class="note" style="margin:6px 0 12px">Gharwise needs your permission to read bank SMS on this phone.</div><button class="btn" data-go="sms">Turn on SMS tracking</button></div>';
+  if(ns&&S.nimp)return h+nimpUI();
+  var d=impDateOK(S.impDate)?S.impDate:isoD(impDef());S.impDate=d;
+  h+='<div class="card"><div class="mute">Import from this date</div><input type="date" id="impd" value="'+d+'" min="'+isoD(impMin())+'" max="'+isoD(new Date())+'" style="width:100%;margin:6px 0 4px;min-height:46px"><div class="note" style="margin-bottom:14px">You can pick any date in the last 3 months.</div>'+
+    (ns?'<button class="btn" id="impgo">Import SMS</button>':'<a class="btn" id="impgo" style="display:block;text-align:center;text-decoration:none" href="'+esc(impHref(d))+'">Import SMS</a>')+
+    '<div class="note" style="margin-top:10px">Messages already processed are ignored.</div></div>';
+  if(os==="ios"){
+    if(SMS_IMPORT_LINK)h+='<div class="note" style="margin:0 0 6px">First time? Add the import shortcut, and allow Messages when iPhone asks.</div><a class="btn ghost" style="display:block;text-align:center;text-decoration:none;margin-bottom:12px" href="'+esc(SMS_IMPORT_LINK)+'" target="_blank" rel="noopener">Add the import shortcut</a>';
+    h+='<div class="warnbox"><b>Importing a lot? Go in small steps.</b><br>iPhone may stop a long import (timeout). Pick a start date within the last 1 month first. Run it again for older dates. Messages already added are skipped.</div>'+
+      '<details class="impd" id="imph"'+(S.impHelp?' open':'')+'><summary>Import not working?</summary><div class="impb"><b>Only a few messages came in, or none?</b><br>Your iPhone’s message search may need refreshing. Do this once:<ol><li>Open Settings → Search → Messages.</li><li>Turn “Show Content in Search” off, then on again.</li><li>Wait 24 hours while your iPhone rebuilds its message index.</li><li>Come back and import again.</li></ol><a href="#" data-trk="stmt" style="color:var(--acc)">Don’t want to wait? Use the Import Bank Statement tab.</a></div></details>'}
+  return h}
+function bindImpSms(){
+  var di=document.getElementById("impd"),go=document.getElementById("impgo"),hp=document.getElementById("imph");
+  if(hp)hp.ontoggle=function(){S.impHelp=hp.open};
+  if(di)di.onchange=function(){if(!impDateOK(di.value)){di.value=isoD(impDef());toast("Pick a date in the last 3 months")}S.impDate=di.value;if(go&&go.tagName==="A")go.href=impHref(S.impDate)};
+  if(go&&go.tagName==="BUTTON")go.onclick=function(){importNativeSms(impDays(S.impDate))}}
 function wz(title,steps,cur,doneTo){
   var s=steps[cur],tb=topbar(title,"track");if(cur>0)tb=tb.replace('data-go="track"','data-step="-1"');
   var h='<div class="wz">'+tb+'<div class="wzp"><div class="wzs">Step '+(cur+1)+' of '+steps.length+'</div><div class="wzbar"><i style="width:'+Math.round((cur+1)/steps.length*100)+'%"></i></div></div>'+
@@ -47,7 +80,7 @@ function vSmsNative(){
   var T=topbar("SMS tracking","track"),st=S.nsms,c=S.sc;
   if(st===null){nsmsRefresh();return T+'<div class="card mute">Checking…</div>'}
   if(st.enabled)return T+'<div class="dc" style="text-align:center"><span style="font-size:46px">✅</span><h3 style="margin:6px 0">SMS tracking is on</h3><p class="mute" style="margin:0">Bank payment SMS are added to the app the moment they arrive, even when the app is closed.</p><div class="note" style="margin-top:10px">'+(st.count?st.count+' sent from this phone'+(st.last?' · last '+ago(new Date(st.last).toISOString()):''):'Waiting for your next bank SMS')+'</div></div>'+
-    nimpUI()+'<button class="btn ghost" id="noff">Turn off SMS tracking</button>';
+    '<button class="btn ghost" id="noff">Turn off SMS tracking</button>';
   return T+'<div class="dc"><div style="text-align:center"><span style="font-size:46px">💬</span><h3 style="margin:6px 0 4px">Track spends from bank SMS</h3><p class="mute" style="margin:0 0 14px">One tap. No other app needed.</p></div>'+
     '<div class="card" style="background:var(--chip);box-shadow:none;font-size:14px;line-height:1.55;margin:0"><b>What happens when you allow SMS access</b><ul style="margin:6px 0 0;padding-left:18px"><li>Gharwise reads SMS on this phone to find <b>bank payment alerts</b> (debited, credited, spent).</li><li>Only those alerts are sent to your account. OTPs, personal messages and offers are checked on the phone and never leave it.</li><li>The alerts are used only to show your spending, and only you and your family can see them.</li><li>You can turn this off any time here, or in Android Settings.</li></ul></div>'+
     (c&&c.key?'<div class="mute" style="margin:16px 0 6px">How far back should we read your bank SMS?</div>'+nmoSel()+'<button class="btn" id="non">Allow SMS access and turn on</button>':'<div class="note" style="margin-top:14px">Loading your account…</div>')+
@@ -72,17 +105,17 @@ function bindNativeSms(){
     catch(e){S.nsms={enabled:false,err:/denied|not given/i.test(e.message||"")?"SMS access was not allowed. Tap the button again, or allow SMS for Gharwise in Android Settings → Apps → Permissions.":e.message};render()}};
   var im=document.getElementById("nimp");if(im)im.onclick=importNativeSms;
   var off=document.getElementById("noff");if(off)off.onclick=async function(){if(!confirm("Turn off SMS tracking on this phone?"))return;try{S.nsms=await smsPlugin().disable()}catch(e){}render()}}
-async function importNativeSms(){
+async function importNativeSms(days){
   if(S.nimp)return;
-  var mo=Math.min(3,S.nmo||1),lab=mo===1?"1 month":mo+" months",h=null,r=null;
-  S.nimp={pct:0,txt:"Reading your messages…",mo:mo,lab:lab,t0:Date.now(),last:Date.now()};setTimeout(function(){var n=S.nimp;if(n&&!n.got){n.txt="Still reading, please keep the app open…";var y=document.getElementById("ntxt");if(y)y.textContent=n.txt}},20000);if(S.tab==="sms")render();
+  var mo=days?Math.min(3,Math.ceil(days/31)):Math.min(3,S.nmo||1),lab=days?days+(days===1?" day":" days"):(mo===1?"1 month":mo+" months"),h=null,r=null;
+  S.nimp={pct:0,txt:"Reading your messages…",mo:mo,lab:lab,t0:Date.now(),last:Date.now()};setTimeout(function(){var n=S.nimp;if(n&&!n.got){n.txt="Still reading, please keep the app open…";var y=document.getElementById("ntxt");if(y)y.textContent=n.txt}},20000);if(S.tab==="sms"||S.tab==="track")render();
   try{h=await smsPlugin().addListener("smsImport",nimpTick)}catch(e){}
-  try{r=await smsPlugin().importRecent({days:Math.min(95,mo*31)})}
-  catch(e){S.nimp=null;try{h&&h.remove()}catch(x){}if(S.tab==="sms")render();showErr("Could not read SMS: "+(e.message||e));return}
+  try{r=await smsPlugin().importRecent({days:Math.min(95,days||mo*31)})}
+  catch(e){S.nimp=null;try{h&&h.remove()}catch(x){}if(S.tab==="sms"||S.tab==="track")render();showErr("Could not read SMS: "+(e.message||e));return}
   try{h&&h.remove()}catch(x){}
   nimpTick({phase:"done"});
   await new Promise(function(res){setTimeout(res,900)});
-  S.nimp=null;if(S.tab==="sms")render();
+  S.nimp=null;if(S.tab==="sms"||S.tab==="track")render();
   if(!r.found)toast("No bank SMS found in the past "+lab);
   else toast("Done · "+r.found+" bank SMS read, "+(r.saved||0)+" new payment"+(r.saved===1?"":"s")+" added"+(r.skipped?" ("+r.skipped+" already in the app or not a payment)":"")+(r.queued&&!r.refused?" · "+r.queued+" will be sent when you are online":""));
   if(r.refused)showErr("The server did not accept the messages. Turn SMS tracking off and on again, then retry.");
@@ -107,25 +140,19 @@ function vSms(){
     var run="shortcuts://run-shortcut?name="+encodeURIComponent(SMS_SHORTCUT_NAME)+"&input=text&text="+encodeURIComponent("OEKEY:"+key);
     var runHist="shortcuts://run-shortcut?name="+encodeURIComponent(SMS_SHORTCUT_NAME)+"&input=text&text=HISTORY%203";
     if(nativeApp()&&SMS_SHORTCUT_LINK)steps=[
-      ['Add the live shortcut','<p>This shortcut sends each new bank SMS to Gharwise. Tap the button, then <b>Add Shortcut</b>, and come back here.</p><a class="btn" style="display:block;text-align:center;text-decoration:none" href="'+esc(SMS_SHORTCUT_LINK)+'" target="_blank" rel="noopener">Add shortcut</a><p class="note">Your account is linked automatically. Nothing to copy.</p><p>Then allow it once: open the Shortcuts app, tap ▶ on “Gharwise SMS”, and tap Always Allow on every question. Without this, the shortcut fails when your phone is locked.</p>'],
+      ['Add the live shortcut','<p>This shortcut sends each new bank SMS to Gharwise. Tap the button, then <b>Add Shortcut</b>, and come back here.</p><a class="btn" style="display:block;text-align:center;text-decoration:none" href="'+esc(SMS_SHORTCUT_LINK)+'" target="_blank" rel="noopener">Add shortcut</a><p class="note">Your account is linked automatically. Nothing to copy.</p><div class="must"><div class="mt"><span>Do this once</span>Allow the shortcut</div><ol><li>Open the Shortcuts app.</li><li>Tap ▶ on Gharwise SMS.</li><li>Tap Always Allow on every question.</li></ol><div class="why">Without this, tracking stops whenever your phone is locked.</div><a class="btn ghost" style="display:block;text-align:center;text-decoration:none" href="shortcuts://">Open Shortcuts</a></div>'],
       ['Turn on live tracking','<video src="sms-live-iphone.mp4" autoplay muted loop playsinline controls style="width:100%;max-width:270px;display:block;margin:0 auto 10px;border-radius:14px"></video><p>Apple does not let any app create this automation for you. Watch the video, then tap the button:</p><ol><li><b>Automation</b> tab → <b>New Automation</b> → <b>Message</b></li><li><b>Message Contains</b>: type one <b>space</b></li><li>Choose <b>'+esc(SMS_SHORTCUT_NAME)+'</b>, tick <b>Run Immediately</b> → Done</li></ol><a class="btn" style="display:block;text-align:center;text-decoration:none" href="shortcuts://">Open Shortcuts</a><div class="note">Only bank payment alerts are saved. Other messages are ignored.</div>'],
-      ['All set','<p>The next bank SMS reaches the app within seconds and shows up in <b>List</b>.</p>'+trackStat()+'<div class="note" style="margin-top:14px;font-size:16px;line-height:1.6;color:var(--ink,#333)"><b>Tip: hide the “Running your automation” banner.</b> Open <b>Settings</b> on your iPhone, then <b>Notifications</b>, then scroll to <b>Shortcuts</b> and tap it. Turn <b>Allow Notifications</b> off. To keep some alerts, leave it on and turn off <b>Lock Screen</b>, <b>Notification Center</b> and <b>Banners</b>. Tracking keeps working either way.</div>']];
+      ['All set','<p>The next bank SMS reaches the app within seconds and shows up in <b>List</b>.</p>'+trackStat()]];
     else if(SMS_SHORTCUT_LINK)steps=[
       ['Add the shortcut','<p>Tap the button, then tap <b>Add Shortcut</b> in the Shortcuts app and come back here.</p><a class="btn" style="display:block;text-align:center;text-decoration:none" href="'+esc(SMS_SHORTCUT_LINK)+'" target="_blank" rel="noopener">Add shortcut</a>'],
       ['Link it to your account','<p>One tap. This hands your personal key to the shortcut, so the SMS it sends are saved as yours. You will see “Linked to Gharwise”.</p><a class="btn" style="display:block;text-align:center;text-decoration:none" href="'+esc(run)+'">Link my account</a><p class="note">If iPhone asks to allow the shortcut to save a file, tap <b>Always Allow</b>.</p>'],
       ['Turn it on for bank SMS','<p>Apple only lets you switch on message automations yourself. It takes about 30 seconds:</p><ol><li>Open <b>Shortcuts</b> → <b>Automation</b> → <b>+</b> → <b>Message</b>.</li><li><b>Message Contains</b>: type <b>Rs</b>.</li><li>Choose <b>Run Immediately</b> → <b>Next</b>.</li><li>Pick <b>'+esc(SMS_SHORTCUT_NAME)+'</b>.</li></ol><a class="btn ghost" style="display:block;text-align:center;text-decoration:none" href="shortcuts://">Open Shortcuts</a><div class="note">Bank writes INR (Axis) or no currency (SBI)? Repeat with <b>INR</b> or <b>debited</b>. Duplicates are ignored.</div>'],
-      ['Read your past messages','<p>One tap. The shortcut reads your bank SMS from the last 1 to 3 months and sends them to the app, each with its date.</p><a class="btn" style="display:block;text-align:center;text-decoration:none" href="'+esc(runHist)+'">Read past SMS</a><p class="note">Tap <b>Allow</b> when iPhone asks for access to Messages. About 2 minutes for 200 messages. Safe to run again; duplicates are skipped.</p>'],
-      ['All set','<p>The next bank SMS reaches the app within seconds and shows up in <b>List</b>.</p>'+trackStat()+'<div class="note" style="margin-top:14px;font-size:16px;line-height:1.6;color:var(--ink,#333)"><b>Tip: hide the “Running your automation” banner.</b> Open <b>Settings</b> on your iPhone, then <b>Notifications</b>, then scroll to <b>Shortcuts</b> and tap it. Turn <b>Allow Notifications</b> off. To keep some alerts, leave it on and turn off <b>Lock Screen</b>, <b>Notification Center</b> and <b>Banners</b>. Tracking keeps working either way.</div>']];
+      ['All set','<p>The next bank SMS reaches the app within seconds and shows up in <b>List</b>.</p>'+trackStat()]];
     else steps=[
       ['Copy your personal key','This key tells the app the SMS is yours. Keep it private.'+kv("Your key",key)],
       ['Create the automation','<ol><li>Open <b>Shortcuts</b> → <b>Automation</b> → <b>+</b> → <b>Message</b>.</li><li><b>Message Contains</b>: type <b>Rs</b>.</li><li><b>Run Immediately</b> → <b>Next</b> → <b>New Blank Automation</b>.</li></ol><a class="btn ghost" style="display:block;text-align:center;text-decoration:none" href="shortcuts://">Open Shortcuts</a>'],
       ['Add the “send” action','<ol><li>Add <b>Get Contents of URL</b> with this URL:</li></ol>'+kv("URL",j)+'<ol start="2"><li>Method <b>POST</b>. Header <b>apikey</b>:</li></ol>'+kv("apikey value",KEY)+'<ol start="3"><li>Request Body <b>JSON</b>: Text field <b>p_key</b> = your key; Text field <b>p_text</b> = Shortcut Input → <b>Content</b>.</li></ol>'],
-      histStep,
       ['All set','<p>The next bank SMS reaches the app within seconds.</p>'+trackStat()]];
-    if(SMS_PAST&&nativeApp()&&SMS_SHORTCUT_LINK){
-      var hrun=function(m){return "shortcuts://run-shortcut?name="+encodeURIComponent(SMS_SHORTCUT_NAME)+"&input=text&text="+encodeURIComponent(SMS_MONTHS_IN_URL?("HISTORY "+m):"HISTORY")};
-      var hsel=SMS_MONTHS_IN_URL?'<div class="mute" style="margin:6px 0 4px">How far back?</div><select id="smsmo" style="width:100%;padding:10px;border-radius:10px;margin-bottom:10px" onchange="document.getElementById(\'smsrun\').href=\''+"shortcuts://run-shortcut?name="+encodeURIComponent(SMS_SHORTCUT_NAME)+"&input=text&text="+'\'+encodeURIComponent(\'HISTORY \'+this.value)"><option value="1">Last 1 month</option><option value="2">Last 2 months</option><option value="3" selected>Last 3 months</option></select>':'';
-      steps.splice(1,0,['Read your past SMS','<p>Choose how far back to read, then tap the button. The shortcut reads your bank SMS from that period and sends them to the app.</p>'+hsel+'<a id="smsrun" class="btn" style="display:block;text-align:center;text-decoration:none" href="'+esc(hrun(3))+'">Read past SMS</a><p class="note">Tap <b>Allow</b> when iPhone asks for access to Messages. It can take a couple of minutes. Safe to run again; duplicates are skipped.</p>'])}
   }else steps=[
     ['Copy your personal key','This key tells the app the SMS is yours. Keep it private.'+kv("Your key",key)],
     ['Install an SMS forwarder','<p>Until the app is on the Play Store, a free helper app forwards bank SMS. These steps use <b>MacroDroid</b>.</p><a class="btn" style="display:block;text-align:center;text-decoration:none" target="_blank" rel="noopener" href="https://play.google.com/store/apps/details?id=com.arlosoft.macrodroid">Get MacroDroid</a><p class="note">Allow SMS access when it asks.</p>'],
@@ -177,6 +204,8 @@ function bindV2(el){
   var da=document.getElementById("delacc");if(da)da.onclick=deleteAccountSheet;
   var cp=document.getElementById("chpw");if(cp)cp.onclick=changePwSheet;
   if(S.tab==="sms"&&nativeSmsOK())bindNativeSms();
+  if(S.tab==="track"&&S.trkTab==="sms")bindImpSms();
+  el.querySelectorAll("[data-trk]").forEach(function(b){b.onclick=function(e){e.preventDefault();S.trkTab=b.dataset.trk;render();window.scrollTo(0,0);if(S.trkTab==="stmt")quiet(loadImports());if(S.trkTab==="sms")quiet(loadSc())}});
   if(S.tab==="fam")bindFam(el);
   el.querySelectorAll("[data-inv]").forEach(function(b){b.onclick=async function(){var q=b.dataset.inv.split("|");
     if(q[0]==="dec"){try{await api("rpc/decline_invite",{method:"POST",body:JSON.stringify({p_id:q[1]})})}catch(e){}S.invites=(S.invites||[]).filter(function(x){return x.id!==q[1]});render();return}
