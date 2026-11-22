@@ -12,6 +12,7 @@ function vTrack(){
   if(tab==="stmt")return h+vStmt();
   var c=S.sc,mail=c&&c.last_run?((Date.now()-new Date(c.last_run).getTime())<30*60000?'<span class="in">✓ Connected</span>':'<span class="out">⚠ Stopped</span>'):'Not set up';
   var ns=nativeSmsOK();if(ns&&S.nsms===null)nsmsRefresh();
+  if(phoneOS()==="ios"&&SMS_SHORTCUT_LINK)h+=scCard();
   h+='<div class="dc trk"><i style="background:rgba(60,130,255,.20)">💬</i><div class="m"><b>SMS Tracking</b><span>Capture spends from bank SMS, seconds after you pay'+(ns&&S.nsms&&S.nsms.enabled?' · <span class="in">✓ On</span>':'')+'</span></div><button class="sbtn" data-go="sms">'+(ns&&S.nsms&&S.nsms.enabled?'Manage':ns?'Turn On':'Set Up')+'</button></div>';
   h+='<div class="dc trk"><i style="background:rgba(255,150,40,.22)">✉️</i><div class="m"><b>Email Tracking</b><span>Capture spends from bank emails · '+mail+'</span></div><button class="sbtn" data-go="mail">'+(c&&c.last_run?'Manage':'Set Up')+'</button></div>';
   h+=trackStat();
@@ -21,7 +22,26 @@ function vTrack(){
     '<p style="margin:0">Use both if you like. The same payment arriving by SMS and by email is saved once. OTPs and offers are ignored.</p></div>';
   return h}
 /* ---- Import SMS tab: pick a start date (last 3 months only), then read the messages from that date ---- */
-var SMS_IMPORT_NAME="Gharwise SMS Import", SMS_IMPORT_LINK="https://www.icloud.com/shortcuts/e11b06ee68054632ab37695db9e0ff4c", SMS_IMPORT_FROM_DATE=true;  /* set the link (and true) once the separate "Gharwise Import" shortcut exists; until then the existing shortcut is used with whole months */
+/* ONE shortcut does live bank SMS, import (text "FROM yyyy-mm-dd") and voice. Its name must match exactly: the app opens it by name. */
+var SMS_SHORTCUT_LINK="https://www.icloud.com/shortcuts/7fbc4d6863cb4863bb452d48fe2a05a0";
+var SMS_SHORTCUT_NAME="Gharwise SMS";
+var SMS_IMPORT_NAME=SMS_SHORTCUT_NAME, SMS_IMPORT_LINK=SMS_SHORTCUT_LINK, SMS_IMPORT_FROM_DATE=true;
+/* older key-based flow used by the web (non-app) iPhone steps; unchanged */
+var SMS_LEGACY_LINK="https://www.icloud.com/shortcuts/be35f33391bd4cdeb6731be3eb675d4e", SMS_LEGACY_NAME="Add SMS to Gharwise";
+/* "added once": remembered on this phone. The app cannot look inside Shortcuts, so it is set when the person taps Add. */
+function scAdded(){try{return localStorage.getItem("gwsc")==="1"}catch(e){return false}}
+function scMark(v){try{v?localStorage.setItem("gwsc","1"):localStorage.removeItem("gwsc")}catch(e){}}
+function scBtn(label){return '<a class="btn" data-sca style="display:block;text-align:center;text-decoration:none" href="'+esc(SMS_SHORTCUT_LINK)+'" target="_blank" rel="noopener">'+label+'</a>'}
+function scCard(){
+  if(scAdded())return '<div class="card"><div class="sxh" style="margin-bottom:8px"><div class="t">✅</div><div><b>Gharwise SMS shortcut added</b><small>One shortcut for live SMS, import and voice</small></div></div><a href="#" data-scx class="note" style="color:var(--acc)">Not added yet? Add it here</a></div>';
+  return '<div class="card" style="border:2px solid var(--acc)"><div class="sxh"><div class="t">⚡</div><div><b>One shortcut does it all</b><small>Add it once, use it three ways</small></div></div>'+
+    '<div class="vs"><span style="font-size:22px">💬</span><div><b>Live bank SMS</b><p>Every new bank SMS is saved by itself.</p></div></div>'+
+    '<div class="vs"><span style="font-size:22px">📥</span><div><b>Import old SMS</b><p>Read messages from the last 3 months.</p></div></div>'+
+    '<div class="vs"><span style="font-size:22px">🎤</span><div><b>Voice expenses</b><p>Double-tap the back of your iPhone and say “Grocery 120”.</p></div></div>'+
+    scBtn("Add the Gharwise SMS shortcut")+'<div class="note" style="text-align:center;margin-top:10px">Tap Add Shortcut, then Allow on every question.</div></div>'}
+document.addEventListener("click",function(e){var a=e.target&&e.target.closest&&e.target.closest("[data-sca],[data-scx]");if(!a)return;
+  if(a.hasAttribute("data-scx")){e.preventDefault();scMark(false);try{render()}catch(x){}return}
+  scMark(true);setTimeout(function(){try{render()}catch(x){}},700)});  /* set the link (and true) once the separate "Gharwise Import" shortcut exists; until then the existing shortcut is used with whole months */
 function isoD(d){var m=d.getMonth()+1,x=d.getDate();return d.getFullYear()+"-"+(m<10?"0":"")+m+"-"+(x<10?"0":"")+x}
 function impMin(){var d=new Date();d.setHours(0,0,0,0);d.setMonth(d.getMonth()-3);return d}
 function impDef(){var d=new Date();d.setHours(0,0,0,0);d.setMonth(d.getMonth()-1);return d}
@@ -38,10 +58,10 @@ function vImportSms(){
   if(ns&&S.nimp)return h+nimpUI();
   var d=impDateOK(S.impDate)?S.impDate:isoD(impDef());S.impDate=d,hasLink=os==="ios"&&!!SMS_IMPORT_LINK;
   var sh=function(n,t){return '<div class="wzh" style="margin-bottom:10px"><em>'+n+'</em><b>'+t+'</b></div>'};
-  if(hasLink)h+='<div class="card">'+sh(1,"Add the shortcut")+'<div class="note" style="margin:0 0 12px">Tap the button, then Add Shortcut in the Shortcuts app, and come back here. Do this once.</div><a class="btn" style="display:block;text-align:center;text-decoration:none" href="'+esc(SMS_IMPORT_LINK)+'" target="_blank" rel="noopener">Add the import shortcut</a></div>';
-  h+='<div class="card">'+(hasLink?sh(2,"Read your old messages"):'')+'<div class="mute">Import from this date</div><input type="date" id="impd" value="'+d+'" min="'+isoD(impMin())+'" max="'+isoD(new Date())+'" style="display:block;width:100%;max-width:100%;min-width:0;box-sizing:border-box;margin:6px 0 4px;min-height:46px"><div class="note" style="margin-bottom:14px">You can pick any date in the last 3 months.</div>'+
-    (ns?'<button class="btn" id="impgo">Import SMS</button>':'<a class="btn" id="impgo" style="display:block;text-align:center;text-decoration:none" href="'+esc(impHref(d))+'">Import SMS</a>')+
-    (hasLink?'<div class="note" style="margin-top:10px">The first time, iPhone asks to allow Messages. Tap Allow.</div>':'')+
+  var ok=!hasLink||scAdded();if(hasLink)h+=scCard();
+  h+='<div class="card">'+(hasLink?'<b style="display:block;margin-bottom:8px;font-size:16px">Read your old messages</b>':'')+'<div class="mute">Import from this date</div><input type="date" id="impd" value="'+d+'" min="'+isoD(impMin())+'" max="'+isoD(new Date())+'" style="display:block;width:100%;max-width:100%;min-width:0;box-sizing:border-box;margin:6px 0 4px;min-height:46px"><div class="note" style="margin-bottom:14px">You can pick any date in the last 3 months.</div>'+
+    (ns?'<button class="btn" id="impgo">Import SMS</button>':ok?'<a class="btn" id="impgo" style="display:block;text-align:center;text-decoration:none" href="'+esc(impHref(d))+'">Import SMS</a>':'<button class="btn" id="impoff" disabled style="opacity:.45">Import SMS</button><div class="note" style="margin-top:8px">Add the Gharwise SMS shortcut above first.</div>')+
+    (hasLink&&ok?'<div class="note" style="margin-top:10px">The first time, iPhone asks to allow Messages. Tap Allow.</div>':'')+
     '<div class="note" style="margin-top:10px">Messages already processed are ignored.</div></div>';
   if(os==="ios"){
     h+='<div class="warnbox"><b>Importing a lot? Go in small steps.</b><br>iPhone may stop a long import (timeout). Pick a start date within the last 1 month first. Run it again for older dates. Messages already added are skipped.</div>'+
@@ -60,9 +80,6 @@ function wz(title,steps,cur,doneTo){
     (cur===steps.length-1?'<button class="btn" data-go="'+doneTo+'">Done</button>':'<button class="btn" data-step="1">Next</button>')+'</div></div>';
   return h}
 function kv(label,val){return '<div class="mute" style="margin-top:10px">'+label+'</div><div class="kv"><span>'+esc(val)+'</span><button class="btn ghost s" data-copy="'+esc(val)+'">Copy</button></div>'}
-/* Paste the iCloud link of the shared "Gharwise SMS" shortcut here (see setup notes). Empty = step-by-step instructions instead. */
-var SMS_SHORTCUT_LINK="https://www.icloud.com/shortcuts/be35f33391bd4cdeb6731be3eb675d4e";
-var SMS_SHORTCUT_NAME="Add SMS to Gharwise";  /* must match the shortcut's name exactly: the app opens it by name */
 var SMS_PAST=true;
 var SMS_MONTHS_IN_URL=true;  /* true once the shortcut reads 'HISTORY <months>' (no question asked) */   /* true once the shared shortcut also reads past SMS */
 var SMS_HIST_NAME="Gharwise past SMS", SMS_HIST_LINK="";   /* iCloud link of the "Gharwise past SMS" shortcut */
@@ -139,16 +156,16 @@ function vSms(){
       '<ol start="6"><li>Request Body <b>JSON</b>: Text <b>p_key</b> = your key. <b>p_items</b> = <b>Array</b> with one <b>Dictionary</b> inside: Text <b>t</b> = <b>Repeat Item → Content</b>, Text <b>d</b> = <b>Formatted Date</b>.</li><li>After the repeat, add <b>Show Notification</b>: “Gharwise: past SMS sent”.</li></ol>'+
       '<p>Run it once. Allow access to Messages when iPhone asks. 200 messages take about 2 minutes. Run it again any time; messages already in the app are skipped.</p><div class="note">If “Find Messages” is missing in your Shortcuts app, tell us your iOS version in feedback.</div>'];
     iosLinkKey(key);
-    var run="shortcuts://run-shortcut?name="+encodeURIComponent(SMS_SHORTCUT_NAME)+"&input=text&text="+encodeURIComponent("OEKEY:"+key);
-    var runHist="shortcuts://run-shortcut?name="+encodeURIComponent(SMS_SHORTCUT_NAME)+"&input=text&text=HISTORY%203";
+    var run="shortcuts://run-shortcut?name="+encodeURIComponent(SMS_LEGACY_NAME)+"&input=text&text="+encodeURIComponent("OEKEY:"+key);
+    var runHist="shortcuts://run-shortcut?name="+encodeURIComponent(SMS_LEGACY_NAME)+"&input=text&text=HISTORY%203";
     if(nativeApp()&&SMS_SHORTCUT_LINK)steps=[
-      ['Add the live shortcut','<p>This shortcut sends each new bank SMS to Gharwise. Tap the button, then <b>Add Shortcut</b>, and come back here.</p><a class="btn" style="display:block;text-align:center;text-decoration:none" href="'+esc(SMS_SHORTCUT_LINK)+'" target="_blank" rel="noopener">Add shortcut</a><p class="note">Your account is linked automatically. Nothing to copy.</p><div class="must"><div class="mt"><span>Do this once</span>Allow the shortcut</div><ol><li>Open the Shortcuts app.</li><li>Tap ▶ on Add SMS to Gharwise.</li><li>Tap Always Allow on every question.</li></ol><div class="why">Without this, tracking stops whenever your phone is locked.</div><a class="btn ghost" style="display:block;text-align:center;text-decoration:none" href="shortcuts://">Open Shortcuts</a></div>'],
+      ['Add the live shortcut',''+(scAdded()?'<p>✅ The Gharwise SMS shortcut is already added. One shortcut does live SMS, import and voice.</p><a href="#" data-scx class="note" style="color:var(--acc)">Not added yet? Add it here</a>':'<p>One shortcut sends each new bank SMS to Gharwise, imports old SMS and adds voice expenses. Tap the button, then <b>Add Shortcut</b>, and come back here.</p>'+scBtn('Add the Gharwise SMS shortcut'))+'<p class="note">Your account is linked automatically. Nothing to copy.</p><div class="must"><div class="mt"><span>Do this once</span>Allow the shortcut</div><ol><li>Open the Shortcuts app.</li><li>Tap ▶ on Gharwise SMS.</li><li>Tap Always Allow on every question.</li></ol><div class="why">Without this, tracking stops whenever your phone is locked.</div><a class="btn ghost" style="display:block;text-align:center;text-decoration:none" href="shortcuts://">Open Shortcuts</a></div>'],
       ['Turn on live tracking','<div class="vlab">Video for iOS 26 and below</div><video src="sms-live-iphone.mp4#t=0.1" preload="metadata" playsinline controls style="width:100%;max-width:270px;display:block;margin:0 auto 6px;border-radius:14px"></video><div class="vhint">🔊 Tap ▶ and turn the sound on</div><p>Apple does not let any app create this automation for you. Watch the video, then tap the button:</p><ol><li><b>Automation</b> tab → <b>New Automation</b> → <b>Message</b></li><li><b>Message Contains</b>: type one <b>space</b></li><li>Choose <b>'+esc(SMS_SHORTCUT_NAME)+'</b>, tick <b>Run Immediately</b> → Done</li></ol><a class="btn" style="display:block;text-align:center;text-decoration:none" href="shortcuts://">Open Shortcuts</a><div class="note">Only bank payment alerts are saved. Other messages are ignored.</div>'],
       ['All set','<p>The next bank SMS reaches the app within seconds and shows up in <b>List</b>.</p>'+trackStat()]];
-    else if(SMS_SHORTCUT_LINK)steps=[
-      ['Add the shortcut','<p>Tap the button, then tap <b>Add Shortcut</b> in the Shortcuts app and come back here.</p><a class="btn" style="display:block;text-align:center;text-decoration:none" href="'+esc(SMS_SHORTCUT_LINK)+'" target="_blank" rel="noopener">Add shortcut</a>'],
+    else if(SMS_LEGACY_LINK)steps=[
+      ['Add the shortcut','<p>Tap the button, then tap <b>Add Shortcut</b> in the Shortcuts app and come back here.</p><a class="btn" style="display:block;text-align:center;text-decoration:none" href="'+esc(SMS_LEGACY_LINK)+'" target="_blank" rel="noopener">Add shortcut</a>'],
       ['Link it to your account','<p>One tap. This hands your personal key to the shortcut, so the SMS it sends are saved as yours. You will see “Linked to Gharwise”.</p><a class="btn" style="display:block;text-align:center;text-decoration:none" href="'+esc(run)+'">Link my account</a><p class="note">If iPhone asks to allow the shortcut to save a file, tap <b>Always Allow</b>.</p>'],
-      ['Turn it on for bank SMS','<p>Apple only lets you switch on message automations yourself. It takes about 30 seconds:</p><ol><li>Open <b>Shortcuts</b> → <b>Automation</b> → <b>+</b> → <b>Message</b>.</li><li><b>Message Contains</b>: type <b>Rs</b>.</li><li>Choose <b>Run Immediately</b> → <b>Next</b>.</li><li>Pick <b>'+esc(SMS_SHORTCUT_NAME)+'</b>.</li></ol><a class="btn ghost" style="display:block;text-align:center;text-decoration:none" href="shortcuts://">Open Shortcuts</a><div class="note">Bank writes INR (Axis) or no currency (SBI)? Repeat with <b>INR</b> or <b>debited</b>. Duplicates are ignored.</div>'],
+      ['Turn it on for bank SMS','<p>Apple only lets you switch on message automations yourself. It takes about 30 seconds:</p><ol><li>Open <b>Shortcuts</b> → <b>Automation</b> → <b>+</b> → <b>Message</b>.</li><li><b>Message Contains</b>: type <b>Rs</b>.</li><li>Choose <b>Run Immediately</b> → <b>Next</b>.</li><li>Pick <b>'+esc(SMS_LEGACY_NAME)+'</b>.</li></ol><a class="btn ghost" style="display:block;text-align:center;text-decoration:none" href="shortcuts://">Open Shortcuts</a><div class="note">Bank writes INR (Axis) or no currency (SBI)? Repeat with <b>INR</b> or <b>debited</b>. Duplicates are ignored.</div>'],
       ['All set','<p>The next bank SMS reaches the app within seconds and shows up in <b>List</b>.</p>'+trackStat()]];
     else steps=[
       ['Copy your personal key','This key tells the app the SMS is yours. Keep it private.'+kv("Your key",key)],

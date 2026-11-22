@@ -90,7 +90,6 @@ async function pushWidget(){   /* the widget only needs who you are; it never sh
 function nativeAfterLoad(){try{gwProbe();pushWidget();schedInsights()}catch(e){}}
 
 /* ---------- Settings cards ---------- */
-var QUICK_SHORTCUT_LINK="https://www.icloud.com/shortcuts/e6dd0738d1ef485ba0fc73d8621e1440";
 function nativeCard(){
   if(!nativeApp())return "";
   if(GWN.ok===undefined){gwProbe();return ""}
@@ -107,7 +106,9 @@ function nativeCard(){
     if(baOn())h+='<div class="ropt"><label><span>'+gwT("When used")+'</span><select id="bap">'+[50,60,70,75,80,90,100].map(function(p){return '<option value="'+p+'"'+(p===baPct()?' selected':'')+'>'+p+'%</option>'}).join('')+'</select></label><label><span>'+gwT("Time")+'</span><input type="time" id="bah" value="'+baTime()+'"></label></div>'}
   h+='</div>';
   h+='<div class="card">'+sxHead('🎤','Add an expense by voice','Say it, it is saved')+'<div class="note" style="margin:0">'+(ios
-    ?'<p class="vi">'+gwT("Double-tap the back of your iPhone and say “Grocery 120”. It is saved. Setup takes about a minute.")+'</p><div class="vs"><span class="vn">1</span><div><b>'+gwT("Add the shortcut")+'</b><p>'+gwT("Tap the button, then tap Add Shortcut. Tap Allow on every question.")+'</p></div></div><a class="btn" style="display:block;text-align:center;text-decoration:none" href="'+esc(QUICK_SHORTCUT_LINK)+'" target="_blank" rel="noopener">'+gwT("Add Quick Expense shortcut")+'</a><div class="vs"><span class="vn">2</span><div><b>'+gwT("Set the double-tap")+'</b><p>'+gwT("Go to Settings → Accessibility → Touch → Back Tap → Double Tap. Choose Quick Expense.")+'</p></div></div><p class="note" style="margin:8px 0 0">'+gwT("You can also say “Hey Siri, add expense in Gharwise”.")+'</p>'
+    ?'<p class="vi">'+gwT("Double-tap the back of your iPhone and say “Grocery 120”. It is saved.")+'</p>'+(scAdded()
+      ?'<div class="sxh" style="margin:6px 0 10px;background:var(--chip);border-radius:14px;padding:10px"><div class="t">✅</div><div><b>'+gwT("Gharwise SMS shortcut added")+'</b><small>'+gwT("Voice uses the same shortcut")+'</small></div></div><a href="#" data-scx class="note" style="color:var(--acc)">'+gwT("Not added yet? Add it here")+'</a>'
+      :'<div class="sxh" style="margin:6px 0 10px;background:var(--chip);border-radius:14px;padding:10px"><div class="t">➕</div><div><b>'+gwT("Add the Gharwise SMS shortcut first")+'</b><small>'+gwT("One shortcut for SMS, import and voice")+'</small></div></div>'+scBtn(gwT("Add the Gharwise SMS shortcut")))+'<div class="vs"><span class="vn">'+(scAdded()?'1':'2')+'</span><div><b>'+gwT("Set the double-tap")+'</b><p>'+gwT("Settings → Accessibility → Touch → Back Tap → Double Tap. Choose Gharwise SMS.")+'</p></div></div><p class="note" style="margin:8px 0 0">'+gwT("You can also say “Hey Siri, Gharwise SMS”.")+'</p>'
     :gwT("Add the Gharwise widget to your home screen. Then tap the microphone on it and say, for example, “Grocery 120”.")+'<button class="btn" id="pinw" style="margin:10px 0 4px">'+gwT("Add widget to home screen")+'</button><div class="note" style="margin:0">'+gwT("If nothing opens: press and hold an empty spot on your home screen, choose Widgets, then Gharwise.")+'</div>')+'</div></div>';
   return h}
 
