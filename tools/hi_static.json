@@ -1434,11 +1434,11 @@
 "Do this once": "यह एक बार करें",
 "Allow the shortcut": "शॉर्टकट को अनुमति दें",
 "Open the Shortcuts app.": "Shortcuts ऐप खोलें।",
-"Tap ▶ on Gharwise SMS.": "Gharwise SMS पर ▶ दबाएँ।",
 "Tap Always Allow on every question.": "हर सवाल पर Always Allow दबाएँ।",
 "Without this, tracking stops whenever your phone is locked.": "इसके बिना, फ़ोन लॉक होने पर ट्रैकिंग रुक जाती है।",
 "Don’t want to wait? Use the Import Bank tab.": "इंतज़ार नहीं करना? बैंक इम्पोर्ट टैब इस्तेमाल करें।",
 "Bank messages are read on the phone that receives them. Open the app on that phone, or use the Import Bank tab here.": "बैंक मैसेज उसी फ़ोन पर पढ़े जाते हैं जिस पर वे आते हैं। उस फ़ोन पर ऐप खोलें, या यहाँ बैंक इम्पोर्ट टैब इस्तेमाल करें।",
 "Reading older SMS needs the Gharwise app from the Play Store. You can also use the Import Bank tab.": "पुराने SMS पढ़ने के लिए Play Store से Gharwise ऐप चाहिए। आप बैंक इम्पोर्ट टैब भी इस्तेमाल कर सकते हैं।",
-"Import Bank": "बैंक इम्पोर्ट"
+"Import Bank": "बैंक इम्पोर्ट",
+"Tap ▶ on Gharwise SMS Live.": "Gharwise SMS Live पर ▶ दबाएँ।"
 }
