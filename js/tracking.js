@@ -61,8 +61,8 @@ function wz(title,steps,cur,doneTo){
   return h}
 function kv(label,val){return '<div class="mute" style="margin-top:10px">'+label+'</div><div class="kv"><span>'+esc(val)+'</span><button class="btn ghost s" data-copy="'+esc(val)+'">Copy</button></div>'}
 /* Paste the iCloud link of the shared "Gharwise SMS" shortcut here (see setup notes). Empty = step-by-step instructions instead. */
-var SMS_SHORTCUT_LINK="https://www.icloud.com/shortcuts/9793021ee7dd4400a1dd1defc5c37f6c";
-var SMS_SHORTCUT_NAME="Gharwise SMS Live";  /* must match the shortcut's name exactly: the app opens it by name */
+var SMS_SHORTCUT_LINK="https://www.icloud.com/shortcuts/be35f33391bd4cdeb6731be3eb675d4e";
+var SMS_SHORTCUT_NAME="Add SMS to Gharwise";  /* must match the shortcut's name exactly: the app opens it by name */
 var SMS_PAST=true;
 var SMS_MONTHS_IN_URL=true;  /* true once the shortcut reads 'HISTORY <months>' (no question asked) */   /* true once the shared shortcut also reads past SMS */
 var SMS_HIST_NAME="Gharwise past SMS", SMS_HIST_LINK="";   /* iCloud link of the "Gharwise past SMS" shortcut */
@@ -142,7 +142,7 @@ function vSms(){
     var run="shortcuts://run-shortcut?name="+encodeURIComponent(SMS_SHORTCUT_NAME)+"&input=text&text="+encodeURIComponent("OEKEY:"+key);
     var runHist="shortcuts://run-shortcut?name="+encodeURIComponent(SMS_SHORTCUT_NAME)+"&input=text&text=HISTORY%203";
     if(nativeApp()&&SMS_SHORTCUT_LINK)steps=[
-      ['Add the live shortcut','<p>This shortcut sends each new bank SMS to Gharwise. Tap the button, then <b>Add Shortcut</b>, and come back here.</p><a class="btn" style="display:block;text-align:center;text-decoration:none" href="'+esc(SMS_SHORTCUT_LINK)+'" target="_blank" rel="noopener">Add shortcut</a><p class="note">Your account is linked automatically. Nothing to copy.</p><div class="must"><div class="mt"><span>Do this once</span>Allow the shortcut</div><ol><li>Open the Shortcuts app.</li><li>Tap ▶ on Gharwise SMS Live.</li><li>Tap Always Allow on every question.</li></ol><div class="why">Without this, tracking stops whenever your phone is locked.</div><a class="btn ghost" style="display:block;text-align:center;text-decoration:none" href="shortcuts://">Open Shortcuts</a></div>'],
+      ['Add the live shortcut','<p>This shortcut sends each new bank SMS to Gharwise. Tap the button, then <b>Add Shortcut</b>, and come back here.</p><a class="btn" style="display:block;text-align:center;text-decoration:none" href="'+esc(SMS_SHORTCUT_LINK)+'" target="_blank" rel="noopener">Add shortcut</a><p class="note">Your account is linked automatically. Nothing to copy.</p><div class="must"><div class="mt"><span>Do this once</span>Allow the shortcut</div><ol><li>Open the Shortcuts app.</li><li>Tap ▶ on Add SMS to Gharwise.</li><li>Tap Always Allow on every question.</li></ol><div class="why">Without this, tracking stops whenever your phone is locked.</div><a class="btn ghost" style="display:block;text-align:center;text-decoration:none" href="shortcuts://">Open Shortcuts</a></div>'],
       ['Turn on live tracking','<video src="sms-live-iphone.mp4" autoplay muted loop playsinline controls style="width:100%;max-width:270px;display:block;margin:0 auto 10px;border-radius:14px"></video><p>Apple does not let any app create this automation for you. Watch the video, then tap the button:</p><ol><li><b>Automation</b> tab → <b>New Automation</b> → <b>Message</b></li><li><b>Message Contains</b>: type one <b>space</b></li><li>Choose <b>'+esc(SMS_SHORTCUT_NAME)+'</b>, tick <b>Run Immediately</b> → Done</li></ol><a class="btn" style="display:block;text-align:center;text-decoration:none" href="shortcuts://">Open Shortcuts</a><div class="note">Only bank payment alerts are saved. Other messages are ignored.</div>'],
       ['All set','<p>The next bank SMS reaches the app within seconds and shows up in <b>List</b>.</p>'+trackStat()]];
     else if(SMS_SHORTCUT_LINK)steps=[
