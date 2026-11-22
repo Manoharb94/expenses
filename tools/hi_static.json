@@ -1506,5 +1506,10 @@
 "live tracking stopped": "लाइव ट्रैकिंग रुक गई है",
 "fix it ›": "ठीक करें ›",
 "waiting for the first sms ›": "पहले SMS का इंतज़ार ›",
-"monthly budget": "मासिक बजट"
+"monthly budget": "मासिक बजट",
+"remind me to categorise": "श्रेणी चुनने की याद दिलाएँ",
+"an evening nudge every day or two, only when payments are waiting": "हर एक-दो दिन में शाम को याद दिलाएगा, सिर्फ़ तब जब भुगतान बाकी हों",
+"allow notifications for gharwise in your phone settings": "फ़ोन की सेटिंग में Gharwise के लिए नोटिफ़िकेशन की अनुमति दें",
+"send a test reminder now": "अभी एक टेस्ट रिमाइंडर भेजें",
+"reminder sent. check your notifications.": "रिमाइंडर भेज दिया। अपने नोटिफ़िकेशन देखें।"
 }

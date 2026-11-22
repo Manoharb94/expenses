@@ -87,7 +87,23 @@ async function pushWidget(){   /* the widget only needs who you are; it never sh
   try{if(!S.sc)await loadSc();var key=S.sc&&S.sc.key;if(!key)return;
     await P.setWidget({key:key,url:URLB+"rpc/",apikey:KEY,lang:(typeof LANG!=="undefined"?LANG:"en")})}
   catch(e){}}
-function nativeAfterLoad(){try{gwProbe();pushWidget();schedInsights()}catch(e){}}
+function nativeAfterLoad(){try{gwProbe();pushWidget();schedInsights();ndInit()}catch(e){}}
+
+/* ---------- Android: evening reminder when payments are still uncategorised ---------- */
+function ndPlugin(){try{if(!nativeApp()||Capacitor.getPlatform()!=="android")return null;var P=smsPlugin();return P&&P.nudgeStatus?P:null}catch(e){return null}}
+function ndInit(){var P=ndPlugin();if(!P)return;
+  if(!S._ndl){S._ndl=1;P.nudgeStatus().then(function(r){S.nd=r;if(S.tab==="set")render()}).catch(function(){})}
+  if(P.takeNudgeTap)P.takeNudgeTap().then(function(r){if(r&&r.tap)ndOpen()}).catch(function(){})}
+function ndOpen(){try{go("home");setTimeout(catFlow,300)}catch(e){}}
+window.gwNudgeOpen=function(){var P=ndPlugin();if(P&&P.takeNudgeTap)P.takeNudgeTap().then(function(){ndOpen()}).catch(function(){ndOpen()})};
+document.addEventListener("click",async function(e){
+  var b=e.target&&e.target.closest&&e.target.closest("#ndtest");if(!b)return;var P=ndPlugin();if(!P||!P.testNudge)return;
+  try{var r=await P.testNudge();toast(r&&r.result==="Sent"?gwT("Reminder sent. Check your notifications."):gwT((r&&r.result)||"Could not send"))}catch(x){toast(gwT("Could not send"))}});
+document.addEventListener("change",async function(e){
+  var t=e.target;if(!t||t.id!=="ndt")return;var P=ndPlugin();if(!P)return;
+  try{S.nd=await P.setNudge({on:!!t.checked});
+    if(t.checked&&S.nd&&!S.nd.allowed)toast(gwT("Allow notifications for Gharwise in your phone settings"))}catch(x){}
+  render()});
 
 /* ---------- Settings cards ---------- */
 function nativeCard(){
@@ -104,6 +120,8 @@ function nativeCard(){
     if(wkOn())h+='<div class="ropt"><label><span>'+gwT("Day")+'</span><select id="wkd">'+dn.map(function(n,k){return opt(k,n,k===wkDay())}).join('')+'</select></label><label><span>'+gwT("Time")+'</span><input type="time" id="wkh" value="'+wkTime()+'"></label></div>';
     h+=row("⚠️","Budget alerts","Get a reminder when a budget has used up the percentage you choose","bat",baOn());
     if(baOn())h+='<div class="ropt"><label><span>'+gwT("When used")+'</span><select id="bap">'+[50,60,70,75,80,90,100].map(function(p){return '<option value="'+p+'"'+(p===baPct()?' selected':'')+'>'+p+'%</option>'}).join('')+'</select></label><label><span>'+gwT("Time")+'</span><input type="time" id="bah" value="'+baTime()+'"></label></div>'}
+  if(ndPlugin()&&S.nd)h+=row("🔔","Remind me to categorise","An evening nudge every day or two, only when payments are waiting","ndt",!!S.nd.on&&!!S.nd.allowed);
+  if(ndPlugin()&&S.nd&&ndPlugin().testNudge)h+='<button class="btn ghost s" id="ndtest" style="margin:6px 0 2px">'+gwT("Send a test reminder now")+'</button>';
   h+='</div>';
   h+='<div class="card">'+sxHead('🎤','Add an expense by voice','Say it, it is saved')+'<div class="note" style="margin:0">'+(ios
     ?'<p class="vi">'+gwT("Double-tap the back of your iPhone and say “Grocery 120”. It is saved.")+'</p>'+(scAdded()
