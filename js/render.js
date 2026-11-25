@@ -45,7 +45,7 @@ function render(){
 function addBudgetSheet(pre){
   var sh=document.getElementById("sheet"),bm={};(S.budgets||[]).forEach(function(b){bm[b.category]=Number(b.amount)});
   var cs=CATS.filter(function(c){return !NOBUDGET[c]});
-  sh.innerHTML='<div class="sheet"><div><b>Add budget</b><div class="mute" style="margin:4px 0 10px">Choose a category and its monthly limit.</div><select id="abc"><option value="">Choose category</option>'+cs.map(function(c){return '<option value="'+esc(c)+'"'+(c===pre?' selected':'')+'>'+esc(c)+'</option>'}).join('')+'</select><input id="aba" type="number" inputmode="numeric" placeholder="Monthly amount" value="'+(pre&&bm[pre]?bm[pre]:'')+'"><button class="btn" id="abok">Add</button><button class="btn ghost" style="margin-top:8px" id="abx">Cancel</button></div></div>';
+  sh.innerHTML='<div class="sheet"><div><b>Add budget</b><div class="mute" style="margin:4px 0 10px">Choose a category and its monthly limit.</div><select id="abc"><option value="">Choose category</option>'+cs.map(function(c){return '<option value="'+esc(c)+'"'+(c===pre?' selected':'')+'>'+esc(c)+'</option>'}).join('')+'</select><label for="aba" style="display:block;margin:8px 0 4px;font-size:13px">Monthly amount</label><input id="aba" type="number" inputmode="numeric" placeholder="Monthly amount" value="'+(pre&&bm[pre]?bm[pre]:'')+'"><button class="btn" id="abok">Add</button><button class="btn ghost" style="margin-top:8px" id="abx">Cancel</button></div></div>';
   var sel=document.getElementById("abc"),am=document.getElementById("aba");
   sel.onchange=function(){if(bm[sel.value]&&!am.value)am.value=bm[sel.value]};
   document.getElementById("abx").onclick=function(){sh.innerHTML=""};
