@@ -293,3 +293,220 @@ grant execute on function lm_ping(jsonb), lm_is_app_user(), lm_family_create(tex
   lm_family_info(), lm_push(jsonb), lm_pull(bigint), lm_mail_token(), lm_mail_off(),
   lm_mail_pull(), lm_mail_ack(bigint[]), lm_mail_status(), admin_local_stats() to authenticated;
 grant execute on function lm_mail_push(text, jsonb) to anon, authenticated;
+
+-- ============================================================================
+-- Part 2: mobile-number invites (family + groups) and Groups / Trips.
+-- Still end-to-end encrypted: each phone has a key pair. An invite carries the family/group key
+-- LOCKED with the invitee's public key, so only their phone can open it. The server never sees it.
+-- ============================================================================
+alter table lm_users add column if not exists pubkey text;
+alter table lm_users add column if not exists pubkey_at timestamptz;
+
+create table if not exists lm_groups (
+  id         uuid primary key default gen_random_uuid(),
+  created_by uuid references auth.users on delete set null,
+  created_at timestamptz not null default now()
+);
+create table if not exists lm_group_members (
+  group_id  uuid not null references lm_groups on delete cascade,
+  user_id   uuid not null references auth.users on delete cascade,
+  joined_at timestamptz not null default now(),
+  primary key (group_id, user_id)
+);
+create table if not exists lm_group_items (
+  seq        bigint not null default nextval('lm_seq'),
+  group_id   uuid not null references lm_groups on delete cascade,
+  item_id    text not null,
+  user_id    uuid references auth.users on delete set null,   -- who changed it last
+  iv         text,
+  ct         text,                                            -- encrypted with the group key
+  deleted    boolean not null default false,
+  updated_at timestamptz not null default now(),
+  primary key (group_id, item_id)
+);
+create index if not exists lm_group_items_seq on lm_group_items (group_id, seq);
+
+create table if not exists lm_invites (
+  id         uuid primary key default gen_random_uuid(),
+  kind       text not null check (kind in ('family','group')),
+  target     uuid not null,                 -- family id or group id
+  from_user  uuid not null references auth.users on delete cascade,
+  to_phone   text not null,                 -- digits, e.g. 919876543210
+  sealed     text,                          -- the key, locked for the invitee's phone
+  sealed_for text,                          -- which public key it was locked for
+  created_at timestamptz not null default now(),
+  unique (kind, target, to_phone)
+);
+alter table lm_groups enable row level security;
+alter table lm_group_members enable row level security;
+alter table lm_group_items enable row level security;
+alter table lm_invites enable row level security;
+
+create or replace function lm_my_phone() returns text
+language sql security definer set search_path = public, auth stable as $$
+  select regexp_replace(coalesce(phone, ''), '\D', '', 'g') from auth.users where id = auth.uid();
+$$;
+
+create or replace function lm_set_pubkey(p_key text) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null then raise exception 'not logged in'; end if;
+  if length(coalesce(p_key, '')) not between 40 and 400 then raise exception 'bad key'; end if;
+  insert into lm_users (user_id, pubkey, pubkey_at) values (auth.uid(), p_key, now())
+  on conflict (user_id) do update set pubkey = excluded.pubkey, pubkey_at = now() where lm_users.pubkey is distinct from excluded.pubkey;
+end $$;
+
+create or replace function lm_is_member(p_kind text, p_target uuid, p_user uuid) returns boolean
+language sql security definer set search_path = public stable as $$
+  select case when p_kind = 'family' then exists (select 1 from lm_family_members where family_id = p_target and user_id = p_user)
+              else exists (select 1 from lm_group_members where group_id = p_target and user_id = p_user) end;
+$$;
+
+-- invite by mobile number. Returns the invitee's public key (if they have the app) so the phone can lock the key for them.
+create or replace function lm_invite(p_kind text, p_target uuid, p_phone text) returns jsonb
+language plpgsql security definer set search_path = public, auth as $$
+declare ph text := regexp_replace(coalesce(p_phone, ''), '\D', '', 'g'); uid uuid; iid uuid; pk text;
+begin
+  if auth.uid() is null then raise exception 'not logged in'; end if;
+  if length(ph) = 10 then ph := '91' || ph; end if;
+  if ph !~ '^91[6-9][0-9]{9}$' then raise exception 'Enter a 10-digit mobile number'; end if;
+  if not lm_is_member(p_kind, p_target, auth.uid()) then raise exception 'You are not in this %', p_kind; end if;
+  select id into uid from auth.users where regexp_replace(coalesce(phone, ''), '\D', '', 'g') = ph limit 1;
+  if uid = auth.uid() then raise exception 'That is your own number'; end if;
+  if uid is not null and lm_is_member(p_kind, p_target, uid) then return jsonb_build_object('status', 'already'); end if;
+  if (select count(*) from lm_invites where from_user = auth.uid() and created_at > now() - interval '1 day') > 50 then raise exception 'Too many invites today'; end if;
+  insert into lm_invites (kind, target, from_user, to_phone) values (p_kind, p_target, auth.uid(), ph)
+  on conflict (kind, target, to_phone) do update set from_user = excluded.from_user
+  returning id into iid;
+  select pubkey into pk from lm_users where user_id = uid;
+  return jsonb_build_object('status', case when uid is null then 'waiting' else 'invited' end, 'id', iid, 'pubkey', pk);
+end $$;
+
+create or replace function lm_invite_seal(p_id uuid, p_sealed text, p_for text) returns void
+language sql security definer set search_path = public as $$
+  update lm_invites set sealed = left(p_sealed, 4000), sealed_for = left(p_for, 100)
+   where id = p_id and lm_is_member(kind, target, auth.uid());
+$$;
+
+-- invites I (or my family/group) sent that are still open, with the invitee's current public key
+create or replace function lm_invites_sent() returns jsonb
+language sql security definer set search_path = public, auth stable as $$
+  select coalesce(jsonb_agg(jsonb_build_object('id', i.id, 'kind', i.kind, 'target', i.target, 'phone', i.to_phone, 'from_user', i.from_user, 'sealed_for', i.sealed_for,
+           'pubkey', (select lu.pubkey from auth.users au join lm_users lu on lu.user_id = au.id
+                       where regexp_replace(coalesce(au.phone, ''), '\D', '', 'g') = i.to_phone limit 1)) order by i.created_at), '[]'::jsonb)
+  from lm_invites i where lm_is_member(i.kind, i.target, auth.uid());
+$$;
+
+-- invites waiting for me, locked for my current public key
+create or replace function lm_invites_inbox() returns jsonb
+language sql security definer set search_path = public stable as $$
+  select coalesce(jsonb_agg(jsonb_build_object('id', i.id, 'kind', i.kind, 'target', i.target, 'sealed', i.sealed, 'sealed_for', i.sealed_for, 'created_at', i.created_at)), '[]'::jsonb)
+  from lm_invites i where i.to_phone = lm_my_phone() and i.sealed is not null;
+$$;
+
+create or replace function lm_invite_respond(p_id uuid, p_accept boolean) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare i lm_invites%rowtype; n int;
+begin
+  select * into i from lm_invites where id = p_id and to_phone = lm_my_phone();
+  if not found then raise exception 'This invite is no longer available'; end if;
+  if p_accept then
+    insert into lm_users (user_id) values (auth.uid()) on conflict do nothing;
+    if i.kind = 'family' then
+      if exists (select 1 from lm_family_members where user_id = auth.uid() and family_id <> i.target) then
+        raise exception 'You are already in a family. Leave it first.';
+      end if;
+      if not exists (select 1 from lm_families where id = i.target) then raise exception 'That family no longer exists'; end if;
+      insert into lm_family_members (family_id, user_id) values (i.target, auth.uid()) on conflict do nothing;
+      select count(*) into n from lm_family_members where family_id = i.target;
+    else
+      if not exists (select 1 from lm_groups where id = i.target) then raise exception 'That group no longer exists'; end if;
+      insert into lm_group_members (group_id, user_id) values (i.target, auth.uid()) on conflict do nothing;
+      select count(*) into n from lm_group_members where group_id = i.target;
+    end if;
+  end if;
+  delete from lm_invites where id = p_id;
+  return jsonb_build_object('kind', i.kind, 'target', i.target, 'members', n);
+end $$;
+
+create or replace function lm_invite_cancel(p_id uuid) returns void
+language sql security definer set search_path = public as $$
+  delete from lm_invites where id = p_id and lm_is_member(kind, target, auth.uid());
+$$;
+
+-- ---------- groups / trips ----------
+create or replace function lm_group_create() returns uuid
+language plpgsql security definer set search_path = public as $$
+declare gid uuid;
+begin
+  if auth.uid() is null then raise exception 'not logged in'; end if;
+  if (select count(*) from lm_groups where created_by = auth.uid() and created_at > now() - interval '1 day') > 30 then raise exception 'Too many groups today'; end if;
+  insert into lm_users (user_id) values (auth.uid()) on conflict do nothing;
+  insert into lm_groups (created_by) values (auth.uid()) returning id into gid;
+  insert into lm_group_members (group_id, user_id) values (gid, auth.uid());
+  return gid;
+end $$;
+
+create or replace function lm_group_leave(p_group uuid) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  delete from lm_group_members where group_id = p_group and user_id = auth.uid();
+  if not exists (select 1 from lm_group_members where group_id = p_group) then delete from lm_groups where id = p_group; end if;
+end $$;
+
+create or replace function lm_group_delete(p_group uuid) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if not exists (select 1 from lm_groups where id = p_group and created_by = auth.uid()) then raise exception 'Only the person who made the group can delete it'; end if;
+  delete from lm_invites where kind = 'group' and target = p_group;
+  delete from lm_groups where id = p_group;
+end $$;
+
+-- my groups: who is in them and who is invited (no group content: that is encrypted)
+create or replace function lm_groups_mine() returns jsonb
+language sql security definer set search_path = public stable as $$
+  select coalesce(jsonb_agg(jsonb_build_object('id', g.id, 'created_by', g.created_by,
+           'members', (select jsonb_agg(m.user_id) from lm_group_members m where m.group_id = g.id),
+           'pending', (select coalesce(jsonb_agg(jsonb_build_object('id', i.id, 'phone', i.to_phone)), '[]'::jsonb) from lm_invites i where i.kind = 'group' and i.target = g.id))), '[]'::jsonb)
+  from lm_groups g where exists (select 1 from lm_group_members m where m.group_id = g.id and m.user_id = auth.uid());
+$$;
+
+create or replace function lm_family_pending() returns jsonb
+language sql security definer set search_path = public stable as $$
+  select coalesce(jsonb_agg(jsonb_build_object('id', i.id, 'phone', i.to_phone)), '[]'::jsonb)
+  from lm_invites i where i.kind = 'family' and i.target = (select family_id from lm_family_members where user_id = auth.uid());
+$$;
+
+create or replace function lm_group_push(p_group uuid, p_items jsonb) returns bigint
+language plpgsql security definer set search_path = public as $$
+declare it jsonb;
+begin
+  if not exists (select 1 from lm_group_members where group_id = p_group and user_id = auth.uid()) then raise exception 'not in this group'; end if;
+  if jsonb_array_length(p_items) > 200 then raise exception 'too many at once'; end if;
+  for it in select * from jsonb_array_elements(p_items) loop
+    insert into lm_group_items as x (group_id, item_id, user_id, iv, ct, deleted, seq, updated_at)
+    values (p_group, left(it->>'item_id', 100), auth.uid(),
+            case when coalesce((it->>'deleted')::boolean, false) then null else it->>'iv' end,
+            case when coalesce((it->>'deleted')::boolean, false) then null else left(it->>'ct', 400000) end,
+            coalesce((it->>'deleted')::boolean, false), nextval('lm_seq'), now())
+    on conflict (group_id, item_id) do update set user_id = auth.uid(), iv = excluded.iv, ct = excluded.ct,
+      deleted = excluded.deleted, seq = nextval('lm_seq'), updated_at = now();
+  end loop;
+  return currval('lm_seq');
+end $$;
+
+create or replace function lm_group_pull(p_group uuid, p_since bigint) returns jsonb
+language sql security definer set search_path = public stable as $$
+  select coalesce(jsonb_agg(jsonb_build_object('seq', x.seq, 'item_id', x.item_id, 'user', x.user_id, 'iv', x.iv, 'ct', x.ct, 'deleted', x.deleted) order by x.seq), '[]'::jsonb)
+  from (select * from lm_group_items x
+         where x.group_id = p_group and x.seq > coalesce(p_since, 0)
+           and exists (select 1 from lm_group_members m where m.group_id = p_group and m.user_id = auth.uid())
+         order by x.seq limit 500) x;
+$$;
+
+revoke all on function lm_my_phone(), lm_set_pubkey(text), lm_is_member(text, uuid, uuid), lm_invite(text, uuid, text), lm_invite_seal(uuid, text, text),
+  lm_invites_sent(), lm_invites_inbox(), lm_invite_respond(uuid, boolean), lm_invite_cancel(uuid), lm_group_create(), lm_group_leave(uuid),
+  lm_group_delete(uuid), lm_groups_mine(), lm_family_pending(), lm_group_push(uuid, jsonb), lm_group_pull(uuid, bigint) from public, anon;
+grant execute on function lm_my_phone(), lm_set_pubkey(text), lm_invite(text, uuid, text), lm_invite_seal(uuid, text, text),
+  lm_invites_sent(), lm_invites_inbox(), lm_invite_respond(uuid, boolean), lm_invite_cancel(uuid), lm_group_create(), lm_group_leave(uuid),
+  lm_group_delete(uuid), lm_groups_mine(), lm_family_pending(), lm_group_push(uuid, jsonb), lm_group_pull(uuid, bigint) to authenticated;

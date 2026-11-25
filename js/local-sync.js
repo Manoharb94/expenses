@@ -12,7 +12,7 @@ var GWL=window.GWL;if(!GWL||!GWL.on)return;
 var SESS=null;try{SESS=JSON.parse(localStorage.getItem("gwsess")||"null")}catch(e){}
 function sessSave(o){SESS={access:o.access_token,refresh:o.refresh_token,exp:o.expires_at||(Math.floor(Date.now()/1000)+(o.expires_in||3600)),phone:(o.user&&o.user.phone)||(SESS&&SESS.phone)||"",uid:(o.user&&o.user.id)||(SESS&&SESS.uid)||""};try{localStorage.setItem("gwsess",JSON.stringify(SESS))}catch(e){}}
 function sessDrop(){SESS=null;try{localStorage.removeItem("gwsess")}catch(e){}}
-GWL.loggedIn=function(){return !!SESS};GWL.phone=function(){return SESS&&SESS.phone||""};GWL.logout=sessDrop;
+GWL.loggedIn=function(){return !!SESS};GWL.uid=function(){return SESS&&SESS.uid||""};GWL.phone=function(){return SESS&&SESS.phone||""};GWL.logout=sessDrop;
 var refreshing=null;
 async function fresh(force){
   if(!SESS)throw new Error("LOGIN");
@@ -59,7 +59,7 @@ function bytesUuid(b){var h=Array.from(b,function(x){return (x<16?"0":"")+x.toSt
 var keyCache={};
 async function aesKey(b64){if(keyCache[b64])return keyCache[b64];return keyCache[b64]=await crypto.subtle.importKey("raw",b64d(b64),"AES-GCM",false,["encrypt","decrypt"])}
 async function hmac(keyBytes,msgBytes){var k=await crypto.subtle.importKey("raw",keyBytes,{name:"HMAC",hash:"SHA-256"},false,["sign"]);return new Uint8Array(await crypto.subtle.sign("HMAC",k,msgBytes))}
-GWL.crypto={b64e:b64e,b64d:b64d,hmac:hmac};
+GWL.crypto={b64e:b64e,b64d:b64d,hmac:hmac,sha256hex:sha256hex};
 
 /* ---------- usage numbers for the owner (no amounts, no payees) ---------- */
 async function ping(open){
@@ -258,7 +258,7 @@ var MAIL_TPL=[
 "}"].join("\n");
 
 /* ---------- when it runs ---------- */
-GWL.online=function(){if(!SESS)return;ping(true);GWL.famInfo().then(sync);mailPull()};
+GWL.online=function(){if(!SESS)return;ping(true);GWL.famInfo().then(sync);mailPull();if(GWL.groupsSync)GWL.groupsSync(true)};
 document.addEventListener("visibilitychange",function(){if(!document.hidden&&!GWL.testing&&SESS&&GWL.db()&&GWL.db().profile&&S.code){sync();mailPull()}});
 setInterval(function(){if(document.hidden||GWL.testing||!SESS||!S.code)return;sync();mailPull();if(Date.now()-(GWL.lastPing||0)>6*3600000)ping(false)},60000);
 window.addEventListener("online",function(){if(SESS&&S.code&&!GWL.testing){sync();mailPull()}});

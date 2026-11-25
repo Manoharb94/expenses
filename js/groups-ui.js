@@ -98,9 +98,9 @@ function gInviteSheet(id,fresh){var g=gGet(id);if(!g)return;
   sh.querySelector("#gad").onclick=async function(){var em=gv(sh,"gem").trim();if(!em)return;if(idKind(em)!=="mobile"){toast("Enter a 10-digit mobile number");return}em=phE164(em);var r=await gCall("group_invite",{p_group:id,p_email:em});if(!r.ok)return;var o=r.r||{},res=sh.querySelector("#gres");
     if(o.status==="already"){res.innerHTML='<div class="note" style="margin-top:8px">They are already in this group.</div>';return}
     if(o.status==="invited"){res.innerHTML='<div class="note" style="margin-top:8px;color:var(--in)">Invite sent. They will see it in the bell in their app and can accept or reject.</div>';sh.querySelector("#gem").value="";return}
-    res.innerHTML='<div class="note" style="margin-top:8px">No Gharwise account found for '+esc(phShow(em))+'. Send them the link instead. When they sign up, they join the group.</div><div class="row" style="gap:8px;justify-content:flex-start;margin-top:8px"><button class="btn s" id="gwa">💬 Invite via WhatsApp</button><button class="btn ghost s" id="gcl">🔗 Copy link</button></div>';
+    var LOC=window.GWL&&GWL.on;res.innerHTML='<div class="note" style="margin-top:8px">'+(LOC?'Invite saved. '+esc(phShow(em))+' doesn’t have the Gharwise app yet. Send them the link: when they install it and log in with this number, the invite is waiting for them to accept.':'No Gharwise account found for '+esc(phShow(em))+'. Send them the link instead. When they sign up, they join the group.')+'</div><div class="row" style="gap:8px;justify-content:flex-start;margin-top:8px"><button class="btn s" id="gwa">💬 Invite via WhatsApp</button><button class="btn ghost s" id="gcl">🔗 Copy link</button></div>';
     var msg=gInviteMsg(g,o.token);sh.querySelector("#gwa").onclick=function(){window.open("https://wa.me/?text="+encodeURIComponent(msg),"_blank")};
-    sh.querySelector("#gcl").onclick=async function(){toast(await copyText(APP_URL+"?g="+o.token)?"Link copied":"Press and hold to copy: "+APP_URL+"?g="+o.token)}};
+    sh.querySelector("#gcl").onclick=async function(){var lk=LOC?msg:APP_URL+"?g="+o.token;toast(await copyText(lk)?"Link copied":"Press and hold to copy: "+lk)}};
   sh.querySelectorAll("[data-gw]").forEach(function(b){b.onclick=function(){window.open("https://wa.me/?text="+encodeURIComponent(gInviteMsg(g,b.dataset.gw)),"_blank")}});
   sh.querySelectorAll("[data-gc]").forEach(function(b){b.onclick=async function(){await gCall("group_cancel_invite",{p_id:b.dataset.gc});gInviteSheet(id)}})}
 
@@ -115,7 +115,7 @@ async function gRate(cur,date){cur=String(cur||"").toUpperCase();if(!cur||cur===
   try{var j2=await to("https://open.er-api.com/v6/latest/"+encodeURIComponent(cur));if(j2&&j2.rates&&j2.rates.INR){return _rc[k]={rate:Math.round(j2.rates.INR*10000)/10000,note:"Latest rate"+(date&&date<today?" (not the exact day)":"")+". You can edit it."}}}catch(e){}
   return null}
 function gExpSheet(o){var g=o.g,e=o.e,t=o.t,me=myId();if(!g)return;
-  var canEdit=!e||(e.created_by===me||e.paid_by===me||(g.owner||g.created_by)===me);
+  var canEdit=!e||(e.created_by===me||e.paid_by===me||(g.owner||g.created_by)===me)||(window.GWL&&GWL.on&&g.members.some(function(m){return m.user_id===me}));
   var st={payer:e?e.paid_by:me,mode:e?e.split_mode:"equal",amt:e?Number(e.amount):(t?Number(t.amount):0),title:e?e.title:(t&&t.merchant)||"",date:e?String(e.txn_date).slice(0,10):(t&&t.txn_date)||iso(new Date()),cat:e?(e.cat||""):"",note:e?(e.note||""):((t&&t.note)||""),photo:e?e.photo:(o.photo||null),
     sel:{},val:{},fx:!!(e&&e.orig_cur),cur:e&&e.orig_cur||"",orig:e&&e.orig_amount||"",rate:e&&e.rate||""};
   function fillScan(sc){if(!sc)return;if(sc.amount)st.amt=sc.amount;if(sc.date)st.date=sc.date;if(sc.category&&!st.cat)st.cat=sc.category}

@@ -7,7 +7,7 @@ if(!ON)return;
 
 var TABLES=["transactions","budgets","fixed_items","goals","goal_entries","household_categories","merchants","statement_imports","cards","txn_bills","family_txns"];
 var FILES={data:"gharwise-data.json",bills:"gharwise-bills.json",family:"gharwise-family.json"};
-var HH="local";
+var HH="local",PLAY_APP="https://play.google.com/store/apps/details?id=in.nestwise.app";
 var DB=null;
 function blank(){var d={v:1,app:"gharwise-local",profile:null,family:null,saved_at:null,t:{}};TABLES.forEach(function(t){d.t[t]=[]});return d}
 function T(n){if(!DB.t[n])DB.t[n]=[];return DB.t[n]}
@@ -16,6 +16,9 @@ function now(){return new Date().toISOString()}
 function day(ms){var d=ms?new Date(ms):new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
 function clone(x){return x==null?x:JSON.parse(JSON.stringify(x))}
 function me(){return DB&&DB.profile?DB.profile.name:""}
+/* my id: the real login id once logged in (groups need it), "local" before that */
+function myUid(){var u=GWL.uid&&GWL.uid();if(u){if(DB&&DB.profile&&DB.profile.uid!==u&&!GWL.testing){DB.profile.uid=u;mark("data",true)}return u}return DB&&DB.profile&&DB.profile.uid||"local"}
+GWL.myId=myUid;
 
 /* ---------- storage on the phone: IndexedDB (fast) + a copy in the person's folder ---------- */
 var IDB=null;
@@ -43,7 +46,7 @@ async function fdelete(name){var P=LF();if(!P){try{localStorage.removeItem("gwfi
 var dirty={data:false,bills:false,family:false},stimer=null,saving=null;
 function mark(kind,quiet){dirty[kind||"data"]=true;dirty.data=true;if(GWL.testing)return;clearTimeout(stimer);stimer=setTimeout(flush,1200);if(!quiet&&kind!=="family"&&GWL.syncSoon)GWL.syncSoon()}
 GWL.mark=mark;
-function mainCopy(){var c={v:1,app:"gharwise-local",saved_at:now(),profile:DB.profile,family:DB.family||null,mail:DB.mail||null,t:{}};
+function mainCopy(){var c={v:1,app:"gharwise-local",saved_at:now(),profile:DB.profile,family:DB.family||null,mail:DB.mail||null,keys:DB.keys||null,t:{}};
   TABLES.forEach(function(t){if(t!=="txn_bills"&&t!=="family_txns")c.t[t]=DB.t[t]});return c}
 async function flush(){
   if(GWL.testing)return;
@@ -57,7 +60,7 @@ async function flush(){
     try{
       if(d.data)await fwrite(FILES.data,JSON.stringify(mainCopy()));
       if(d.bills)await fwrite(FILES.bills,JSON.stringify({v:1,saved_at:now(),bills:T("txn_bills")}));
-      if(d.family)await fwrite(FILES.family,JSON.stringify({v:1,saved_at:now(),family_txns:T("family_txns")}));
+      if(d.family)await fwrite(FILES.family,JSON.stringify({v:1,saved_at:now(),family_txns:T("family_txns"),groups:DB.groups||[],gevents:DB.gevents||[]}));
       GWL.lastBackup=Date.now();
     }catch(e){dirty.data=dirty.data||d.data;dirty.bills=dirty.bills||d.bills;dirty.family=dirty.family||d.family}
   })();
@@ -116,9 +119,9 @@ function rest(path,opt){
     if(gone.length)mark(TOUCH[tb]);return /return=representation/.test(pref)?clone(gone):null}
   throw new Error("405")}
 function familyPeople(){var s={};T("family_txns").forEach(function(r){if(r.person)s[r.person]=r.received_at||s[r.person]||""});return s}
-function membersList(){var out=[{user_id:"local",display_name:me(),role:"owner",created_at:DB.profile&&DB.profile.created||now()}],fp=familyPeople();
+function membersList(){var out=[{user_id:myUid(),display_name:me(),role:"owner",created_at:DB.profile&&DB.profile.created||now()}],fp=familyPeople();
   Object.keys(fp).forEach(function(n){if(n!==me())out.push({user_id:"fam:"+n,display_name:n,role:"member",created_at:fp[n]||now()})});return out}
-function profile(){if(!DB.profile)return null;return {user_id:"local",household_id:HH,display_name:DB.profile.name,role:"owner",can_edit:true,email:"",invite_code:"",phone:""}}
+function profile(){if(!DB.profile)return null;return {user_id:myUid(),household_id:HH,display_name:DB.profile.name,role:"owner",can_edit:true,email:"",invite_code:"",phone:""}}
 function appTxns(limit){var own=T("transactions").filter(function(t){return !t.hidden}),fam=T("family_txns").map(function(r){var o=Object.assign({},r);o.source="family";return o});
   return clone(sortRows(own.concat(fam),"txn_date.desc,created_at.desc").slice(0,limit||5000))}
 
@@ -139,8 +142,9 @@ function importStatement(a){
 function undoStatement(b){DB.t.transactions=T("transactions").filter(function(t){return t.batch_id!==b});T("transactions").forEach(function(t){if(t.hidden_by===b){t.hidden=false;delete t.hidden_by}});DB.t.statement_imports=T("statement_imports").filter(function(i){return i.id!==b});mark();return true}
 
 var NOOP=["touch","set_my_banks","set_mail_months","set_card","set_my_photo","regenerate_ingest_key","clear_join_request","set_member_edit"];
-var EMPTY=["my_invites","my_groups","family_join_requests","bank_list"];
+var EMPTY=["family_join_requests","bank_list"];
 function rpc(fn,a){
+  if(GWL.grpcHas&&GWL.grpcHas(fn))return GWL.grpc(fn,a);
   if(fn==="my_profile")return profile();
   if(fn==="app_txns")return appTxns(a.p_limit);
   if(fn==="my_script_config")return {key:"local",name:me(),last_run:null,banks:[],months:1};
@@ -154,7 +158,7 @@ function rpc(fn,a){
   if(EMPTY.indexOf(fn)>=0)return [];
   throw new Error("404 This needs the internet version of Gharwise ("+fn+")")}
 GWL.api=async function(path,opt){opt=opt||{};
-  if(path.indexOf("rpc/")===0){var a={};try{a=JSON.parse(opt.body||"{}")}catch(e){}return clone(rpc(path.slice(4),a))}
+  if(path.indexOf("rpc/")===0){var a={};try{a=JSON.parse(opt.body||"{}")}catch(e){}var out=await rpc(path.slice(4),a);return clone(out)}
   return rest(path,opt)};
 
 /* ---------- bank SMS and voice entries, read on the phone ---------- */
@@ -228,6 +232,7 @@ GWL.exportData=async function(fmt,r,how,pre){
 /* ---------- erase ---------- */
 async function eraseAll(serverToo){try{var P=smsP();if(P)await P.disable()}catch(e){}
   if(GWL.loggedIn&&GWL.loggedIn()){try{if(DB.family)await GWL.srv("lm_family_leave",{})}catch(e){}try{if(DB.mail)await GWL.srv("lm_mail_off",{})}catch(e){}
+    for(var gi=0;gi<(DB.groups||[]).length;gi++){try{await GWL.srv("lm_group_leave",{p_group:DB.groups[gi].id})}catch(e){}}
     if(serverToo)try{await GWL.srv("delete_my_account",{})}catch(e){}GWL.logout()}
   await idbClear();var keep={theme:1,accent:1,lang:1};try{Object.keys(localStorage).forEach(function(k){if(!keep[k])localStorage.removeItem(k)})}catch(e){}
   DB=blank()}
@@ -235,9 +240,9 @@ GWL.eraseAll=eraseAll;GWL.deleteFolderFiles=async function(){for(var k in FILES)
 
 /* ---------- restore from the folder ---------- */
 async function peekFolder(){try{var t=await fread(FILES.data);if(!t)return null;var o=JSON.parse(t);if(!o||o.app!=="gharwise-local"||!o.t)return null;return o}catch(e){return null}}
-async function restoreFrom(o){var d=blank();d.profile=o.profile;d.family=o.family&&o.family.key?o.family:null;d.mail=o.mail||null;TABLES.forEach(function(t){if(o.t[t])d.t[t]=o.t[t]});
+async function restoreFrom(o){var d=blank();d.profile=o.profile;d.family=o.family&&o.family.key?o.family:null;d.mail=o.mail||null;d.keys=o.keys||null;TABLES.forEach(function(t){if(o.t[t])d.t[t]=o.t[t]});
   try{var b=JSON.parse(await fread(FILES.bills)||"null");if(b&&b.bills)d.t.txn_bills=b.bills}catch(e){}
-  try{var f=JSON.parse(await fread(FILES.family)||"null");if(f&&f.family_txns)d.t.family_txns=f.family_txns}catch(e){}
+  try{var f=JSON.parse(await fread(FILES.family)||"null");if(f&&f.family_txns)d.t.family_txns=f.family_txns;if(f&&f.groups)d.groups=f.groups;if(f&&f.gevents)d.gevents=f.gevents}catch(e){}
   DB=d;await idbPut("db",DB)}
 
 /* ---------- first-run setup: welcome → mobile → SMS code → name → folder ---------- */
@@ -258,7 +263,7 @@ function setupView(){
     else h+=(GWL.folder.ok?'<div class="note" style="margin:0 0 10px">✓ Folder: <b>'+esc(GWL.folder.name)+'</b></div><button class="btn" data-l="done">Start using Gharwise</button><button class="btn ghost" data-l="pick" style="margin-top:8px">Choose a different folder</button>':'<button class="btn" data-l="pick">'+(SU.busy?'Waiting…':'Choose folder')+'</button>');
     h+=err}
   return h+'</div>'}
-async function finishSetup(){if(!DB.profile)DB.profile={name:SU.name,created:now()};DB.profile.phone=GWL.phone&&GWL.phone();dirty.data=dirty.bills=dirty.family=true;await flush();S.view="";startApp()}
+async function finishSetup(){if(!DB.profile)DB.profile={name:SU.name,created:now()};DB.profile.phone=GWL.phone&&GWL.phone();DB.profile.uid=GWL.uid&&GWL.uid()||DB.profile.uid||null;dirty.data=dirty.bills=dirty.family=true;await flush();S.view="";startApp()}
 function afterLogin(){if(S.view==="llogin"){S.view="";SU.step=1;var b=document.getElementById("lgbar");if(b)b.remove();render();if(GWL.online)GWL.online();toast("Logged in. Sync is back on.");return}
   SU.step=4;render()}
 document.addEventListener("click",async function(e){var b=e.target&&e.target.closest&&e.target.closest("[data-l]");if(!b)return;var a=b.getAttribute("data-l");SU.err="";
@@ -302,9 +307,12 @@ GWL.hook=function(){
   boot=function(){return GWL.start()};
   /* Quick Add: put the cursor in the Amount box straight away */
   var _add=addSheet;addSheet=function(){var r=_add.apply(this,arguments);setTimeout(function(){var x=document.getElementById("xa");if(x&&!x.value&&document.activeElement!==x){try{x.focus()}catch(e){}}},250);return r};
+  /* new group: cursor in the name box, so people (and the test robot) can type straight away */
+  try{var _ge=gEditSheet;gEditSheet=function(id){var r=_ge.apply(this,arguments);if(!id)setTimeout(function(){var x=document.getElementById("gnm");if(x){try{x.focus();x.select()}catch(e){}}},250);return r}}catch(e){}
+  try{var _gi=gInviteSheet;gInviteSheet=function(){var r=_gi.apply(this,arguments);setTimeout(function(){var x=document.getElementById("gem");if(x){try{x.focus()}catch(e){}}},250);return r}}catch(e){}
   phoneNudge=function(){};joinCheck=function(){};touch=function(){};
   logoutLocal=function(){if(GWL.logout)GWL.logout();if(GWL.loginBar)GWL.loginBar()};
-  try{loadGroups=function(){};gOKUI=function(){return false}}catch(e){}
+  try{gInviteMsg=function(g){return (S.name||"I")+" invited you to the group “"+g.name+"” on Gharwise, to split expenses.\n\nInstall Gharwise and log in with this mobile number. The invite is waiting for you to accept:\n"+PLAY_APP}}catch(e){}
   var _can=canEditT;canEditT=function(t){return t&&t.source==="family"?false:_can(t)};
   vMenu=localMenu;vFam=localFam;vMail=localMail;
   var _vt=vTrack;vTrack=function(){var h=_vt(),m=DB.mail&&DB.mail.on;
@@ -351,12 +359,20 @@ document.addEventListener("click",async function(e){var t=e.target&&e.target.clo
   var ex=t.closest("[data-ex]");if(ex){var kv=ex.getAttribute("data-ex").split(":");EX[kv[0]]=kv[1];exportSheet();return}
   var eg=t.closest("[data-exgo]");if(eg){var w=eg.getAttribute("data-exgo"),sh=document.getElementById("sheet");if(w==="close"){sh.innerHTML="";return}
     eg.disabled=true;eg.textContent="Preparing…";try{await GWL.exportData(EX.f,EX.r,w);sh.innerHTML=""}catch(x){eg.disabled=false;eg.textContent=w==="share"?"Share…":"Save in my folder";showErr("Could not export: "+(x&&x.message||x))}return}
+  var fx=t.closest("[data-fcx],[data-fia],[data-fir]");if(fx){fx.disabled=true;try{
+    if(fx.dataset.fcx){await GWL.srv("lm_invite_cancel",{p_id:fx.dataset.fcx});DB.family.invites=(DB.family.invites||[]).filter(function(x){return x.id!==fx.dataset.fcx});mark("data",true);toast("Invite cancelled")}
+    else if(fx.dataset.fia){await GWL.inviteRespond(fx.dataset.fia,true);await load(true);toast("You joined the family")}
+    else{await GWL.inviteRespond(fx.dataset.fir,false);toast("Invite rejected")}
+    render()}catch(x){fx.disabled=false;showErr(x&&x.message||String(x))}return}
   var fb=t.closest("[data-fam]");if(fb){var f=fb.getAttribute("data-fam");
     try{
       if(!GWL.loggedIn()&&f!=="copy"){S.view="llogin";SU.step=2;render();return}
       var oldFam=async function(fn){try{return await fn()}catch(x){if(/already in a family/i.test(x&&x.message||"")&&confirm("This number is still in a family from before (for example, from an old install). Leave that family and continue?\n\nIf you want to rejoin it instead, paste its family code under “Someone already created one?”.")){await GWL.srv("lm_family_leave",{});return await fn()}throw x}};
-      if(f==="create"){fb.disabled=true;await oldFam(function(){return GWL.famCreate()});render();toast("Family created. Share the code with your family.")}
+      if(f==="create"){fb.disabled=true;await oldFam(function(){return GWL.famCreate()});render();toast("Family created. Now invite them by mobile number.")}
       else if(f==="join"){fb.disabled=true;var code=(document.getElementById("famcode")||{}).value;var n=await oldFam(function(){return GWL.famJoin(code)});render();toast("Joined. "+n+" people in your family.")}
+      else if(f==="invite"){var v=phDigits((document.getElementById("finv")||{}).value||"");if(!isMob(v)){showErr("Type a 10-digit mobile number");return}fb.disabled=true;var r=await GWL.invite("family",DB.family.id,v);fb.disabled=false;
+        if(r.status==="already")toast("They are already in your family");else{if(r.status==="waiting"){var P2=LF(),m2=me()+" invited you to our family on Gharwise.\n\nInstall Gharwise and log in with this mobile number ("+v+"). The invite is waiting for you to accept:\n"+PLAY_APP;if(confirm("Invite saved. "+v+" doesn’t have the Gharwise app yet. Send them the download link?")){if(P2)await P2.shareFile({name:"gharwise-invite.txt",text:m2,mime:"text/plain",title:"Gharwise invite"});else await copyText(m2)}}else toast("Invite sent. They can accept it in their app.");
+          try{DB.family.invites=await GWL.srv("lm_family_pending",{});mark("data",true)}catch(x){}render()}}
       else if(f==="copy"){if(await copyText(GWL.famCode()))toast("Code copied")}
       else if(f==="sharecode"){var P=LF(),msg="Join my Gharwise family. In the Gharwise app: Menu → Family sharing → Join, and paste this code:\n\n"+GWL.famCode();if(P)await P.shareFile({name:"gharwise-family-code.txt",text:msg,mime:"text/plain",title:"Gharwise family code"});else if(await copyText(GWL.famCode()))toast("Code copied")}
       else if(f==="sync"){fb.disabled=true;await GWL.sync();fb.disabled=false;render();toast("Up to date")}
@@ -365,12 +381,16 @@ document.addEventListener("click",async function(e){var t=e.target&&e.target.clo
 function localFam(){
   var h=topbar("Family sharing","menu"),li=GWL.loggedIn&&GWL.loggedIn();
   if(!li)h+='<div class="note out" style="margin:10px 0">You are logged out, so family sync is paused. <a href="#" data-lm="login" style="color:var(--acc)">Log in</a></div>';
+  var finv=(GWL.inbox?GWL.inbox():[]).filter(function(i){return i.kind==="family"});
+  finv.forEach(function(i){h+='<div class="card" style="border:1.5px solid var(--acc)"><b>'+esc(i.by)+' asked you to join their family</b><div class="note" style="margin:4px 0 10px">You will see each other’s payments. They stay encrypted between your phones.</div><div class="row" style="gap:8px;justify-content:flex-start;padding:0"><button class="btn s" data-fia="'+esc(i.id)+'">Accept</button><button class="btn ghost s out" data-fir="'+esc(i.id)+'">Reject</button></div></div>'});
   if(!DB.family)return h+'<div class="dc"><div style="text-align:center"><span style="font-size:42px">👨‍👩‍👧</span><h3 style="margin:6px 0 4px">See the family’s spending together</h3><p class="mute" style="margin:0 0 12px">Payments sync automatically. Each phone <b>encrypts</b> them with your family key before sending, so our server only passes on data it can’t read.</p></div><button class="btn" data-fam="create">Create a family</button></div>'+
     '<div class="card"><b>Someone already created one?</b><div class="mute" style="margin:4px 0 8px">Paste the family code they sent you (it starts with GW1-).</div><textarea id="famcode" rows="3" placeholder="GW1-…" autocapitalize="off" autocomplete="off" style="width:100%;font-family:monospace;font-size:13px"></textarea><button class="btn ghost" data-fam="join" style="margin-top:8px">Join this family</button></div>';
   if(DB.family.members==null&&GWL.famInfo)GWL.famInfo();
   var ppl={};T("family_txns").forEach(function(r){var k=r.member||r.person;if(!ppl[k])ppl[k]={name:r.person,n:0};ppl[k].n++});
-  h+='<div class="dc"><div class="row" style="padding:0"><b>✓ Family sync is on</b><span class="mute">'+(DB.family.members||Object.keys(ppl).length+1)+' people</span></div><div class="note" style="margin:6px 0 0">'+(GWL.lastSync?'Synced '+ago(new Date(GWL.lastSync).toISOString()):'Syncs automatically when you are online')+'. Payments are encrypted on each phone.</div><button class="btn ghost s" data-fam="sync" style="margin-top:10px">Sync now</button></div>';
-  h+='<div class="card"><b>Add someone</b><div class="mute" style="margin:4px 0 10px">Send them this code. It holds your family key, so share it <b>only with family</b>.</div><div style="font-family:monospace;font-size:12px;word-break:break-all;background:var(--chip);border-radius:10px;padding:10px">'+esc(GWL.famCode())+'</div><div class="row" style="gap:8px;padding:0;margin-top:10px"><button class="btn ghost s" data-fam="copy">Copy</button><button class="btn s" data-fam="sharecode">Share code</button></div></div>';
+  h+='<div class="dc"><div class="row" style="padding:0"><b>✓ Family sync is on</b><span class="mute">'+(function(n){return n+(n===1?' person':' people')})(DB.family.members||Object.keys(ppl).length+1)+'</span></div><div class="note" style="margin:6px 0 0">'+(GWL.lastSync?'Synced '+ago(new Date(GWL.lastSync).toISOString()):'Syncs automatically when you are online')+'. Payments are encrypted on each phone.</div><button class="btn ghost s" data-fam="sync" style="margin-top:10px">Sync now</button></div>';
+  var pend=DB.family.invites||[];
+  h+='<div class="card"><b>Invite by mobile number</b><div class="mute" style="margin:4px 0 10px">They get an invite in their Gharwise app to accept or reject. Only their phone can open it.</div><div class="mobw"><span class="mcc">+91</span><input id="finv" type="tel" inputmode="numeric" maxlength="14" placeholder="Mobile number" autocomplete="off"></div><button class="btn" data-fam="invite">Send invite</button>'+(pend.length?'<div class="mute" style="margin:12px 0 4px">Waiting to accept</div>'+pend.map(function(p){return '<div class="row" style="padding:6px 0"><span>+'+esc(String(p.phone).replace(/^91/,"91 "))+'</span><button class="btn ghost s out" data-fcx="'+esc(p.id)+'">Cancel</button></div>'}).join(''):'')+'</div>';
+  h+='<div class="card"><b>Or share a family code</b><div class="mute" style="margin:4px 0 10px">Send them this code. It holds your family key, so share it <b>only with family</b>.</div><div style="font-family:monospace;font-size:12px;word-break:break-all;background:var(--chip);border-radius:10px;padding:10px">'+esc(GWL.famCode())+'</div><div class="row" style="gap:8px;padding:0;margin-top:10px"><button class="btn ghost s" data-fam="copy">Copy</button><button class="btn s" data-fam="sharecode">Share code</button></div></div>';
   h+='<div class="sec">People</div><div class="card"><div class="row" style="padding:6px 0"><b>'+esc(me())+' (you)</b><span class="mute">'+T("transactions").filter(function(t){return !t.hidden&&t.person===me()}).length+' payments</span></div>'+
     (Object.keys(ppl).length?Object.keys(ppl).map(function(k){return '<div class="row" style="padding:6px 0"><b>'+esc(ppl[k].name)+'</b><span class="mute">'+ppl[k].n+' payments</span></div>'}).join(''):'<div class="note">Nobody else’s payments yet. They appear once family members join and open the app.</div>')+'</div>';
   return h+'<button class="btn ghost" data-fam="leave" style="margin:6px 0 20px">Leave this family</button>'}
@@ -407,5 +427,5 @@ document.addEventListener("click",async function(e){var b=e.target&&e.target.clo
     else if(a==="pull"){b.disabled=true;var n=await GWL.mailPull();MS.st=null;b.disabled=false;render();if(!n)toast("No new bank emails")}
     else if(a==="off"){if(!confirm("Turn off email tracking? Then delete the project in script.google.com too."))return;await GWL.mailOff();MS.st=null;render()}
   }catch(x){b.disabled=false;showErr(x&&x.message||String(x))}});
-GWL.db=function(){return DB};GWL.swapDb=function(d){var o=DB;DB=d;return o};GWL.blankDb=blank;GWL.files={write:fwrite,writeB64:fwriteB64,read:fread,del:fdelete};GWL.prep=prep;GWL.FILES=FILES;GWL.T=T;GWL.flush=flush;
+GWL.newId=uid;GWL.db=function(){return DB};GWL.swapDb=function(d){var o=DB;DB=d;return o};GWL.blankDb=blank;GWL.files={write:fwrite,writeB64:fwriteB64,read:fread,del:fdelete};GWL.prep=prep;GWL.FILES=FILES;GWL.T=T;GWL.flush=flush;
 })();

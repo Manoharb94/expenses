@@ -25,7 +25,7 @@ var SMS=[
 var VOICE=[["spent 100 rs for auto",100,"out","Auto","Transport"],["paid ₹250 for groceries",250,"out","Groceries","Groceries"],["petrol 500",500,"out","Petrol","Fuel"],["received 1000 rupees from manohar",1000,"in","Manohar",null],["got 2k rupees from amma",2000,"in","Amma",null]];
 
 var R=[],running=false,FT={};
-function testNums(){return String(ls("gwtestnums")||"919000000001,919000000002").split(/[\s,]+/).filter(Boolean).map(function(n){n=n.replace(/\D/g,"");return n.length===10?"91"+n:n})}
+function testNums(){return String(ls("gwtestnums")||"919000000001,919000000002,919000000003").split(/[\s,]+/).filter(Boolean).map(function(n){n=n.replace(/\D/g,"");return n.length===10?"91"+n:n})}
 function testOtp(){return ls("gwtestotp")||"123456"}
 function need(){if(!FT.A||!FT.B)skip("test members could not log in")}
 async function asDev(who,fn){var d=FT[who],os=GWL._swapSess(d.sess),od=GWL.swapDb(d.db);try{return await fn()}finally{GWL.swapDb(od);GWL._swapSess(os)}}
@@ -96,17 +96,28 @@ var TESTS=[
 ["Android","Notifications allowed",async function(){var n=P("LocalNotifications");if(!n)skip("not in the app");var p=await n.checkPermissions();must(p.display==="granted","not allowed: Settings → Remind me to categorise")}],
 ["Android","A test notification appears in 5 seconds",async function(){var n=P("LocalNotifications");if(!n)skip("not in the app");var p=await n.checkPermissions();if(p.display!=="granted")skip("notifications not allowed");
   await n.schedule({notifications:[{id:9598,title:"Gharwise self-check",body:"If you see this, notifications work ✓",schedule:{at:new Date(Date.now()+5000)}}]});return "leave the app to see it"}],
+["Android","Categorise reminders are scheduled",async function(){var n=P("LocalNotifications");if(!n)skip("not in the app");if(ls("ndion")==="0")skip("reminders are off in Settings");
+  var p=await n.checkPermissions();if(p.display!=="granted")skip("notifications not allowed");
+  var un=(S.txns||[]).filter(function(t){return !t.category&&t.type==="out"&&canEditT(t)}).length;
+  try{if(typeof ndiSched==="function")await ndiSched()}catch(e){}
+  var pend=((await n.getPending()).notifications||[]).filter(function(x){var i=Number(x.id);return i>=9511&&i<=9513});
+  if(!un){must(!pend.length,"reminders are scheduled although everything is categorised");return "everything categorised, so none scheduled ✓"}
+  must(pend.length>0,un+" uncategorised payments but no reminder is scheduled");var at=pend.map(function(x){return x.schedule&&x.schedule.at}).filter(Boolean).sort()[0];
+  return pend.length+" scheduled"+(at?", next "+new Date(at).toLocaleString("en-IN",{weekday:"short",hour:"numeric",minute:"2-digit"}):"")}],
 ["Android","App lock (fingerprint/face) available",async function(){var g=P("GharwiseNative");if(!g||!g.lockStatus)skip("not in the app");var s=await g.lockStatus();must(s&&s.available!==false,"this phone has no screen lock set")}],
 /* ---- family sync, end to end, between two Supabase TEST numbers (your real family is not touched) ---- */
 ["Family sync","Two test members log in",async function(){var nums=testNums(),otp=testOtp(),own=String(GWL.phone()||"").replace(/\D/g,"").slice(-10);
   var use=nums.filter(function(n){return n.replace(/\D/g,"").slice(-10)!==own});
   if(use.length<2)throw new Error("needs two test numbers that are not this phone's login (now: "+nums.join(", ")+"). Tap “Test numbers” below to change them.");
   for(var i=0;i<2;i++){var who=i?"B":"A";try{FT[who]={num:use[i],sess:await GWL._loginTest(use[i],otp)}}catch(e){throw new Error("+"+use[i]+" could not log in ("+(e.message||e)+"). Add it in Supabase → Authentication → Phone → Test phone numbers, code "+otp+".")}
-    var d=GWL.blankDb();d.profile={name:"Test "+who,created:new Date().toISOString()};FT[who].db=d}
-  for(var w of ["A","B"])await asDev(w,function(){return GWL.srv("lm_family_leave",{})});
+    var d=GWL.blankDb();d.profile={name:"Test "+who,created:new Date().toISOString()};FT[who].db=d;await asDev(who,function(){return GWL.publishKey()})}
+  for(var w of ["A","B"])await asDev(w,async function(){await GWL.srv("lm_family_leave",{});var gs=await GWL.srv("lm_groups_mine",{})||[];for(var g of gs){try{await GWL.srv(g.created_by===GWL.uid()?"lm_group_delete":"lm_group_leave",{p_group:g.id})}catch(e){}}});
   return "+"+FT.A.num+" and +"+FT.B.num}],
-["Family sync","A creates a family, B joins with the shared code",async function(){need();var code=await asDev("A",function(){return GWL.famCreate()});must(/^GW1-/.test(code),"no code");
-  var shared="Join my Gharwise family. Paste this code:\n\n"+code;var n=await asDev("B",function(){return GWL.famJoin(shared)});must(n===2,"family has "+n+" members, expected 2");return "2 members"}],
+["Family sync","A creates a family and invites B by mobile number",async function(){need();await asDev("A",function(){return GWL.famCreate()});
+  var r=await asDev("A",function(){return GWL.invite("family",GWL.db().family.id,FT.B.num)});must(r&&r.status==="invited","invite status: "+(r&&r.status)+(r&&r.status==="waiting"?" (B's phone key not published)":""));return "invite sent to +"+FT.B.num}],
+["Family sync","B gets the invite and accepts",async function(){need();FT.fid=await asDev("A",function(){return GWL.db().family&&GWL.db().family.id});
+  var n=await asDev("B",async function(){await GWL.fetchInbox();var i=GWL.inbox().filter(function(x){return x.kind==="family"&&x.target===FT.fid})[0];must(i,"no invite arrived");must(i.by==="Test A","invite shows "+i.by);await GWL.inviteRespond(i.id,true);return GWL.db().family&&GWL.db().family.members});
+  must(n===2,"family has "+n+" members, expected 2");return "2 members"}],
 ["Family sync","B adds a payment → A sees it",async function(){need();
   await asDev("B",async function(){await api2("transactions",{method:"POST",headers:{Prefer:"return=minimal"},body:JSON.stringify({amount:321,type:"out",merchant:"Sync test shop",category:"Groceries",txn_date:new Date().toISOString().slice(0,10)})});await GWL.sync()});
   var r=await asDev("A",async function(){await GWL.sync();return GWL.T("family_txns").find(function(t){return t.merchant==="Sync test shop"})});
@@ -124,6 +135,34 @@ var TESTS=[
 ["Family sync","Server copy is scrambled",async function(){need();var list=await asDev("B",function(){return GWL.srv("lm_pull",{p_since:0})});must(list&&list.length,"nothing on the server");
   var leak=list.some(function(e){return e.ct&&/Reverse test|Sync test shop/.test(atob(e.ct))});must(!leak,"payee name readable on the server!");return list.length+" item(s), unreadable"}],
 ["Family sync","Both leave; test family removed",async function(){need();await cleanupFamily();var a=await asDev("A",function(){return GWL.srv("lm_family_info",{})});must(!a,"A is still in a family")}],
+/* ---- groups / trips between the same two test numbers ---- */
+["Groups","A creates a trip and invites B by mobile",async function(){need();
+  var id=await asDev("A",async function(){var g=await api2("rpc/group_create",{method:"POST",body:JSON.stringify({p_name:"Self-check trip",p_photo:null,p_start:null,p_end:null,p_simplify:true})});
+    var r=await api2("rpc/group_invite",{method:"POST",body:JSON.stringify({p_group:g,p_email:"+"+FT.B.num})});must(r.status==="invited","invite status "+r.status);return g});FT.gid=id;return "invite sent"}],
+["Groups","B accepts the invite",async function(){need();if(!FT.gid)skip("no test group");
+  var n=await asDev("B",async function(){await GWL.fetchInbox();var i=GWL.inbox().filter(function(x){return x.kind==="group"&&x.target===FT.gid})[0];must(i,"no invite arrived");must(i.name==="Self-check trip"&&i.by==="Test A","invite shows "+i.name+" from "+i.by);
+    await api2("rpc/group_invite_respond",{method:"POST",body:JSON.stringify({p_id:i.id,p_accept:true})});await GWL.groupsSync(true);var g=GWL.groupView(GWL.groupsLocal().filter(function(x){return x.id===FT.gid})[0]);return g.members.map(function(m){return m.name}).sort().join(",")});
+  must(n==="Test A,Test B","members: "+n);return "Test A and Test B"}],
+["Groups","B adds ₹600 split equally → A owes ₹300",async function(){need();if(!FT.gid)skip("no test group");
+  FT.eid=await asDev("B",async function(){var g=GWL.groupView(GWL.groupsLocal().filter(function(x){return x.id===FT.gid})[0]),ids=g.members.map(function(m){return m.user_id}),sh={};ids.forEach(function(u){sh[u]=600/ids.length});
+    return api2("rpc/group_save_expense",{method:"POST",body:JSON.stringify({p_group:FT.gid,p_id:null,p_txn:null,p_paid_by:GWL.uid(),p_amount:600,p_date:new Date().toISOString().slice(0,10),p_title:"Self-check dinner",p_mode:"equal",p_shares:sh,p_cat:"Food"})})});
+  var net=await asDev("A",async function(){await GWL.groupsSync(true);var g=GWL.groupView(GWL.groupsLocal().filter(function(x){return x.id===FT.gid})[0]);must(g.expenses.some(function(e){return e.title==="Self-check dinner"}),"payment did not arrive");return gNets(g)[GWL.uid()]});
+  must(Math.round(net)===-300,"A's balance is "+net);return "A owes ₹300"}],
+["Groups","A edits B's payment → B sees it",async function(){need();if(!FT.eid)skip("no test payment");
+  await asDev("A",async function(){var g=GWL.groupView(GWL.groupsLocal().filter(function(x){return x.id===FT.gid})[0]),e=g.expenses[0],sh={};Object.keys(e.shares).forEach(function(u){sh[u]=400});
+    await api2("rpc/group_save_expense",{method:"POST",body:JSON.stringify({p_group:FT.gid,p_id:e.id,p_txn:null,p_paid_by:e.paid_by,p_amount:800,p_date:e.txn_date,p_title:e.title,p_mode:"equal",p_shares:sh,p_cat:"Food"})})});
+  var a=await asDev("B",async function(){await GWL.groupsSync(true);return GWL.groupView(GWL.groupsLocal().filter(function(x){return x.id===FT.gid})[0]).expenses[0].amount});must(a===800,"B sees ₹"+a);return "now ₹800"}],
+["Groups","A deletes it → gone for B",async function(){need();if(!FT.eid)skip("no test payment");
+  await asDev("A",function(){return api2("rpc/group_delete_expense",{method:"POST",body:JSON.stringify({p_id:FT.eid})})});
+  var n=await asDev("B",async function(){await GWL.groupsSync(true);return GWL.groupView(GWL.groupsLocal().filter(function(x){return x.id===FT.gid})[0]).expenses.length});must(n===0,"still there")}],
+["Groups","Only the creator can delete the trip",async function(){need();if(!FT.gid)skip("no test group");var refused=false;
+  try{await asDev("B",function(){return api2("rpc/group_delete",{method:"POST",body:JSON.stringify({p_group:FT.gid})})})}catch(e){refused=/Only the person/.test(e.message)}must(refused,"B could delete it")}],
+["Groups","Server copy is scrambled",async function(){need();if(!FT.gid)skip("no test group");
+  var list=await asDev("B",function(){return GWL.srv("lm_group_pull",{p_group:FT.gid,p_since:0})});must(list&&list.length,"nothing on the server");
+  must(!list.some(function(e){return e.ct&&/Self-check|Test A|Test B/.test(atob(e.ct))}),"group text readable on the server!");return list.length+" item(s), unreadable"}],
+["Groups","A deletes the trip → gone for B",async function(){need();if(!FT.gid)skip("no test group");
+  await asDev("A",function(){return api2("rpc/group_delete",{method:"POST",body:JSON.stringify({p_group:FT.gid})})});
+  var n=await asDev("B",async function(){await GWL.groupsSync(true);return GWL.groupsLocal().filter(function(x){return x.id===FT.gid}).length});FT.gid=null;must(n===0,"B still has it")}],
 /* ---- server ---- */
 ["Server","Logged in",async function(){must(GWL.loggedIn(),"logged out: Menu → Account → log in");return "+"+String(GWL.phone()).replace(/^\+/,"")}],
 ["Server","Server is reachable and set up",async function(){if(!GWL.loggedIn())skip("logged out");try{await GWL.srv("lm_is_app_user",{})}catch(e){if(/Could not find|does not exist|PGRST202/i.test(e.message))throw new Error("run local_mode.sql in Supabase");if(/Failed to fetch|NetworkError|LOGIN/i.test(e.message))throw new Error("no internet or login expired");throw e}}],
