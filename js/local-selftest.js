@@ -24,7 +24,12 @@ var SMS=[
 ["Hi! Are we meeting at 6? Bring Rs 200 for snacks",0]];
 var VOICE=[["spent 100 rs for auto",100,"out","Auto","Transport"],["paid ₹250 for groceries",250,"out","Groceries","Groceries"],["petrol 500",500,"out","Petrol","Fuel"],["received 1000 rupees from manohar",1000,"in","Manohar",null],["got 2k rupees from amma",2000,"in","Amma",null]];
 
-var R=[],running=false;
+var R=[],running=false,FT={};
+function testNums(){return String(ls("gwtestnums")||"919000000001,919000000002").split(/[\s,]+/).filter(Boolean).map(function(n){n=n.replace(/\D/g,"");return n.length===10?"91"+n:n})}
+function testOtp(){return ls("gwtestotp")||"123456"}
+function need(){if(!FT.A||!FT.B)skip("test members could not log in")}
+async function asDev(who,fn){var d=FT[who],os=GWL._swapSess(d.sess),od=GWL.swapDb(d.db);try{return await fn()}finally{GWL.swapDb(od);GWL._swapSess(os)}}
+async function cleanupFamily(){for(var w of ["A","B"]){if(!FT[w])continue;try{await asDev(w,function(){return GWL.famLeave()})}catch(e){try{await asDev(w,function(){return GWL.srv("lm_family_leave",{})})}catch(x){}}}}
 function P(n){try{return window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins[n]||null}catch(e){return null}}
 function native(){try{return typeof nativeApp==="function"&&nativeApp()}catch(e){return false}}
 function skip(why){var e=new Error(why);e.skip=1;throw e}
@@ -92,6 +97,33 @@ var TESTS=[
 ["Android","A test notification appears in 5 seconds",async function(){var n=P("LocalNotifications");if(!n)skip("not in the app");var p=await n.checkPermissions();if(p.display!=="granted")skip("notifications not allowed");
   await n.schedule({notifications:[{id:9598,title:"Gharwise self-check",body:"If you see this, notifications work ✓",schedule:{at:new Date(Date.now()+5000)}}]});return "leave the app to see it"}],
 ["Android","App lock (fingerprint/face) available",async function(){var g=P("GharwiseNative");if(!g||!g.lockStatus)skip("not in the app");var s=await g.lockStatus();must(s&&s.available!==false,"this phone has no screen lock set")}],
+/* ---- family sync, end to end, between two Supabase TEST numbers (your real family is not touched) ---- */
+["Family sync","Two test members log in",async function(){var nums=testNums(),otp=testOtp(),own=String(GWL.phone()||"").replace(/\D/g,"").slice(-10);
+  var use=nums.filter(function(n){return n.replace(/\D/g,"").slice(-10)!==own});
+  if(use.length<2)throw new Error("needs two test numbers that are not this phone's login (now: "+nums.join(", ")+"). Tap “Test numbers” below to change them.");
+  for(var i=0;i<2;i++){var who=i?"B":"A";try{FT[who]={num:use[i],sess:await GWL._loginTest(use[i],otp)}}catch(e){throw new Error("+"+use[i]+" could not log in ("+(e.message||e)+"). Add it in Supabase → Authentication → Phone → Test phone numbers, code "+otp+".")}
+    var d=GWL.blankDb();d.profile={name:"Test "+who,created:new Date().toISOString()};FT[who].db=d}
+  for(var w of ["A","B"])await asDev(w,function(){return GWL.srv("lm_family_leave",{})});
+  return "+"+FT.A.num+" and +"+FT.B.num}],
+["Family sync","A creates a family, B joins with the shared code",async function(){need();var code=await asDev("A",function(){return GWL.famCreate()});must(/^GW1-/.test(code),"no code");
+  var shared="Join my Gharwise family. Paste this code:\n\n"+code;var n=await asDev("B",function(){return GWL.famJoin(shared)});must(n===2,"family has "+n+" members, expected 2");return "2 members"}],
+["Family sync","B adds a payment → A sees it",async function(){need();
+  await asDev("B",async function(){await api2("transactions",{method:"POST",headers:{Prefer:"return=minimal"},body:JSON.stringify({amount:321,type:"out",merchant:"Sync test shop",category:"Groceries",txn_date:new Date().toISOString().slice(0,10)})});await GWL.sync()});
+  var r=await asDev("A",async function(){await GWL.sync();return GWL.T("family_txns").find(function(t){return t.merchant==="Sync test shop"})});
+  must(r,"payment did not arrive");must(r.amount===321&&r.person==="Test B"&&r.category==="Groceries","arrived wrong: "+r.amount+" "+r.person+" "+r.category);return "₹321 from Test B arrived"}],
+["Family sync","B changes it → A sees the change",async function(){need();
+  await asDev("B",async function(){var t=GWL.T("transactions").find(function(x){return x.merchant==="Sync test shop"});await api2("transactions?id=eq."+t.id,{method:"PATCH",body:JSON.stringify({category:"Food",amount:345})});await GWL.sync()});
+  var r=await asDev("A",async function(){await GWL.sync();return GWL.T("family_txns").find(function(t){return t.merchant==="Sync test shop"})});
+  must(r&&r.category==="Food"&&r.amount===345,"change did not arrive"+(r?" ("+r.category+" ₹"+r.amount+")":""));return "now Food ₹345"}],
+["Family sync","B deletes it → it disappears for A",async function(){need();
+  await asDev("B",async function(){var t=GWL.T("transactions").find(function(x){return x.merchant==="Sync test shop"});await api2("transactions?id=eq."+t.id,{method:"DELETE"});await GWL.sync()});
+  var r=await asDev("A",async function(){await GWL.sync();return GWL.T("family_txns").find(function(t){return t.merchant==="Sync test shop"})});must(!r,"still there after delete")}],
+["Family sync","A adds a payment → B sees it",async function(){need();
+  await asDev("A",async function(){await api2("transactions",{method:"POST",headers:{Prefer:"return=minimal"},body:JSON.stringify({amount:99,type:"out",merchant:"Reverse test",category:"Food",txn_date:new Date().toISOString().slice(0,10)})});await GWL.sync()});
+  var r=await asDev("B",async function(){await GWL.sync();return GWL.T("family_txns").find(function(t){return t.merchant==="Reverse test"})});must(r&&r.amount===99&&r.person==="Test A","did not arrive")}],
+["Family sync","Server copy is scrambled",async function(){need();var list=await asDev("B",function(){return GWL.srv("lm_pull",{p_since:0})});must(list&&list.length,"nothing on the server");
+  var leak=list.some(function(e){return e.ct&&/Reverse test|Sync test shop/.test(atob(e.ct))});must(!leak,"payee name readable on the server!");return list.length+" item(s), unreadable"}],
+["Family sync","Both leave; test family removed",async function(){need();await cleanupFamily();var a=await asDev("A",function(){return GWL.srv("lm_family_info",{})});must(!a,"A is still in a family")}],
 /* ---- server ---- */
 ["Server","Logged in",async function(){must(GWL.loggedIn(),"logged out: Menu → Account → log in");return "+"+String(GWL.phone()).replace(/^\+/,"")}],
 ["Server","Server is reachable and set up",async function(){if(!GWL.loggedIn())skip("logged out");try{await GWL.srv("lm_is_app_user",{})}catch(e){if(/Could not find|does not exist|PGRST202/i.test(e.message))throw new Error("run local_mode.sql in Supabase");if(/Failed to fetch|NetworkError|LOGIN/i.test(e.message))throw new Error("no internet or login expired");throw e}}],
@@ -108,20 +140,22 @@ function ui(){var o=document.getElementById("gwst");if(!o){o=document.createElem
   var ic={pass:'<span style="color:#16a34a">✓</span>',fail:'<span style="color:#dc2626">✗</span>',skip:'<span class="mute">–</span>',run:'<span class="mute">…</span>'},last="";
   o.innerHTML='<h2 style="margin:0 0 4px">Self-check</h2><div class="mute" style="margin:0 0 12px">'+(running?'Running… '+R.length+' of '+TESTS.length:(fail?'<b style="color:#dc2626">'+fail+' failed</b>':'<b style="color:#16a34a">All good</b>')+' · '+pass+' passed · '+sk+' skipped')+'</div>'+
     R.map(function(r){var h=(r.g!==last?'<div class="sec" style="margin:12px 0 4px">'+esc(r.g)+'</div>':'');last=r.g;return h+'<div class="row" style="padding:6px 0;align-items:flex-start;gap:10px"><span style="width:18px">'+ic[r.s]+'</span><span style="flex:1"><b style="font-weight:500">'+esc(r.n)+'</b>'+(r.m?'<br><small class="'+(r.s==="fail"?'out':'mute')+'">'+esc(r.m)+'</small>':'')+'</span><small class="mute">'+(r.ms!=null?r.ms+' ms':'')+'</small></div>'}).join('')+
-    (running?'':'<button class="btn" data-st="share" style="margin-top:16px">Share report</button><button class="btn ghost" data-st="again" style="margin-top:8px">Run again</button><button class="btn ghost" data-st="close" style="margin-top:8px">Close</button>')}
+    (running?'':'<div class="note" style="margin-top:14px">Family test numbers: '+esc(testNums().map(function(n){return "+"+n}).join(", "))+' · code '+esc(testOtp())+' <a href="#" data-st="nums" style="color:var(--acc)">Test numbers</a></div><button class="btn" data-st="share" style="margin-top:10px">Share report</button><button class="btn ghost" data-st="again" style="margin-top:8px">Run again</button><button class="btn ghost" data-st="close" style="margin-top:8px">Close</button>')}
 function report(){var pass=R.filter(function(r){return r.s==="pass"}).length,fail=R.filter(function(r){return r.s==="fail"}).length;
   return "Gharwise self-check — "+new Date().toLocaleString("en-IN")+"\n"+(GWL.selftestVersion||"")+" · "+navigator.userAgent.replace(/^.*?\(|\).*$/g,"")+"\n"+pass+" passed, "+fail+" failed, "+(R.length-pass-fail)+" skipped\n\n"+
     R.map(function(r){return (r.s==="pass"?"✓":r.s==="fail"?"✗":"–")+" "+r.g+": "+r.n+(r.m?" — "+r.m:"")}).join("\n")}
-async function run(){if(running)return;running=true;R=[];ui();
+async function run(){if(running)return;running=true;R=[];FT={};ui();
+  if(GWL.idle)await GWL.idle();
   GWL.selftestReal=JSON.parse(JSON.stringify({family:GWL.db().family||null,mail:GWL.db().mail||null}));
   var test=GWL.blankDb();test.profile={name:GWL.db().profile.name,created:new Date().toISOString()};
   GWL.testing=true;var real=GWL.swapDb(test);
   try{for(var i=0;i<TESTS.length;i++){var t=TESTS[i],row={g:t[0],n:t[1],s:"run"};R.push(row);ui();var t0=Date.now();
       try{var m=await t[2]();row.s="pass";if(typeof m==="string")row.m=m;if(row.n==="App version")GWL.selftestVersion=m}catch(e){row.s=e&&e.skip?"skip":"fail";row.m=e&&e.message||String(e)}
       row.ms=Date.now()-t0;ui()}}
-  finally{GWL.swapDb(real);GWL.testing=false;running=false;try{await load(true);go("menu")}catch(e){}ui()}}
+  finally{try{await cleanupFamily()}catch(e){}FT={};GWL.swapDb(real);GWL.testing=false;running=false;try{await load(true);go("menu")}catch(e){}ui()}}
 GWL.selftest=run;GWL.selftestResults=function(){return R};
 document.addEventListener("click",async function(e){var b=e.target&&e.target.closest&&e.target.closest("[data-st]");if(b){var a=b.getAttribute("data-st");
+    if(a==="nums"){e.preventDefault();var v=prompt("Two Supabase test phone numbers for the family check, separated by a comma",testNums().join(","));if(v){ls("gwtestnums",v)}var c=prompt("Their test code (6 digits)",testOtp());if(c&&/^\d{6}$/.test(c.trim()))ls("gwtestotp",c.trim());ui();return}
     if(a==="run")run();else if(a==="again")run();else if(a==="close"){var o=document.getElementById("gwst");if(o)o.remove()}
     else if(a==="share"){var f=P("LocalFiles"),t=report();if(f)await f.shareFile({name:"gharwise-selfcheck.txt",text:t,mime:"text/plain",title:"Gharwise self-check"});else if(await copyText(t))toast("Report copied")}return}
   var v=e.target&&e.target.closest&&e.target.closest("#gwver");if(v){var n=(+v.dataset.n||0)+1;v.dataset.n=n;if(n>=7){ls("gwdev","1");toast("Self-check unlocked");render()}else if(n>=4)toast((7-n)+" more taps")}});

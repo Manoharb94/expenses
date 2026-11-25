@@ -32,6 +32,12 @@ async function srv(fn,body,retry){
   if(!r.ok){var m=t;try{var o=JSON.parse(t);m=o.message||o.msg||t}catch(e){}throw new Error(m)}
   return t?JSON.parse(t):null}
 GWL.srv=srv;
+/* self-check only: sign in a Supabase TEST number without touching this phone's own login */
+GWL._loginTest=async function(num,otp){num=String(num).replace(/\D/g,"");await authFetch("otp","POST",{phone:"+"+num,create_user:true});
+  var o=await authFetch("verify","POST",{type:"sms",phone:"+"+num,token:String(otp)});if(!o||!o.access_token)throw new Error("no session");
+  return {access:o.access_token,refresh:o.refresh_token,exp:o.expires_at||(Math.floor(Date.now()/1000)+(o.expires_in||3600)),phone:num,uid:o.user&&o.user.id||""}};
+GWL._swapSess=function(o){var x=SESS;SESS=o;return x};
+GWL.idle=async function(){try{if(syncing)await syncing}catch(e){}var n=0;while(pulling&&n++<100)await new Promise(function(r){setTimeout(r,100)})};
 GWL.sendOtp=async function(ph){await authFetch("otp","POST",{phone:ph,create_user:true})};
 GWL.verifyOtp=async function(ph,code){var o=await authFetch("verify","POST",{type:"sms",phone:ph,token:code});if(!o||!o.access_token)throw new Error("That code did not work.");sessSave(o);return true};
 function loginBar(){if(!GWL.db()||!GWL.db().profile)return;var b=document.getElementById("lgbar");if(SESS){if(b)b.remove();return}if(b)return;
@@ -253,7 +259,7 @@ var MAIL_TPL=[
 
 /* ---------- when it runs ---------- */
 GWL.online=function(){if(!SESS)return;ping(true);GWL.famInfo().then(sync);mailPull()};
-document.addEventListener("visibilitychange",function(){if(!document.hidden&&SESS&&GWL.db()&&GWL.db().profile&&S.code){sync();mailPull()}});
-setInterval(function(){if(document.hidden||!SESS||!S.code)return;sync();mailPull();if(Date.now()-(GWL.lastPing||0)>6*3600000)ping(false)},60000);
-window.addEventListener("online",function(){if(SESS&&S.code){sync();mailPull()}});
+document.addEventListener("visibilitychange",function(){if(!document.hidden&&!GWL.testing&&SESS&&GWL.db()&&GWL.db().profile&&S.code){sync();mailPull()}});
+setInterval(function(){if(document.hidden||GWL.testing||!SESS||!S.code)return;sync();mailPull();if(Date.now()-(GWL.lastPing||0)>6*3600000)ping(false)},60000);
+window.addEventListener("online",function(){if(SESS&&S.code&&!GWL.testing){sync();mailPull()}});
 })();
