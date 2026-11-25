@@ -559,6 +559,12 @@ end $$;
 create or replace function lm_push_forget(p_token text) returns void
 language sql security definer set search_path = public as $$ delete from lm_push where token = p_token; $$;
 
-revoke all on function lm_set_push(text, text), lm_drop_push(text), lm_push_targets(uuid, uuid), lm_push_forget(text) from public, anon, authenticated;
+-- test notification to my own phone(s): lm-push Edge Function only
+create or replace function lm_push_mine(p_user uuid) returns jsonb
+language sql security definer set search_path = public stable as $$
+  select coalesce(jsonb_agg(token), '[]'::jsonb) from lm_push where user_id = p_user;
+$$;
+
+revoke all on function lm_set_push(text, text), lm_drop_push(text), lm_push_targets(uuid, uuid), lm_push_forget(text), lm_push_mine(uuid) from public, anon, authenticated;
 grant execute on function lm_set_push(text, text), lm_drop_push(text) to authenticated;
-grant execute on function lm_push_targets(uuid, uuid), lm_push_forget(text) to service_role;
+grant execute on function lm_push_targets(uuid, uuid), lm_push_forget(text), lm_push_mine(uuid) to service_role;

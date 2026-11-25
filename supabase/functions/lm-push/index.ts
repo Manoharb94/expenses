@@ -45,6 +45,19 @@ async function googleToken(sa: { client_email: string; private_key: string }): P
   return cached.token;
 }
 
+// deno-lint-ignore no-explicit-any
+async function send(project: string, access: string, token: string, title: string, body: string, data: Record<string, string>, sb: any): Promise<boolean> {
+  const r = await fetch(`https://fcm.googleapis.com/v1/projects/${project}/messages:send`, {
+    method: "POST",
+    headers: { Authorization: "Bearer " + access, "Content-Type": "application/json" },
+    body: JSON.stringify({ message: { token, notification: { title, body }, data, android: { priority: "HIGH", notification: { channel_id: "invites" } } } }),
+  });
+  if (r.ok) return true;
+  const e = await r.text();
+  if (r.status === 404 || /UNREGISTERED|INVALID_ARGUMENT/.test(e)) await sb.rpc("lm_push_forget", { p_token: token });
+  return false;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   try {
@@ -57,7 +70,30 @@ Deno.serve(async (req) => {
     const { data: u } = await sb.auth.getUser(jwt);
     if (!u?.user) return json({ error: "not logged in" }, 401);
 
-    const { invite } = await req.json().catch(() => ({}));
+    const body = await req.json().catch(() => ({}));
+
+    // test mode (hidden Testing menu / Maestro 14_push): after a short wait, send one notification to the caller's own phone(s)
+    if (body.test) {
+      const { data: mine, error: e1 } = await sb.rpc("lm_push_mine", { p_user: u.user.id });
+      if (e1) return json({ error: e1.message }, 500);
+      const toks: string[] = mine || [];
+      if (!toks.length) return json({ queued: 0 });
+      const delay = Math.min(Math.max(Number(body.delay) || 10, 0), 30) * 1000;
+      const job = (async () => {
+        await new Promise((r) => setTimeout(r, delay));
+        const access = await googleToken(sa);
+        for (const token of toks) {
+          await send(sa.project_id, access, token, "Gharwise test notification", "Push notifications work ✓ Tap to open Gharwise.", { kind: "test" }, sb);
+        }
+      })();
+      // answer straight away so the person can leave the app; keep sending in the background
+      // deno-lint-ignore no-explicit-any
+      const rt = (globalThis as any).EdgeRuntime;
+      if (rt?.waitUntil) rt.waitUntil(job); else await job;
+      return json({ queued: toks.length });
+    }
+
+    const invite = body.invite;
     if (!invite) return json({ error: "invite missing" }, 400);
     const { data: t, error } = await sb.rpc("lm_push_targets", { p_invite: invite, p_caller: u.user.id });
     if (error) return json({ error: error.message }, 403);
@@ -68,28 +104,12 @@ Deno.serve(async (req) => {
     const access = await googleToken(sa);
     let sent = 0;
     for (const token of tokens) {
-      const r = await fetch(`https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`, {
-        method: "POST",
-        headers: { Authorization: "Bearer " + access, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: {
-            token,
-            notification: {
-              title: family ? "Family invite" : "Group invite",
-              body: family
-                ? "Someone invited you to their family on Gharwise. Open the app to accept or reject."
-                : "Someone invited you to a group on Gharwise. Open the app to accept or reject.",
-            },
-            data: { kind: "invite", invite: String(invite) },
-            android: { priority: "HIGH", notification: { channel_id: "invites" } },
-          },
-        }),
-      });
-      if (r.ok) sent++;
-      else {
-        const e = await r.text();
-        if (r.status === 404 || /UNREGISTERED|INVALID_ARGUMENT/.test(e)) await sb.rpc("lm_push_forget", { p_token: token });
-      }
+      if (await send(sa.project_id, access, token,
+        family ? "Family invite" : "Group invite",
+        family
+          ? "Someone invited you to their family on Gharwise. Open the app to accept or reject."
+          : "Someone invited you to a group on Gharwise. Open the app to accept or reject.",
+        { kind: "invite", invite: String(invite) }, sb)) sent++;
     }
     return json({ sent });
   } catch (e) {

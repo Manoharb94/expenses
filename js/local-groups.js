@@ -202,7 +202,7 @@ GWL.pushSetup=async function(){var P=pushP();if(!P||!GWL.loggedIn()||GWL.testing
     P.addListener("registration",async function(t){var tok=t&&t.value;if(!tok)return;var tag=GWL.uid()+":"+tok;if(ls("gwpush")===tag)return;try{await srv("lm_set_push",{p_token:tok,p_platform:"android"});ls("gwpush",tag)}catch(e){}});
     P.addListener("registrationError",function(){});
     P.addListener("pushNotificationReceived",function(){GWL.groupsSync(true)});
-    P.addListener("pushNotificationActionPerformed",function(){GWL.groupsSync(true).then(function(){try{if(S.code){go("home");loadGroups(true)}}catch(e){}})})}
+    P.addListener("pushNotificationActionPerformed",function(ev){try{var dt=ev&&ev.notification&&ev.notification.data||{};if(dt.kind==="test"){setTimeout(function(){toast("Push notification works ✓")},800);return}}catch(e){}GWL.groupsSync(true).then(function(){try{if(S.code){go("home");loadGroups(true)}}catch(e){}})})}
   try{await P.createChannel({id:"invites",name:"Invites",description:"When someone invites you to their family or a group",importance:4,visibility:1})}catch(e){}
   var pm=await P.checkPermissions();if(pm.receive==="prompt"||pm.receive==="prompt-with-rationale")pm=await P.requestPermissions();
   if(pm.receive!=="granted")return "not allowed";
