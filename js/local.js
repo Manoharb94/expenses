@@ -297,6 +297,8 @@ GWL.hook=function(){
   var _auth=authView;authView=function(){return LV[S.view]?setupView():_auth()};
   var _bind=bindAuth;bindAuth=function(el){if(LV[S.view])return;_bind(el)};
   var _render=render;render=function(){if(LV[S.view]&&S.code&&S.name){var el=document.getElementById("app"),nav=document.getElementById("nav");nav.classList.add("hide");el.innerHTML=setupView();return}return _render.apply(this,arguments)};
+  /* put the cursor in the setup box straight away (helps people and the Maestro test robot) */
+  var _r2=render;render=function(){var out=_r2.apply(this,arguments);if(LV[S.view])setTimeout(function(){var i=document.getElementById("lotp")||document.getElementById("lphone")||document.getElementById("lname");if(i&&document.activeElement!==i){try{i.focus()}catch(e){}}},150);return out};
   boot=function(){return GWL.start()};
   phoneNudge=function(){};joinCheck=function(){};touch=function(){};
   logoutLocal=function(){if(GWL.logout)GWL.logout();if(GWL.loginBar)GWL.loginBar()};
