@@ -1,4 +1,4 @@
-/* ===== On-phone app: invites by mobile number (family + groups) and Groups / Trips =====
+/* ===== On-phone app: invites by mobile number (family) =====
    Each phone makes its own key pair (ECDH P-256). Only the PUBLIC half goes to the server.
    An invite carries the family or group key LOCKED for the invitee's public key, so only the invitee's phone can open it.
    If the person has no app yet, the invite waits; when they log in, any member's phone locks the key for them.
@@ -37,31 +37,6 @@ async function unseal(s){var k=await myKeys(),b=C.b64d(s),priv=await crypto.subt
   return JSON.parse(td.decode(await crypto.subtle.decrypt({name:"AES-GCM",iv:b.slice(65,77)},key,b.slice(77))))}
 GWL.inviteCrypto={seal:seal,unseal:unseal,myKeys:myKeys,pubHash:pubHash};
 
-/* ---------- groups kept on this phone ---------- */
-function groups(){var d=D();if(!d.groups)d.groups=[];return d.groups}
-function grp(id){return groups().filter(function(g){return g.id===id})[0]}
-function grpOf(prefix,id){return groups().filter(function(g){var x=g.items[prefix+id];return x&&!x.del})[0]}
-function newGroup(id,key,by){return {id:id,key:key,created_by:by||null,seq:0,items:{},out:{},members:[myId()],pending:[]}}
-function put(g,k,v){g.items[k]={v:v,by:myId(),at:now()};g.out[k]=1;save()}
-function del(g,k){var x=g.items[k];g.items[k]={del:true,v:x&&x.v||null,by:myId(),at:now()};g.out[k]=1;save()}
-function val(g,k){var x=g.items[k];return x&&!x.del?x.v:null}
-function meta(g){return val(g,"meta")||{}}
-function nameOf(g,u){var m=val(g,"m:"+u);return m&&m.name||(u===myId()?me():"Member")}
-function isCreator(g){return g.created_by===myId()}
-
-/* the shape the Groups screens expect (same as the internet version's my_groups) */
-function view(g){var M=meta(g),ids=(g.members&&g.members.length?g.members.slice():[myId()]);
-  var members=ids.map(function(u){var m=val(g,"m:"+u)||{};return {user_id:u,name:m.name||(u===myId()?me():"Member"),photo:m.photo||null,upis:[]}});
-  var exp=[],set=[],rec=[];
-  Object.keys(g.items).forEach(function(k){var x=g.items[k];if(!x||x.del)return;var id=k.slice(2),v=x.v||{};
-    if(k.indexOf("e:")===0)exp.push(Object.assign({},v,{id:id,amount:Number(v.amount)||0,at:x.at,paid_by_name:nameOf(g,v.paid_by),created_by_name:nameOf(g,v.created_by),updated_by_name:x.by&&x.by!==v.created_by?nameOf(g,x.by):null}));
-    else if(k.indexOf("s:")===0)set.push(Object.assign({},v,{id:id,amount:Number(v.amount)||0,settled_on:v.txn_date}));
-    else if(k.indexOf("r:")===0)rec.push(Object.assign({},v,{id:id,amount:Number(v.amount)||0,paid_by_name:nameOf(g,v.paid_by)}))});
-  var by=function(a,b){return String(b.txn_date||"").localeCompare(String(a.txn_date||""))||String(b.created_at||"").localeCompare(String(a.created_at||""))};
-  exp.sort(by);set.sort(by);
-  return {id:g.id,name:M.name||"Group",photo:M.photo||null,owner:g.created_by,created_by:g.created_by,start_date:M.start_date||null,end_date:M.end_date||null,simplify:M.simplify!==false,closed:!!M.closed,
-    members:members,expenses:exp,settlements:set,recurring:rec,pending:(g.pending||[]).map(function(p){return {id:p.id,phone:p.phone,email:null,token:null}})}}
-
 /* ---------- invites: inbox (to me) ---------- */
 /* kept per login, so the self-check's test members never mix with yours */
 var INB={};function inbox(){return INB[myId()]||[]}function setInbox(v){INB[myId()]=v}GWL.inbox=inbox;
@@ -72,10 +47,10 @@ async function fetchInbox(){var list=await srv("lm_invites_inbox",{}),k=await my
 GWL.fetchInbox=fetchInbox;
 
 /* ---------- invites: sending ---------- */
-function keyOf(kind,target){if(kind==="family"){var f=D().family;return f&&f.id===target?{key:f.key,name:"Family"}:null}var g=grp(target);return g?{key:g.key,name:meta(g).name||"Group"}:null}
+function keyOf(kind,target){if(kind==="family"){var f=D().family;return f&&f.id===target?{key:f.key,name:"Family"}:null}return null}
 /* the invite shows who asked, even when another member's phone locks it later */
 function inviterName(kind,target,from){if(!from||from===myId())return me();
-  if(kind==="group"){var g=grp(target);return g?nameOf(g,from):me()}
+  
   var r=GWL.T("family_txns").filter(function(x){return x.member===from})[0];return r&&r.person||me()}
 async function sealFor(id,kind,target,pub,from){var k=keyOf(kind,target);if(!k)return false;
   await srv("lm_invite_seal",{p_id:id,p_sealed:await seal(pub,{v:1,kind:kind,target:target,key:k.key,name:k.name,by:inviterName(kind,target,from)}),p_for:await pubHash(pub)});notify(id);return true}
@@ -101,38 +76,6 @@ GWL.inviteRespond=async function(id,accept){need();var inv=inbox().filter(functi
     setInbox(inbox().filter(function(x){return x.id!==id}));await GWL.flush();try{await GWL.sync()}catch(e){}return null}
   await srv("lm_invite_respond",{p_id:id,p_accept:false});setInbox(inbox().filter(function(x){return x.id!==id}));return null};
 
-/* ---------- sync: each group's items, encrypted ---------- */
-var EV=function(){var d=D();if(!d.gevents)d.gevents=[];return d.gevents};
-function event(g,seq,user,text){var l=EV();l.unshift({id:Number(seq)||0,actor:user,name:nameOf(g,user),group_id:g.id,text:text,at:now()});
-  var lo=Date.now()-2*864e5;D().gevents=l.filter(function(e){return Date.parse(e.at)>lo}).slice(0,60)}
-function evText(k,old,nw,deleted){var v=nw||{},o=old||{};
-  if(k.indexOf("e:")===0)return deleted?"removed "+(o.title||"a payment"):(old?"changed ":"added ")+(v.title||"a payment")+" ("+(Number(v.amount)||0)+")";
-  if(k.indexOf("s:")===0)return deleted?"removed a settlement":"settled up ("+(Number(v.amount)||0)+")";
-  if(k.indexOf("m:")===0)return deleted?"left":(old?"":"joined");
-  if(k==="meta"){if(!!v.closed!==!!o.closed)return v.closed?"closed the group":"reopened the group";return old?"updated the group":"created the group"}
-  if(k.indexOf("r:")===0)return deleted?"removed a repeating payment":(old?"changed ":"added ")+"repeating "+(v.title||"payment");
-  return ""}
-async function pushGroup(g){var ks=Object.keys(g.out||{});if(!ks.length)return 0;var key=await GWL.aesKey(g.key),items=[];
-  for(var i=0;i<ks.length;i++){var x=g.items[ks[i]];if(!x||x.del){items.push({item_id:ks[i],deleted:true});continue}
-    var iv=rnd(12),ct=await crypto.subtle.encrypt({name:"AES-GCM",iv:iv},key,te.encode(JSON.stringify(x.v)));items.push({item_id:ks[i],iv:C.b64e(iv),ct:C.b64e(ct)})}
-  for(var j=0;j<items.length;j+=100){var part=items.slice(j,j+100);await srv("lm_group_push",{p_group:g.id,p_items:part});part.forEach(function(p){delete g.out[p.item_id]})}
-  save();return items.length}
-async function pullGroup(g){var key=await GWL.aesKey(g.key),ch=0,guard=0,mine=myId();
-  while(guard++<40){var list=await srv("lm_group_pull",{p_group:g.id,p_since:g.seq||0});if(!Array.isArray(list)||!list.length)break;
-    for(var i=0;i<list.length;i++){var e=list[i],k=e.item_id,old=g.items[k];g.seq=Math.max(g.seq||0,Number(e.seq)||0);
-      if(g.out&&g.out[k])continue;   /* my newer change is still waiting to upload */
-      if(e.deleted){if(old&&!old.del){g.items[k]={del:true,v:old.v,by:e.user,at:now()};ch++;if(e.user!==mine)event(g,e.seq,e.user,evText(k,old.v,null,true))}continue}
-      try{var v=JSON.parse(td.decode(await crypto.subtle.decrypt({name:"AES-GCM",iv:C.b64d(e.iv)},key,C.b64d(e.ct))));
-        var same=old&&!old.del&&JSON.stringify(old.v)===JSON.stringify(v);g.items[k]={v:v,by:e.user,at:now()};
-        if(!same){ch++;var t=evText(k,old&&!old.del?old.v:null,v,false);if(e.user!==mine&&t)event(g,e.seq,e.user,t)}}catch(x){}}
-    if(list.length<500)break}
-  if(ch)save();return ch}
-/* who is in which group, from the server (no content) */
-async function refreshMine(){var list=await srv("lm_groups_mine",{})||[],by={},ch=false;list.forEach(function(x){by[x.id]=x});
-  var keep=groups().filter(function(g){var s=by[g.id];if(!s){ch=true;return false}
-    var mem=(s.members||[]).slice().sort().join(","),pen=JSON.stringify(s.pending||[]);
-    if(mem!==(g.members||[]).slice().sort().join(",")||pen!==JSON.stringify(g.pending||[])||g.created_by!==s.created_by){g.members=s.members||[];g.pending=s.pending||[];g.created_by=s.created_by;ch=true}return true});
-  if(ch){D().groups=keep;save()}return ch}
 var gsync=null,lastInbox=0;
 GWL.groupsSync=function(full){if(!GWL.loggedIn()||!D()||!D().profile)return Promise.resolve(false);if(gsync)return gsync;
   gsync=(async function(){var ch=false;
