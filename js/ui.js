@@ -1,4 +1,4 @@
-function toast(m){if(S._q2&&Date.now()-S._q2<2500)m="Saved on this phone · will sync when you are online";var b=document.getElementById("toast");if(!b){b=document.createElement("div");b.id="toast";b.style.cssText="position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#1c1c1a;color:#fff;padding:10px 16px;border-radius:20px;font-size:14px;z-index:99;max-width:90%";document.body.appendChild(b)}
+function toast(m){if(S._q2&&Date.now()-S._q2<2500)m="Saved on this phone · will sync when you are online";var b=document.getElementById("toast");if(!b){b=document.createElement("div");b.id="toast";b.style.cssText="position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#1c1c1a;color:#fff;padding:10px 16px;border-radius:20px;font-size:14px;z-index:99;max-width:90%;pointer-events:none";document.body.appendChild(b)}
   b.textContent=m;b.style.display="block";clearTimeout(toast.t);toast.t=setTimeout(function(){b.style.display="none"},3500)}
 async function saveTxn(body){
   if(navigator.onLine===false)return queueTxn(body);

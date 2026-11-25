@@ -60,7 +60,7 @@ async function flush(){
     try{
       if(d.data)await fwrite(FILES.data,JSON.stringify(mainCopy()));
       if(d.bills)await fwrite(FILES.bills,JSON.stringify({v:1,saved_at:now(),bills:T("txn_bills")}));
-      if(d.family)await fwrite(FILES.family,JSON.stringify({v:1,saved_at:now(),family_txns:T("family_txns"),groups:DB.groups||[],gevents:DB.gevents||[]}));
+      if(d.family)await fwrite(FILES.family,JSON.stringify({v:1,saved_at:now(),family_txns:T("family_txns")}));
       GWL.lastBackup=Date.now();
     }catch(e){dirty.data=dirty.data||d.data;dirty.bills=dirty.bills||d.bills;dirty.family=dirty.family||d.family}
   })();
@@ -233,7 +233,7 @@ GWL.exportData=async function(fmt,r,how,pre){
 async function eraseAll(serverToo){try{var P=smsP();if(P)await P.disable()}catch(e){}
   if(GWL.loggedIn&&GWL.loggedIn()){try{if(DB.family)await GWL.srv("lm_family_leave",{})}catch(e){}try{if(DB.mail)await GWL.srv("lm_mail_off",{})}catch(e){}
     try{var pt=String(ls("gwpush")||"").split(":").slice(1).join(":");if(pt)await GWL.srv("lm_drop_push",{p_token:pt})}catch(e){}
-    for(var gi=0;gi<(DB.groups||[]).length;gi++){try{await GWL.srv("lm_group_leave",{p_group:DB.groups[gi].id})}catch(e){}}
+    
     if(serverToo)try{await GWL.srv("delete_my_account",{})}catch(e){}GWL.logout()}
   await idbClear();var keep={theme:1,accent:1,lang:1};try{Object.keys(localStorage).forEach(function(k){if(!keep[k])localStorage.removeItem(k)})}catch(e){}
   DB=blank()}
@@ -243,7 +243,7 @@ GWL.eraseAll=eraseAll;GWL.deleteFolderFiles=async function(){for(var k in FILES)
 async function peekFolder(){try{var t=await fread(FILES.data);if(!t)return null;var o=JSON.parse(t);if(!o||o.app!=="gharwise-local"||!o.t)return null;return o}catch(e){return null}}
 async function restoreFrom(o){var d=blank();d.profile=o.profile;d.family=o.family&&o.family.key?o.family:null;d.mail=o.mail||null;d.keys=o.keys||null;TABLES.forEach(function(t){if(o.t[t])d.t[t]=o.t[t]});
   try{var b=JSON.parse(await fread(FILES.bills)||"null");if(b&&b.bills)d.t.txn_bills=b.bills}catch(e){}
-  try{var f=JSON.parse(await fread(FILES.family)||"null");if(f&&f.family_txns)d.t.family_txns=f.family_txns;if(f&&f.groups)d.groups=f.groups;if(f&&f.gevents)d.gevents=f.gevents}catch(e){}
+  try{var f=JSON.parse(await fread(FILES.family)||"null");if(f&&f.family_txns)d.t.family_txns=f.family_txns;}catch(e){}
   DB=d;await idbPut("db",DB)}
 
 /* ---------- first-run setup: welcome → mobile → SMS code → name → folder ---------- */
@@ -308,16 +308,13 @@ GWL.hook=function(){
   boot=function(){return GWL.start()};
   /* Quick Add: put the cursor in the Amount box straight away */
   var _add=addSheet;addSheet=function(){var r=_add.apply(this,arguments);setTimeout(function(){var x=document.getElementById("xa");if(x&&!x.value&&document.activeElement!==x){try{x.focus()}catch(e){}}},250);return r};
-  /* new group: cursor in the name box, so people (and the test robot) can type straight away */
-  try{var _ge=gEditSheet;gEditSheet=function(id){var r=_ge.apply(this,arguments);if(!id)setTimeout(function(){var x=document.getElementById("gnm");if(x){try{x.focus();x.select()}catch(e){}}},250);return r}}catch(e){}
-  try{var _gi=gInviteSheet;gInviteSheet=function(){var r=_gi.apply(this,arguments);setTimeout(function(){var x=document.getElementById("gem");if(x){try{x.focus()}catch(e){}}},250);return r}}catch(e){}
   phoneNudge=function(){};joinCheck=function(){};touch=function(){};
   logoutLocal=function(){if(GWL.logout)GWL.logout();if(GWL.loginBar)GWL.loginBar()};
-  try{gInviteMsg=function(g){return (S.name||"I")+" invited you to the group “"+g.name+"” on Gharwise, to split expenses.\n\nInstall Gharwise and log in with this mobile number. The invite is waiting for you to accept:\n"+PLAY_APP}}catch(e){}
+  try{loadGroups=function(){};gOKUI=function(){return false}}catch(e){}
   var _can=canEditT;canEditT=function(t){return t&&t.source==="family"?false:_can(t)};
   vMenu=localMenu;vFam=localFam;vMail=localMail;
   var _vt=vTrack;vTrack=function(){var h=_vt(),m=DB.mail&&DB.mail.on;
-    h=h.replace(/<div class="dc trk"><i style="background:rgba\(255,150,40,\.22\)">✉️<\/i>[\s\S]*?<\/button><\/div>/,'<div class="dc trk"><i style="background:rgba(255,150,40,.22)">✉️</i><div class="m"><b>Email Tracking</b><span>Bank emails, encrypted in your Gmail'+(m?' · <span class="in">✓ On</span>':'')+'</span></div><button class="sbtn" data-go="mail">'+(m?'Manage':'Set Up')+'</button></div>');
+    h=h.replace(/<div class="dc trk"><i style="background:rgba\(255,150,40,\.22\)">✉️<\/i>[\s\S]*?<\/button><\/div>/,'<div class="dc trk"><i style="background:rgba(255,150,40,.22)">✉️</i><div class="m"><b>Email Tracking</b><span>Bank emails, encrypted in your Gmail'+(m?' · <span class="in">✓ On</span>':'')+'</span></div><button class="sbtn" data-go="mail" aria-label="'+(m?'Manage':'Set up')+' email tracking">'+(m?'Manage':'Set Up')+'</button></div>');
     h=h.replace(/<div class="sec">❔ How It Works<\/div><div class="card"[\s\S]*$/,'<div class="sec">❔ How It Works</div><div class="card" style="font-size:14px;line-height:1.55"><p style="margin:0 0 8px"><b>SMS</b>: bank alerts are read on this phone the moment they arrive and saved here. Nothing is sent anywhere.</p><p style="margin:0 0 8px"><b>Email</b>: a small script in your own Gmail finds bank emails and <b>encrypts</b> them before sending. Only this phone can open them, and they are deleted from our server once collected.</p><p style="margin:0 0 8px"><b>Voice</b>: say an expense to the home-screen widget, for example “Grocery 120”.</p><p style="margin:0"><b>Bank statements</b>: import a PDF, Excel or CSV file from your bank. It is read on the phone.</p></div>');
     return h};
   var _vsn=vSmsNative;vSmsNative=function(){var h=_vsn();
@@ -334,7 +331,7 @@ GWL.hook=function(){
   ndPlugin=function(){return null};
   ndiIos=function(){try{return nativeApp()&&!!lnPlugin()}catch(e){return false}};
 };
-function rowB(id,i,a,b,bg,go){return '<button class="mr" '+(go?'data-go="'+go+'"':'data-lm="'+id+'"')+'><i class="mt" style="background:'+bg+'">'+i+'</i><span><b>'+a+'</b>'+(b?'<span>'+b+'</span>':'')+'</span><span class="go">›</span></button>'}
+function rowB(id,i,a,b,bg,go){return '<button class="mr" '+(go?'data-go="'+go+'"':'data-lmenu="'+id+'"')+'><i class="mt" style="background:'+bg+'">'+i+'</i><span><b>'+a+'</b>'+(b?'<span>'+b+'</span>':'')+'</span><span class="go">›</span></button>'}
 function familyPeopleCount(){var s={};T("family_txns").forEach(function(r){s[r.member||r.person]=1});return Object.keys(s).length}
 function localMenu(){
   var fam=DB.family?(DB.family.members||familyPeopleCount()+1)+" people · encrypted":"Not set up",li=GWL.loggedIn&&GWL.loggedIn();
@@ -347,8 +344,8 @@ function exportSheet(){var sh=document.getElementById("sheet");if(!sh)return;
   var chip=function(k,v,l){return '<button type="button" class="'+(EX[k]===v?'on':'')+'" data-ex="'+k+':'+v+'">'+l+'</button>'};
   sh.innerHTML='<div class="sheet"><div class="sx">'+sxHead("📤","Export my data","Expenses and income from this phone")+'<div class="mute" style="margin:6px 0">Format</div><div class="sxs">'+chip("f","pdf","PDF")+chip("f","csv","CSV / Excel")+chip("f","json","Full backup")+'</div><div class="mute" style="margin:10px 0 6px">Which payments</div><div class="sxs" style="flex-wrap:wrap">'+chip("r","month","This month")+chip("r","last","Last month")+chip("r","year","This year")+chip("r","all","All")+'</div><button class="btn" data-exgo="save" style="margin-top:14px">Save in my folder</button><button class="btn ghost" data-exgo="share" style="margin-top:8px">Share…</button><button class="btn ghost" data-exgo="close" style="margin-top:8px">Close</button></div></div>'}
 document.addEventListener("click",async function(e){var t=e.target&&e.target.closest?e.target:null;if(!t||!GWL.on)return;
-  var lm=t.closest("[data-lm]");
-  if(lm){var a=lm.getAttribute("data-lm");
+  var lm=t.closest("[data-lmenu]");
+  if(lm){var a=lm.getAttribute("data-lmenu");
     if(a==="export")exportSheet();
     else if(a==="pushtest"){lm.disabled=true;try{var st=await GWL.pushSetup();if(st!=="on")throw new Error(st==="not in this build"?"This build has no Firebase file (google-services.json)":st==="not allowed"?"Allow notifications for Gharwise in Android settings":"Push notifications are not available");
         await new Promise(function(r){setTimeout(r,1500)});var r=await GWL.fn("lm-push",{test:true,delay:10});
@@ -386,7 +383,7 @@ document.addEventListener("click",async function(e){var t=e.target&&e.target.clo
     }catch(x){fb.disabled=false;showErr(x&&x.message||String(x))}}});
 function localFam(){
   var h=topbar("Family sharing","menu"),li=GWL.loggedIn&&GWL.loggedIn();
-  if(!li)h+='<div class="note out" style="margin:10px 0">You are logged out, so family sync is paused. <a href="#" data-lm="login" style="color:var(--acc)">Log in</a></div>';
+  if(!li)h+='<div class="note out" style="margin:10px 0">You are logged out, so family sync is paused. <a href="#" data-lmenu="login" style="color:var(--acc)">Log in</a></div>';
   var finv=(GWL.inbox?GWL.inbox():[]).filter(function(i){return i.kind==="family"});
   finv.forEach(function(i){h+='<div class="card" style="border:1.5px solid var(--acc)"><b>'+esc(i.by)+' asked you to join their family</b><div class="note" style="margin:4px 0 10px">You will see each other’s payments. They stay encrypted between your phones.</div><div class="row" style="gap:8px;justify-content:flex-start;padding:0"><button class="btn s" data-fia="'+esc(i.id)+'">Accept</button><button class="btn ghost s out" data-fir="'+esc(i.id)+'">Reject</button></div></div>'});
   if(!DB.family)return h+'<div class="dc"><div style="text-align:center"><span style="font-size:42px">👨‍👩‍👧</span><h3 style="margin:6px 0 4px">See the family’s spending together</h3><p class="mute" style="margin:0 0 12px">Payments sync automatically. Each phone <b>encrypts</b> them with your family key before sending, so our server only passes on data it can’t read.</p></div><button class="btn" data-fam="create">Create a family</button></div>'+
@@ -403,7 +400,7 @@ function localFam(){
 var MS={months:1,st:null,busy:false};
 function localMail(){
   var h=topbar("Email tracking","track"),m=DB.mail&&DB.mail.on,li=GWL.loggedIn&&GWL.loggedIn();
-  if(!li)return h+'<div class="card"><b>Log in first</b><div class="note" style="margin:6px 0 10px">Email tracking needs your login.</div><button class="btn" data-lm="login">Log in</button></div>';
+  if(!li)return h+'<div class="card"><b>Log in first</b><div class="note" style="margin:6px 0 10px">Email tracking needs your login.</div><button class="btn" data-lmenu="login">Log in</button></div>';
   if(!m)return h+'<div class="dc"><div style="text-align:center"><span style="font-size:42px">✉️</span><h3 style="margin:6px 0 4px">Track spends from bank emails</h3></div><div class="card" style="background:var(--chip);box-shadow:none;font-size:14px;line-height:1.55;margin:10px 0"><ul style="margin:0;padding-left:18px"><li>A small script runs in <b>your own Gmail</b>. It only looks at bank alert emails.</li><li>It <b>encrypts</b> each email there, with a key only this phone has.</li><li>Our server holds the scrambled text until this phone collects it, then deletes it.</li></ul></div><div class="mute" style="margin:0 0 6px">Also read past emails?</div><select id="mmo2">'+[0,1,3,6].map(function(x){return '<option value="'+x+'"'+(MS.months===x?' selected':'')+'>'+(x===0?'Only new emails':'Past '+(x===1?'1 month':x+' months'))+'</option>'}).join('')+'</select><button class="btn" data-mail="on" style="margin-top:10px">Make my Gmail script</button></div>';
   if(!MS.st&&!MS.busy){MS.busy=true;GWL.mailStatus().then(function(r){MS.st=r||{};MS.busy=false;if(S.tab==="mail")render()})}
   var st=MS.st||{},ok=st.last_run&&(Date.now()-new Date(st.last_run).getTime())<30*60000;
