@@ -52,7 +52,7 @@ window.addEventListener("online",function(){try{flushOutbox();if(S.code&&S.offli
 window.addEventListener("offline",function(){setOffline(true)});
 setInterval(function(){if(S.offline&&navigator.onLine!==false&&S.auth&&typeof enter==="function")enter()},15000);
 async function api(path,opt){
-  opt=opt||{};var lm=/id=eq\.(loc-[0-9]+)/.exec(path);if(lm)return localEdit(lm[1],path,opt);
+  opt=opt||{};if(window.GWL&&GWL.on)return GWL.api(path,opt);var lm=/id=eq\.(loc-[0-9]+)/.exec(path);if(lm)return localEdit(lm[1],path,opt);
   try{await ensureToken()}catch(e0){if(isNet(e0))setOffline(true);throw e0}
   var ch=opt.headers||{},h={apikey:KEY,"x-household":S.code,"Content-Type":"application/json"};
   if(S.auth)h.Authorization="Bearer "+S.auth.access;

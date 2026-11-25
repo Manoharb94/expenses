@@ -1,5 +1,5 @@
 /* ---------- statement import ---------- */
-var XLSX_URL="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+var XLSX_URL=window.GW_LOCAL_BUILD?"vendor/xlsx.full.min.js":"https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
 S.st=null;S.imports=null;S.stsel="";
 function loadXlsx(){return new Promise(function(res,rej){if(window.XLSX)return res();var x=document.createElement("script");x.src=XLSX_URL;x.onload=function(){res()};x.onerror=function(){rej(new Error("Could not load the spreadsheet reader. Check your internet and try again."))};document.head.appendChild(x)})}
 function stNum(x){var v=parseFloat(String(x==null?"":x).replace(/,/g,""));return isNaN(v)?0:v}
@@ -43,7 +43,7 @@ function parseHdfc(aoa){
   var bal=has?Math.abs(sum.opening+sc-sd-sum.closing)<0.5:null,tie=sum.debits!=null?Math.abs(sum.debits-sd)<0.5&&Math.abs(sum.credits-sc)<0.5:null;
   return {rows:rows,from:ds[0],to:ds[ds.length-1],debits:Math.round(sd*100)/100,credits:Math.round(sc*100)/100,opening:sum.opening,closing:sum.closing,balance_ok:bal,summary_ok:tie}}
 /* ---------- any-file statement reader ---------- */
-var PDFJS_URL="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js",PDFW_URL="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+var PDFJS_URL=window.GW_LOCAL_BUILD?"vendor/pdf.min.js":"https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js",PDFW_URL=window.GW_LOCAL_BUILD?"vendor/pdf.worker.min.js":"https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 function loadPdfjs(){return new Promise(function(res,rej){if(window.pdfjsLib)return res();var x=document.createElement("script");x.src=PDFJS_URL;x.onload=function(){res()};x.onerror=function(){rej(new Error("Could not load the PDF reader. Check your internet and try again."))};document.head.appendChild(x)}).then(async function(){
   if(pdfjsLib.GlobalWorkerOptions.workerSrc)return;
   try{var t=await (await fetch(PDFW_URL)).text();pdfjsLib.GlobalWorkerOptions.workerSrc=URL.createObjectURL(new Blob([t],{type:"application/javascript"}))}catch(e){pdfjsLib.GlobalWorkerOptions.workerSrc=PDFW_URL}})}

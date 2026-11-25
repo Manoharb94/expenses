@@ -120,7 +120,7 @@ function nmoSel(){return '<select id="nmo" style="margin-bottom:12px">'+[1,2,3].
 function bindNativeSms(){
   var nm=document.getElementById("nmo");if(nm){nm.onchange=function(){S.nmo=Math.min(3,+nm.value);var b=document.getElementById("nimp");if(b)b.textContent="Add bank SMS from the past "+nmoLab()}}
   var on=document.getElementById("non");if(on)on.onclick=async function(){this.disabled=true;this.textContent="Waiting for permission…";
-    try{S.nsms=await smsPlugin().enable({key:S.sc.key,url:URLB+"rpc/ingest_sms",apikey:KEY});render();if(S.nsms.enabled&&confirm("SMS tracking is on. Add your bank SMS from the past "+nmoLab()+" now?"))importNativeSms()}
+    try{S.nsms=await smsPlugin().enable({key:S.sc.key,url:(window.GWL&&GWL.on)?"local:":URLB+"rpc/ingest_sms",apikey:KEY});render();if(S.nsms.enabled&&confirm("SMS tracking is on. Add your bank SMS from the past "+nmoLab()+" now?"))importNativeSms()}
     catch(e){S.nsms={enabled:false,err:/denied|not given/i.test(e.message||"")?"SMS access was not allowed. Tap the button again, or allow SMS for Gharwise in Android Settings → Apps → Permissions.":e.message};render()}};
   var im=document.getElementById("nimp");if(im)im.onclick=importNativeSms;
   var off=document.getElementById("noff");if(off)off.onclick=async function(){if(!confirm("Turn off SMS tracking on this phone?"))return;try{S.nsms=await smsPlugin().disable()}catch(e){}render()}}
@@ -132,6 +132,7 @@ async function importNativeSms(days){
   try{r=await smsPlugin().importRecent({days:Math.min(95,days||mo*31)})}
   catch(e){S.nimp=null;try{h&&h.remove()}catch(x){}if(S.tab==="sms"||S.tab==="track")render();showErr("Could not read SMS: "+(e.message||e));return}
   try{h&&h.remove()}catch(x){}
+  if(r&&r.items&&window.GWL&&GWL.on){var gi=GWL.ingestSms(r.items);r.saved=gi.saved;r.skipped=gi.skipped+gi.bad;try{await GWL.flush();await load(true)}catch(x){}}
   nimpTick({phase:"done"});
   await new Promise(function(res){setTimeout(res,900)});
   S.nimp=null;if(S.tab==="sms"||S.tab==="track")render();

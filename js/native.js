@@ -85,7 +85,7 @@ function widgetLeft(){
 async function pushWidget(){   /* the widget only needs who you are; it never shows your money */
   var P=gwNative();if(!P||!(await gwProbe()))return;
   try{if(!S.sc)await loadSc();var key=S.sc&&S.sc.key;if(!key)return;
-    await P.setWidget({key:key,url:URLB+"rpc/",apikey:KEY,lang:(typeof LANG!=="undefined"?LANG:"en")})}
+    await P.setWidget({key:key,url:(window.GWL&&GWL.on)?"local:":URLB+"rpc/",apikey:KEY,lang:(typeof LANG!=="undefined"?LANG:"en")})}
   catch(e){}}
 function nativeAfterLoad(){try{gwProbe();pushWidget();schedInsights();ndInit();ndiListen();ndiSched()}catch(e){}}
 
