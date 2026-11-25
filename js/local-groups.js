@@ -78,7 +78,7 @@ function inviterName(kind,target,from){if(!from||from===myId())return me();
   if(kind==="group"){var g=grp(target);return g?nameOf(g,from):me()}
   var r=GWL.T("family_txns").filter(function(x){return x.member===from})[0];return r&&r.person||me()}
 async function sealFor(id,kind,target,pub,from){var k=keyOf(kind,target);if(!k)return false;
-  await srv("lm_invite_seal",{p_id:id,p_sealed:await seal(pub,{v:1,kind:kind,target:target,key:k.key,name:k.name,by:inviterName(kind,target,from)}),p_for:await pubHash(pub)});return true}
+  await srv("lm_invite_seal",{p_id:id,p_sealed:await seal(pub,{v:1,kind:kind,target:target,key:k.key,name:k.name,by:inviterName(kind,target,from)}),p_for:await pubHash(pub)});notify(id);return true}
 GWL.invite=async function(kind,target,phone){need();var r=await srv("lm_invite",{p_kind:kind,p_target:target,p_phone:String(phone||"")});
   if(r&&r.status==="invited"){if(r.pubkey)await sealFor(r.id,kind,target,r.pubkey);else r.status="waiting"}
   return r};
@@ -190,6 +190,23 @@ var H={
 var _idle=GWL.idle;GWL.idle=async function(){if(_idle)await _idle();try{if(gsync)await gsync}catch(e){}};
 GWL.grpc=function(fn,a){return H[fn]?H[fn](a||{}):undefined};GWL.grpcHas=function(fn){return !!H[fn]};
 GWL.groupsLocal=groups;GWL.groupView=view;
+
+/* ---------- push notifications (Firebase), so an invite is noticed while the app is closed ---------- */
+/* tell the invitee's phone: the server sends only "Someone invited you…"; it never knows names */
+function notify(id){if(GWL.testing&&!GWL.pushInTests)return;try{GWL.fn("lm-push",{invite:id}).catch(function(){})}catch(e){}}
+function pushP(){try{return window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.PushNotifications||null}catch(e){return null}}
+var pushOn=false;
+GWL.pushSetup=async function(){var P=pushP();if(!P||!GWL.loggedIn()||GWL.testing)return "no";
+  try{var S2=Capacitor.Plugins.SmsTracker,a=S2&&S2.appInfo?await S2.appInfo():null;if(!a||!a.pushReady)return "not in this build"}catch(e){return "no"}
+  if(!pushOn){pushOn=true;
+    P.addListener("registration",async function(t){var tok=t&&t.value;if(!tok)return;var tag=GWL.uid()+":"+tok;if(ls("gwpush")===tag)return;try{await srv("lm_set_push",{p_token:tok,p_platform:"android"});ls("gwpush",tag)}catch(e){}});
+    P.addListener("registrationError",function(){});
+    P.addListener("pushNotificationReceived",function(){GWL.groupsSync(true)});
+    P.addListener("pushNotificationActionPerformed",function(){GWL.groupsSync(true).then(function(){try{if(S.code){go("home");loadGroups(true)}}catch(e){}})})}
+  try{await P.createChannel({id:"invites",name:"Invites",description:"When someone invites you to their family or a group",importance:4,visibility:1})}catch(e){}
+  var pm=await P.checkPermissions();if(pm.receive==="prompt"||pm.receive==="prompt-with-rationale")pm=await P.requestPermissions();
+  if(pm.receive!=="granted")return "not allowed";
+  await P.register();return "on"};
 
 /* ---------- when it runs ---------- */
 document.addEventListener("visibilitychange",function(){if(!document.hidden&&!GWL.testing&&GWL.loggedIn()&&D()&&D().profile&&S.code)GWL.groupsSync(true)});

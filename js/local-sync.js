@@ -32,6 +32,9 @@ async function srv(fn,body,retry){
   if(!r.ok){var m=t;try{var o=JSON.parse(t);m=o.message||o.msg||t}catch(e){}throw new Error(m)}
   return t?JSON.parse(t):null}
 GWL.srv=srv;
+/* a Supabase Edge Function (used only to send invite notifications); quiet if it isn't set up */
+GWL.fn=async function(name,body){await fresh();var r=await fetch(URLB.replace(/rest\/v1\/?$/,"functions/v1/")+name,{method:"POST",headers:{apikey:KEY,Authorization:"Bearer "+SESS.access,"Content-Type":"application/json"},body:JSON.stringify(body||{})});
+  var t=await r.text(),o={};try{o=JSON.parse(t)||{}}catch(e){}if(!r.ok)o.status=r.status;return o};
 /* self-check only: sign in a Supabase TEST number without touching this phone's own login */
 GWL._loginTest=async function(num,otp){num=String(num).replace(/\D/g,"");await authFetch("otp","POST",{phone:"+"+num,create_user:true});
   var o=await authFetch("verify","POST",{type:"sms",phone:"+"+num,token:String(otp)});if(!o||!o.access_token)throw new Error("no session");
@@ -258,7 +261,7 @@ var MAIL_TPL=[
 "}"].join("\n");
 
 /* ---------- when it runs ---------- */
-GWL.online=function(){if(!SESS)return;ping(true);GWL.famInfo().then(sync);mailPull();if(GWL.groupsSync)GWL.groupsSync(true)};
+GWL.online=function(){if(!SESS)return;ping(true);GWL.famInfo().then(sync);mailPull();if(GWL.groupsSync)GWL.groupsSync(true);if(GWL.pushSetup)GWL.pushSetup().catch(function(){})};
 document.addEventListener("visibilitychange",function(){if(!document.hidden&&!GWL.testing&&SESS&&GWL.db()&&GWL.db().profile&&S.code){sync();mailPull()}});
 setInterval(function(){if(document.hidden||GWL.testing||!SESS||!S.code)return;sync();mailPull();if(Date.now()-(GWL.lastPing||0)>6*3600000)ping(false)},60000);
 window.addEventListener("online",function(){if(SESS&&S.code&&!GWL.testing){sync();mailPull()}});

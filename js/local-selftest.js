@@ -104,6 +104,8 @@ var TESTS=[
   if(!un){must(!pend.length,"reminders are scheduled although everything is categorised");return "everything categorised, so none scheduled ✓"}
   must(pend.length>0,un+" uncategorised payments but no reminder is scheduled");var at=pend.map(function(x){return x.schedule&&x.schedule.at}).filter(Boolean).sort()[0];
   return pend.length+" scheduled"+(at?", next "+new Date(at).toLocaleString("en-IN",{weekday:"short",hour:"numeric",minute:"2-digit"}):"")}],
+["Android","Invite notifications (push) are on",async function(){var s=P("SmsTracker"),pn=P("PushNotifications");if(!s||!pn)skip("not in the app / old build");var a=await s.appInfo();if(!a.pushReady)skip("this build has no Firebase file (google-services.json)");
+  var pm=await pn.checkPermissions();must(pm.receive==="granted","notifications not allowed for Gharwise in Android settings");must(String(ls("gwpush")||"").indexOf(GWL.uid()+":")===0,"this phone is not registered yet: reopen the app while online");return "registered"}],
 ["Android","App lock (fingerprint/face) available",async function(){var g=P("GharwiseNative");if(!g||!g.lockStatus)skip("not in the app");var s=await g.lockStatus();must(s&&s.available!==false,"this phone has no screen lock set")}],
 /* ---- family sync, end to end, between two Supabase TEST numbers (your real family is not touched) ---- */
 ["Family sync","Two test members log in",async function(){var nums=testNums(),otp=testOtp(),own=String(GWL.phone()||"").replace(/\D/g,"").slice(-10);
@@ -166,6 +168,8 @@ var TESTS=[
 /* ---- server ---- */
 ["Server","Logged in",async function(){must(GWL.loggedIn(),"logged out: Menu → Account → log in");return "+"+String(GWL.phone()).replace(/^\+/,"")}],
 ["Server","Server is reachable and set up",async function(){if(!GWL.loggedIn())skip("logged out");try{await GWL.srv("lm_is_app_user",{})}catch(e){if(/Could not find|does not exist|PGRST202/i.test(e.message))throw new Error("run local_mode.sql in Supabase");if(/Failed to fetch|NetworkError|LOGIN/i.test(e.message))throw new Error("no internet or login expired");throw e}}],
+["Server","Invite notification service is set up",async function(){if(!GWL.loggedIn())skip("logged out");var r;try{r=await GWL.fn("lm-push",{invite:"00000000-0000-0000-0000-000000000000"})}catch(e){throw new Error("no internet")}
+  if(r&&r.status===404)throw new Error("Edge Function lm-push is not deployed in Supabase");if(r&&r.note)throw new Error(r.note);must(r&&r.sent===0,"unexpected answer: "+JSON.stringify(r).slice(0,120));return "ready"}],
 ["Server","Usage numbers are recorded",async function(){if(!GWL.loggedIn())skip("logged out");must(await GWL.srv("lm_is_app_user",{})===true,"no usage row yet: reopen the app")}],
 ["Server","Family sync status",async function(){if(!GWL.loggedIn())skip("logged out");var r=await GWL.srv("lm_family_info",{});var real=GWL.selftestReal;if(!real.family)return r?"in a family on the server but not on this phone":"not in a family";must(r&&r.family_id===real.family.id,"this phone's family doesn't match the server");return r.members+" people"}],
 ["Server","Email tracking status",async function(){if(!GWL.loggedIn())skip("logged out");var real=GWL.selftestReal;if(!real.mail||!real.mail.on)skip("email tracking is off");var r=await GWL.srv("lm_mail_status",{});must(r&&r.on,"server has no email token: set it up again");

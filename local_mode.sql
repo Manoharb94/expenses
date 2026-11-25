@@ -510,3 +510,55 @@ revoke all on function lm_my_phone(), lm_set_pubkey(text), lm_is_member(text, uu
 grant execute on function lm_my_phone(), lm_set_pubkey(text), lm_invite(text, uuid, text), lm_invite_seal(uuid, text, text),
   lm_invites_sent(), lm_invites_inbox(), lm_invite_respond(uuid, boolean), lm_invite_cancel(uuid), lm_group_create(), lm_group_leave(uuid),
   lm_group_delete(uuid), lm_groups_mine(), lm_family_pending(), lm_group_push(uuid, jsonb), lm_group_pull(uuid, bigint) to authenticated;
+
+-- ============================================================================
+-- Part 3: push notifications for invites (Firebase), so people hear about an invite while the app is closed.
+-- The notification text is general ("Someone invited you to a group"). Names stay encrypted; Google never sees them.
+-- ============================================================================
+create table if not exists lm_push (
+  token      text primary key,
+  user_id    uuid not null references auth.users on delete cascade,
+  platform   text,
+  updated_at timestamptz not null default now()
+);
+create index if not exists lm_push_user on lm_push (user_id);
+alter table lm_push enable row level security;
+alter table lm_invites add column if not exists notified_for text;
+
+create or replace function lm_set_push(p_token text, p_platform text) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null then raise exception 'not logged in'; end if;
+  if length(coalesce(p_token, '')) not between 20 and 4096 then raise exception 'bad token'; end if;
+  insert into lm_push (token, user_id, platform) values (p_token, auth.uid(), left(p_platform, 20))
+  on conflict (token) do update set user_id = auth.uid(), platform = excluded.platform, updated_at = now();
+  delete from lm_push where user_id = auth.uid() and token <> p_token and updated_at < now() - interval '60 days';
+end $$;
+
+create or replace function lm_drop_push(p_token text) returns void
+language sql security definer set search_path = public as $$
+  delete from lm_push where token = p_token and user_id = auth.uid();
+$$;
+
+-- called only by the lm-push Edge Function (service role): who to notify about this invite, once per locked copy
+create or replace function lm_push_targets(p_invite uuid, p_caller uuid) returns jsonb
+language plpgsql security definer set search_path = public, auth as $$
+declare i lm_invites%rowtype; toks jsonb;
+begin
+  select * into i from lm_invites where id = p_invite;
+  if not found or i.sealed is null then return jsonb_build_object('kind', null, 'tokens', '[]'::jsonb); end if;
+  if not lm_is_member(i.kind, i.target, p_caller) then raise exception 'not allowed'; end if;
+  if i.notified_for is not distinct from i.sealed_for then return jsonb_build_object('kind', i.kind, 'tokens', '[]'::jsonb); end if;
+  update lm_invites set notified_for = sealed_for where id = p_invite;
+  select coalesce(jsonb_agg(p.token), '[]'::jsonb) into toks
+    from lm_push p join auth.users u on u.id = p.user_id
+   where regexp_replace(coalesce(u.phone, ''), '\D', '', 'g') = i.to_phone;
+  return jsonb_build_object('kind', i.kind, 'tokens', toks);
+end $$;
+
+create or replace function lm_push_forget(p_token text) returns void
+language sql security definer set search_path = public as $$ delete from lm_push where token = p_token; $$;
+
+revoke all on function lm_set_push(text, text), lm_drop_push(text), lm_push_targets(uuid, uuid), lm_push_forget(text) from public, anon, authenticated;
+grant execute on function lm_set_push(text, text), lm_drop_push(text) to authenticated;
+grant execute on function lm_push_targets(uuid, uuid), lm_push_forget(text) to service_role;

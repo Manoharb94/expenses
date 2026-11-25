@@ -232,6 +232,7 @@ GWL.exportData=async function(fmt,r,how,pre){
 /* ---------- erase ---------- */
 async function eraseAll(serverToo){try{var P=smsP();if(P)await P.disable()}catch(e){}
   if(GWL.loggedIn&&GWL.loggedIn()){try{if(DB.family)await GWL.srv("lm_family_leave",{})}catch(e){}try{if(DB.mail)await GWL.srv("lm_mail_off",{})}catch(e){}
+    try{var pt=String(ls("gwpush")||"").split(":").slice(1).join(":");if(pt)await GWL.srv("lm_drop_push",{p_token:pt})}catch(e){}
     for(var gi=0;gi<(DB.groups||[]).length;gi++){try{await GWL.srv("lm_group_leave",{p_group:DB.groups[gi].id})}catch(e){}}
     if(serverToo)try{await GWL.srv("delete_my_account",{})}catch(e){}GWL.logout()}
   await idbClear();var keep={theme:1,accent:1,lang:1};try{Object.keys(localStorage).forEach(function(k){if(!keep[k])localStorage.removeItem(k)})}catch(e){}
