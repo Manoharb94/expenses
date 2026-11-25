@@ -45,10 +45,13 @@ def main():
     pv = os.path.join(WWW, "privacy.html")
     if os.path.exists(pv):
         t = open(pv, encoding="utf-8").read()
-        note = ('<div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;padding:12px 14px;margin:12px 0">'
-                '<b>On-phone version:</b> this app keeps your payments, budgets and bank SMS only on your phone and in the folder you '
-                'choose. It has no account and sends nothing to any server. Family sharing uses files encrypted with your family code. '
-                'The policy below describes the online version.</div>')
+        note = ('<div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;padding:12px 14px;margin:12px 0;line-height:1.5">'
+                '<b>Gharwise app (on-phone version)</b><br>'
+                '&bull; Your payments, budgets, bank SMS and bill photos are kept <b>only on your phone</b> and in the folder you choose. They are never stored on our server.<br>'
+                '&bull; Our server keeps: your <b>mobile number</b> (to log in with an SMS code), and <b>usage counts</b>: when you last opened the app, the app version, which features are switched on, and how many payments you have (a count, no amounts or payees).<br>'
+                '&bull; <b>Family sharing</b> is end-to-end encrypted: each phone encrypts payments with your family key before sending. Our server passes on data it cannot read.<br>'
+                '&bull; <b>Email tracking</b> (optional): a script in your own Gmail encrypts bank emails before sending. Our server holds the scrambled text until your phone collects it, then deletes it.<br>'
+                'The rest of this page describes the website version.</div>')
         t = re.sub(r'(<body[^>]*>)', r'\1' + note, t, count=1)
         open(pv, "w", encoding="utf-8").write(t)
     size = 0

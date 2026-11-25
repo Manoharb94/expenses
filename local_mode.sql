@@ -1,0 +1,295 @@
+-- ============================================================================
+-- Gharwise on-phone app (branch local-mode): the only things the server keeps.
+--   * login: Supabase phone OTP (no new tables)
+--   * lm_usage:   last opened, version, which features are on, payment COUNT (no amounts)
+--   * lm_families / lm_family_members / lm_items: family sync, END-TO-END ENCRYPTED
+--       (the server stores scrambled blobs; the key never leaves the phones)
+--   * lm_mail:    bank emails from the Gmail script, ENCRYPTED in Gmail, deleted
+--       as soon as the phone collects them
+-- Safe to run more than once.
+-- ============================================================================
+
+create sequence if not exists lm_seq;
+
+create table if not exists lm_users (
+  user_id     uuid primary key references auth.users on delete cascade,
+  mail_token  text unique,
+  mail_last   timestamptz,            -- last time the Gmail script checked in
+  mail_count  int not null default 0, -- encrypted emails received so far
+  created_at  timestamptz not null default now()
+);
+
+create table if not exists lm_usage (
+  user_id      uuid primary key references auth.users on delete cascade,
+  first_seen   timestamptz not null default now(),
+  last_seen    timestamptz,
+  opens        int not null default 0,
+  platform     text,
+  app_version  text,
+  sms_on       boolean,
+  email_on     boolean,
+  voice_on     boolean,
+  family_on    boolean,
+  family_size  int,
+  lock_on      boolean,
+  reminders_on boolean,
+  payments     int
+);
+
+create table if not exists lm_families (
+  id         uuid primary key default gen_random_uuid(),
+  join_hash  text not null,           -- a one-way hash made on the phone from the family key
+  created_by uuid references auth.users on delete set null,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists lm_family_members (
+  family_id uuid not null references lm_families on delete cascade,
+  user_id   uuid not null references auth.users on delete cascade,
+  joined_at timestamptz not null default now(),
+  primary key (family_id, user_id)
+);
+create unique index if not exists lm_family_members_one on lm_family_members (user_id);
+
+create table if not exists lm_items (
+  seq        bigint not null default nextval('lm_seq'),
+  family_id  uuid not null references lm_families on delete cascade,
+  user_id    uuid not null references auth.users on delete cascade,
+  item_id    text not null,
+  iv         text,
+  ct         text,                    -- encrypted payment: unreadable without the family key
+  deleted    boolean not null default false,
+  updated_at timestamptz not null default now(),
+  primary key (family_id, user_id, item_id)
+);
+create index if not exists lm_items_seq on lm_items (family_id, seq);
+
+create table if not exists lm_mail (
+  id         bigint primary key default nextval('lm_seq'),
+  user_id    uuid not null references auth.users on delete cascade,
+  nonce      text not null,
+  ct         text not null,           -- encrypted in the person's own Gmail script
+  mac        text not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists lm_mail_user on lm_mail (user_id, id);
+
+-- nobody reads these tables directly; only through the functions below
+alter table lm_users enable row level security;
+alter table lm_usage enable row level security;
+alter table lm_families enable row level security;
+alter table lm_family_members enable row level security;
+alter table lm_items enable row level security;
+alter table lm_mail enable row level security;
+
+-- ---------- usage ----------
+create or replace function lm_ping(p jsonb) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null then raise exception 'not logged in'; end if;
+  insert into lm_users (user_id) values (auth.uid()) on conflict do nothing;
+  insert into lm_usage as u (user_id, last_seen, opens, platform, app_version, sms_on, email_on, voice_on,
+                             family_on, family_size, lock_on, reminders_on, payments)
+  values (auth.uid(), now(), 1, left(p->>'platform', 20), left(p->>'app_version', 30),
+          (p->>'sms_on')::boolean, (p->>'email_on')::boolean, (p->>'voice_on')::boolean,
+          (p->>'family_on')::boolean, (p->>'family_size')::int, (p->>'lock_on')::boolean,
+          (p->>'reminders_on')::boolean, (p->>'payments')::int)
+  on conflict (user_id) do update set
+    last_seen = now(),
+    opens = u.opens + case when coalesce((p->>'open')::boolean, false) then 1 else 0 end,
+    platform = excluded.platform, app_version = excluded.app_version,
+    sms_on = excluded.sms_on, email_on = excluded.email_on, voice_on = excluded.voice_on,
+    family_on = excluded.family_on, family_size = excluded.family_size,
+    lock_on = excluded.lock_on, reminders_on = excluded.reminders_on, payments = excluded.payments;
+end $$;
+
+-- the website uses this to tell app users that their data is on their phone
+create or replace function lm_is_app_user() returns boolean
+language sql security definer set search_path = public stable as $$
+  select exists (select 1 from lm_users where user_id = auth.uid());
+$$;
+
+-- ---------- family (end-to-end encrypted) ----------
+create or replace function lm_family_create(p_join_hash text) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare fid uuid;
+begin
+  if auth.uid() is null then raise exception 'not logged in'; end if;
+  if length(coalesce(p_join_hash, '')) < 20 then raise exception 'bad family code'; end if;
+  if exists (select 1 from lm_family_members where user_id = auth.uid()) then
+    raise exception 'You are already in a family. Leave it first.';
+  end if;
+  insert into lm_users (user_id) values (auth.uid()) on conflict do nothing;
+  insert into lm_families (join_hash, created_by) values (p_join_hash, auth.uid()) returning id into fid;
+  insert into lm_family_members (family_id, user_id) values (fid, auth.uid());
+  return fid;
+end $$;
+
+create or replace function lm_family_join(p_family uuid, p_join_hash text) returns int
+language plpgsql security definer set search_path = public as $$
+declare n int;
+begin
+  if auth.uid() is null then raise exception 'not logged in'; end if;
+  if not exists (select 1 from lm_families where id = p_family and join_hash = p_join_hash) then
+    raise exception 'This family code is not valid. Ask for it again.';
+  end if;
+  if exists (select 1 from lm_family_members where user_id = auth.uid() and family_id <> p_family) then
+    raise exception 'You are already in a family. Leave it first.';
+  end if;
+  insert into lm_users (user_id) values (auth.uid()) on conflict do nothing;
+  insert into lm_family_members (family_id, user_id) values (p_family, auth.uid()) on conflict do nothing;
+  select count(*) into n from lm_family_members where family_id = p_family;
+  return n;
+end $$;
+
+create or replace function lm_family_leave() returns void
+language plpgsql security definer set search_path = public as $$
+declare fid uuid;
+begin
+  select family_id into fid from lm_family_members where user_id = auth.uid();
+  if fid is null then return; end if;
+  delete from lm_items where family_id = fid and user_id = auth.uid();
+  delete from lm_family_members where family_id = fid and user_id = auth.uid();
+  if not exists (select 1 from lm_family_members where family_id = fid) then delete from lm_families where id = fid; end if;
+end $$;
+
+create or replace function lm_family_info() returns jsonb
+language sql security definer set search_path = public stable as $$
+  select jsonb_build_object('family_id', m.family_id, 'members', (select count(*) from lm_family_members x where x.family_id = m.family_id))
+  from lm_family_members m where m.user_id = auth.uid();
+$$;
+
+-- p_items: [{item_id, iv, ct, deleted}]
+create or replace function lm_push(p_items jsonb) returns bigint
+language plpgsql security definer set search_path = public as $$
+declare fid uuid; it jsonb;
+begin
+  select family_id into fid from lm_family_members where user_id = auth.uid();
+  if fid is null then raise exception 'not in a family'; end if;
+  if jsonb_array_length(p_items) > 500 then raise exception 'too many at once'; end if;
+  for it in select * from jsonb_array_elements(p_items) loop
+    insert into lm_items as i (family_id, user_id, item_id, iv, ct, deleted, seq, updated_at)
+    values (fid, auth.uid(), left(it->>'item_id', 80),
+            case when coalesce((it->>'deleted')::boolean, false) then null else it->>'iv' end,
+            case when coalesce((it->>'deleted')::boolean, false) then null else left(it->>'ct', 20000) end,
+            coalesce((it->>'deleted')::boolean, false), nextval('lm_seq'), now())
+    on conflict (family_id, user_id, item_id) do update set
+      iv = excluded.iv, ct = excluded.ct, deleted = excluded.deleted, seq = nextval('lm_seq'), updated_at = now();
+  end loop;
+  return currval('lm_seq');
+end $$;
+
+-- everything other family members changed after p_since
+create or replace function lm_pull(p_since bigint) returns jsonb
+language sql security definer set search_path = public stable as $$
+  select coalesce(jsonb_agg(jsonb_build_object('seq', i.seq, 'user', i.user_id, 'item_id', i.item_id, 'iv', i.iv, 'ct', i.ct, 'deleted', i.deleted) order by i.seq), '[]'::jsonb)
+  from (select * from lm_items i
+         where i.family_id = (select family_id from lm_family_members where user_id = auth.uid())
+           and i.user_id <> auth.uid() and i.seq > coalesce(p_since, 0)
+         order by i.seq limit 1000) i;
+$$;
+
+-- ---------- email (encrypted in the person's Gmail) ----------
+create or replace function lm_mail_token() returns text
+language plpgsql security definer set search_path = public as $$
+declare t text;
+begin
+  if auth.uid() is null then raise exception 'not logged in'; end if;
+  insert into lm_users (user_id) values (auth.uid()) on conflict do nothing;
+  select mail_token into t from lm_users where user_id = auth.uid();
+  if t is null then
+    t := replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', '');
+    update lm_users set mail_token = t, mail_last = null, mail_count = 0 where user_id = auth.uid();
+  end if;
+  return t;
+end $$;
+
+create or replace function lm_mail_off() returns void
+language sql security definer set search_path = public as $$
+  update lm_users set mail_token = null, mail_last = null, mail_count = 0 where user_id = auth.uid();
+  delete from lm_mail where user_id = auth.uid();
+$$;
+
+-- called by the Gmail script (no login, it has the person's token). Items: [{n, c, m}] all encrypted.
+create or replace function lm_mail_push(p_token text, p_items jsonb) returns int
+language plpgsql security definer set search_path = public as $$
+declare uid uuid; it jsonb; n int := 0; waiting int;
+begin
+  select user_id into uid from lm_users where mail_token = p_token and length(p_token) > 30;
+  if uid is null then raise exception 'unknown token'; end if;
+  update lm_users set mail_last = now() where user_id = uid;
+  if p_items is null or jsonb_array_length(p_items) = 0 then return 0; end if;
+  if jsonb_array_length(p_items) > 100 then raise exception 'too many at once'; end if;
+  select count(*) into waiting from lm_mail where user_id = uid;
+  if waiting > 5000 then raise exception 'inbox full: open the Gharwise app'; end if;
+  for it in select * from jsonb_array_elements(p_items) loop
+    if length(coalesce(it->>'c', '')) between 10 and 12000 then
+      insert into lm_mail (user_id, nonce, ct, mac) values (uid, left(it->>'n', 100), it->>'c', left(it->>'m', 100));
+      n := n + 1;
+    end if;
+  end loop;
+  update lm_users set mail_count = mail_count + n where user_id = uid;
+  return n;
+end $$;
+
+create or replace function lm_mail_pull() returns jsonb
+language sql security definer set search_path = public stable as $$
+  select coalesce(jsonb_agg(jsonb_build_object('id', id, 'n', nonce, 'c', ct, 'm', mac) order by id), '[]'::jsonb)
+  from (select * from lm_mail where user_id = auth.uid() order by id limit 300) x;
+$$;
+
+create or replace function lm_mail_ack(p_ids bigint[]) returns void
+language sql security definer set search_path = public as $$
+  delete from lm_mail where user_id = auth.uid() and id = any(p_ids);
+$$;
+
+create or replace function lm_mail_status() returns jsonb
+language sql security definer set search_path = public stable as $$
+  select jsonb_build_object('on', mail_token is not null, 'last_run', mail_last, 'count', mail_count,
+                            'waiting', (select count(*) from lm_mail m where m.user_id = u.user_id))
+  from lm_users u where u.user_id = auth.uid();
+$$;
+
+-- ---------- your admin dashboard ----------
+create or replace function admin_local_stats() returns jsonb
+language plpgsql security definer set search_path = public, admin, auth stable as $$
+declare r jsonb;
+begin
+  if not exists (select 1 from admin.admins a join auth.users u on lower(u.email) = lower(a.email) where u.id = auth.uid()) then
+    raise exception 'not allowed';
+  end if;
+  select jsonb_build_object(
+    'generated_at', now(),
+    'users', (select count(*) from lm_usage),
+    'active_1d', (select count(*) from lm_usage where last_seen > now() - interval '1 day'),
+    'active_7d', (select count(*) from lm_usage where last_seen > now() - interval '7 days'),
+    'active_30d', (select count(*) from lm_usage where last_seen > now() - interval '30 days'),
+    'new_7d', (select count(*) from lm_usage where first_seen > now() - interval '7 days'),
+    'sms_on', (select count(*) from lm_usage where sms_on),
+    'email_on', (select count(*) from lm_usage where email_on),
+    'voice_on', (select count(*) from lm_usage where voice_on),
+    'family_on', (select count(*) from lm_usage where family_on),
+    'families', (select count(*) from lm_families),
+    'lock_on', (select count(*) from lm_usage where lock_on),
+    'reminders_on', (select count(*) from lm_usage where reminders_on),
+    'payments', (select coalesce(sum(payments), 0) from lm_usage),
+    'platforms', (select coalesce(jsonb_object_agg(coalesce(platform, 'unknown'), n), '{}'::jsonb) from (select platform, count(*) n from lm_usage group by platform) p),
+    'versions', (select coalesce(jsonb_object_agg(coalesce(app_version, 'unknown'), n), '{}'::jsonb) from (select app_version, count(*) n from lm_usage group by app_version) v),
+    'list', (select coalesce(jsonb_agg(jsonb_build_object(
+                'phone', au.phone, 'first_seen', u.first_seen, 'last_seen', u.last_seen, 'opens', u.opens,
+                'platform', u.platform, 'version', u.app_version, 'sms', u.sms_on, 'email', u.email_on,
+                'voice', u.voice_on, 'family', u.family_on, 'family_size', u.family_size,
+                'lock', u.lock_on, 'reminders', u.reminders_on, 'payments', u.payments,
+                'mail_last', lu.mail_last) order by u.last_seen desc nulls last), '[]'::jsonb)
+             from lm_usage u join auth.users au on au.id = u.user_id left join lm_users lu on lu.user_id = u.user_id)
+  ) into r;
+  return r;
+end $$;
+
+revoke all on function lm_ping(jsonb), lm_is_app_user(), lm_family_create(text), lm_family_join(uuid, text), lm_family_leave(),
+  lm_family_info(), lm_push(jsonb), lm_pull(bigint), lm_mail_token(), lm_mail_off(), lm_mail_push(text, jsonb),
+  lm_mail_pull(), lm_mail_ack(bigint[]), lm_mail_status(), admin_local_stats() from public, anon;
+grant execute on function lm_ping(jsonb), lm_is_app_user(), lm_family_create(text), lm_family_join(uuid, text), lm_family_leave(),
+  lm_family_info(), lm_push(jsonb), lm_pull(bigint), lm_mail_token(), lm_mail_off(),
+  lm_mail_pull(), lm_mail_ack(bigint[]), lm_mail_status(), admin_local_stats() to authenticated;
+grant execute on function lm_mail_push(text, jsonb) to anon, authenticated;

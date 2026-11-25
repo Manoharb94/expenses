@@ -75,7 +75,17 @@ async function fetchData(){
   var t=await r.text();
   if(r.status===401){ss("adm",null);A.tok=null;return loginView("Session expired. Log in again.")}
   if(!r.ok){ss("adm",null);A.tok=null;return loginView(/not allowed/.test(t)?"This account is not an admin.":/admin_dashboard/.test(t)?"Run admin_dashboard.sql in Supabase first.":"Error "+r.status+": "+t.slice(0,140))}
-  A.d=JSON.parse(t);render()}
+  A.d=JSON.parse(t);
+  try{var r2=await fetch(BASE+"/rest/v1/rpc/admin_local_stats",{method:"POST",headers:{apikey:KEY,Authorization:"Bearer "+A.tok,"Content-Type":"application/json"},body:"{}"});A.ls=r2.ok?await r2.json():null}catch(e){A.ls=null}
+  render()}
+/* the on-phone app: usage only (no amounts, no payees; payments stay on people's phones) */
+function localSection(tile){var L=A.ls;if(!L)return "";var u=L.users||0,list=L.list||[];
+  var yes=function(v){return v?'<span style="color:var(--s1)">✓</span>':'<span class="mute">–</span>'};
+  var x='<h2>Phone app · on-phone version ('+n(u)+' users)</h2><div class="kpis">'+tile("Users",n(u),"+"+n(L.new_7d)+" this week")+tile("Active today",n(L.active_1d),pct(L.active_1d,u))+tile("Active · 7 days",n(L.active_7d),pct(L.active_7d,u))+tile("Active · 30 days",n(L.active_30d),pct(L.active_30d,u))+'</div>';
+  x+='<div class="kpis">'+tile("SMS tracking on",n(L.sms_on),pct(L.sms_on,u))+tile("Email tracking on",n(L.email_on),pct(L.email_on,u))+tile("Voice used · 30 d",n(L.voice_on),pct(L.voice_on,u))+tile("In a family",n(L.family_on),n(L.families)+" families")+tile("App lock on",n(L.lock_on),pct(L.lock_on,u))+tile("Payments on phones",n(L.payments),"count only")+'</div>';
+  x+='<div class="card"><div class="tw"><table style="min-width:900px"><thead><tr><th>Mobile</th><th>Last opened</th><th>Joined</th><th class="n">Opens</th><th>Version</th><th>SMS</th><th>Email</th><th>Voice</th><th>Family</th><th>Lock</th><th class="n">Payments</th></tr></thead><tbody>'+
+    (list.length?list.map(function(r){return '<tr><td>'+esc(r.phone?"+"+String(r.phone).replace(/^\+/,""):"—")+'</td><td>'+esc(ago(r.last_seen))+'</td><td>'+esc(r.first_seen?new Date(r.first_seen).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"}):"")+'</td><td class="n">'+n(r.opens)+'</td><td>'+esc(r.version||"")+'</td><td>'+yes(r.sms)+'</td><td>'+yes(r.email)+(r.email&&r.mail_last?' <span class="mute">'+esc(ago(r.mail_last))+'</span>':'')+'</td><td>'+yes(r.voice)+'</td><td>'+(r.family?esc(String(r.family_size||""))+' people':'<span class="mute">–</span>')+'</td><td>'+yes(r.lock)+'</td><td class="n">'+n(r.payments)+'</td></tr>'}).join(''):'<tr><td colspan="11" class="mute">No phone-app users yet</td></tr>')+'</tbody></table></div></div>';
+  return x}
 
 /* ---------- charts ---------- */
 function niceMax(v){if(v<=4)return 4;var p=Math.pow(10,Math.floor(Math.log10(v))),f=v/p;return (f<=1?1:f<=2?2:f<=5?5:10)*p}
@@ -117,6 +127,7 @@ function render(){
   var stick=k.active_30d?Math.round((k.active_today||0)/k.active_30d*100):null;
   var tile=function(lbl,val,sub){return '<div class="k"><small>'+lbl+'</small><b>'+val+'</b>'+(sub?'<span>'+sub+'</span>':'')+'</div>'};
   var x='<header><h1>Gharwise <span>· Admin</span></h1><span class="mute">Updated '+new Date(d.generated_at).toLocaleString("en-IN",{hour:"numeric",minute:"2-digit",day:"numeric",month:"short"})+'</span><button class="btn" id="rf">Refresh</button><button class="btn" id="lo">Log out</button></header>';
+  x+=localSection(tile);
   // REACH
   x+='<h2>Reach</h2><div class="kpis">'+tile("Total users",n(k.total_users),"+"+n(k.new_7d)+" this week · +"+n(rc.new_30d)+" in 30 days")+tile("New today",n(k.new_today))+tile("Families",n(k.families),"avg "+(rc.avg_family||0)+" people")+tile("Joined by invite",n(rc.joined_by_invite),pct(rc.families_multi,k.families)+" of families have 2+")+tile("Installed as app",n(rc.installed),pct(rc.installed,rc.with_os)+" of known devices")+tile("Accounts deleted",n(rc.deleted_30d),"last 30 days")+'</div>';
   var os=rc.os||{},osRows=[["iPhone",os.ios||0,S1],["Android",os.and||0,S2],["Computer",os.desk||0,S3]],osT=osRows.reduce(function(a,r){return a+r[1]},0);
