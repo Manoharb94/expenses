@@ -17,6 +17,14 @@ COPY_FILES = ["manifest.json", "privacy.html", "logo.svg", "icon.png", "icon-192
 def main():
     if not os.path.isdir(os.path.join(APP, "android")):
         sys.exit("Can't find the gharwise-app folder at " + APP)
+    # safety: only build the on-phone bundle from, and into, the local-mode branches
+    for repo in (ROOT, APP):
+        try:
+            br = subprocess.check_output(["git", "-C", repo, "rev-parse", "--abbrev-ref", "HEAD"], text=True).strip()
+        except Exception:
+            br = "?"
+        if br != "local-mode":
+            sys.exit("Stopped: %s is on branch '%s'. Switch both repos to local-mode first." % (repo, br))
     if os.path.isdir(WWW):
         shutil.rmtree(WWW)
     os.makedirs(WWW)
