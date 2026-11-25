@@ -120,7 +120,7 @@ function nmoSel(){return '<select id="nmo" style="margin-bottom:12px">'+[1,2,3].
 function bindNativeSms(){
   var nm=document.getElementById("nmo");if(nm){nm.onchange=function(){S.nmo=Math.min(3,+nm.value);var b=document.getElementById("nimp");if(b)b.textContent="Add bank SMS from the past "+nmoLab()}}
   var on=document.getElementById("non");if(on)on.onclick=async function(){this.disabled=true;this.textContent="Waiting for permission…";
-    try{S.nsms=await smsPlugin().enable({key:S.sc.key,url:(window.GWL&&GWL.on)?"local:":URLB+"rpc/ingest_sms",apikey:KEY});render();if(S.nsms.enabled&&confirm("SMS tracking is on. Add your bank SMS from the past "+nmoLab()+" now?"))importNativeSms()}
+    try{S.nsms=await smsPlugin().enable({key:S.sc.key,url:(window.GWL&&GWL.on)?"local:":URLB+"rpc/ingest_sms",apikey:KEY});render();if(S.nsms.enabled&&!(window.GWL&&GWL.on)&&confirm("SMS tracking is on. Add your bank SMS from the past "+nmoLab()+" now?"))importNativeSms()}
     catch(e){S.nsms={enabled:false,err:/denied|not given/i.test(e.message||"")?"SMS access was not allowed. Tap the button again, or allow SMS for Gharwise in Android Settings → Apps → Permissions.":e.message};render()}};
   var im=document.getElementById("nimp");if(im)im.onclick=importNativeSms;
   var off=document.getElementById("noff");if(off)off.onclick=async function(){if(!confirm("Turn off SMS tracking on this phone?"))return;try{S.nsms=await smsPlugin().disable()}catch(e){}render()}}
@@ -129,7 +129,7 @@ async function importNativeSms(days){
   var mo=days?Math.min(3,Math.ceil(days/31)):Math.min(3,S.nmo||1),lab=days?days+(days===1?" day":" days"):(mo===1?"1 month":mo+" months"),h=null,r=null;
   S.nimp={pct:0,txt:"Reading your messages…",mo:mo,lab:lab,t0:Date.now(),last:Date.now()};setTimeout(function(){var n=S.nimp;if(n&&!n.got){n.txt="Still reading, please keep the app open…";var y=document.getElementById("ntxt");if(y)y.textContent=n.txt}},20000);if(S.tab==="sms"||S.tab==="track")render();
   try{h=await smsPlugin().addListener("smsImport",nimpTick)}catch(e){}
-  try{r=await smsPlugin().importRecent({days:Math.min(95,days||mo*31)})}
+  try{r=await smsPlugin().importRecent({days:Math.min(95,days||mo*31),local:!!(window.GWL&&GWL.on)})}
   catch(e){S.nimp=null;try{h&&h.remove()}catch(x){}if(S.tab==="sms"||S.tab==="track")render();showErr("Could not read SMS: "+(e.message||e));return}
   try{h&&h.remove()}catch(x){}
   if(r&&r.items&&window.GWL&&GWL.on){var gi=GWL.ingestSms(r.items);r.saved=gi.saved;r.skipped=gi.skipped+gi.bad;try{await GWL.flush();await load(true)}catch(x){}}

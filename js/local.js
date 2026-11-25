@@ -311,7 +311,15 @@ GWL.hook=function(){
     return h};
   var _vsn=vSmsNative;vSmsNative=function(){var h=_vsn();
     h=h.replace(/<ul[\s\S]*?<\/ul>/,'<ul style="margin:6px 0 0;padding-left:18px"><li>Gharwise reads SMS on this phone to find <b>bank payment alerts</b> (debited, credited, spent).</li><li>They are saved <b>only on this phone</b> and in your backup folder. SMS text is never sent anywhere.</li><li>OTPs, personal messages and offers are ignored.</li><li>You can turn this off any time here, or in Android Settings.</li></ul>');
-    h=h.replace(/ sent from this phone/," added on this phone").replace(/<div class="note" style="text-align:center;margin-top:10px">You can also use <a[\s\S]*?<\/div>/,"");return h};
+    h=h.replace(/ sent from this phone/," added on this phone").replace(/<div class="note" style="text-align:center;margin-top:10px">You can also use <a[\s\S]*?<\/div>/,"");
+    h=h.replace(/<div class="mute" style="margin:16px 0 6px">How far back should we read your bank SMS\?<\/div>[\s\S]*?(<button class="btn" id="non">)/,'<div style="height:14px"></div>$1');
+    h=h.replace("Allow SMS access and turn on","Allow SMS access and turn on live tracking").replace("SMS tracking is on</h3>","Live SMS tracking is on</h3>");
+    h=h.replace('<button class="btn ghost" id="noff">','<div class="note" style="margin:0 0 12px;text-align:center">Live tracking only adds new SMS. For older bank SMS, use <a href="#" data-limp="1" style="color:var(--acc)">Import SMS</a>.</div><button class="btn ghost" id="noff">');
+    return h};
+  var _vi=vImportSms;vImportSms=function(){var st=S.nsms;
+    if(!nativeSmsOK()||!st||st.enabled)return _vi();
+    if(st.permission!=="granted")return '<h2 style="margin:14px 0 2px">Import SMS</h2><div class="mute" style="margin-bottom:12px">Read older bank messages from this phone, once.</div><div class="card"><b>Allow Gharwise to read SMS</b><div class="note" style="margin:6px 0 12px">Only bank payment alerts are picked out and saved on this phone. This does not turn on live tracking.</div><button class="btn" data-lsmsperm="1">Allow SMS access</button></div>';
+    S.nsms=Object.assign({},st,{enabled:true});try{return _vi()}finally{S.nsms=st}};
   ndPlugin=function(){return null};
   ndiIos=function(){try{return nativeApp()&&!!lnPlugin()}catch(e){return false}};
 };
@@ -373,9 +381,22 @@ function localMail(){
   var st=MS.st||{},ok=st.last_run&&(Date.now()-new Date(st.last_run).getTime())<30*60000;
   h+='<div class="dc"><div class="row" style="padding:0"><b>'+(st.last_run?(ok?'✓ Connected':'⚠ Stopped'):'Waiting for your Gmail script')+'</b><span class="mute">'+(st.last_run?'checked '+ago(st.last_run):'')+'</span></div><div class="note" style="margin:6px 0 0">'+(st.count?st.count+' encrypted emails received':'No emails yet')+(st.waiting?' · '+st.waiting+' waiting for this phone':'')+'.</div><button class="btn ghost s" data-mail="pull" style="margin-top:10px">Check now</button></div>';
   h+='<div class="card"><b>1. Copy your script</b><div class="mute" style="margin:4px 0 10px">It contains your personal key. Don’t share it.</div><button class="btn" data-mail="copy">Copy script</button><button class="btn ghost" data-mail="sharescript" style="margin-top:8px">Send it to my computer…</button></div>';
-  h+='<div class="card"><b>2. Put it in Google Script</b><ol style="margin:6px 0 0;padding-left:18px;line-height:1.6;font-size:14px"><li>Open <b>script.google.com</b> with the Gmail account that gets your bank alerts (a computer is easiest).</li><li>Tap <b>New project</b>, select everything there and paste your script.</li><li>Press <b>Save</b>, choose <b>setup</b> in the function box and press <b>Run</b>.</li><li>Allow access when Google asks (Advanced → Go to project).</li></ol></div>';
+  h+='<div class="card"><b>2. Put it in Google Script</b><div class="mute" style="margin:4px 0 8px">A computer is easiest. On a phone, use Chrome and turn on ⋮ → Desktop site.</div>'+
+    '<a class="btn ghost s" href="https://script.google.com/home" target="_blank" rel="noopener" style="display:inline-block;text-decoration:none;margin-bottom:8px">Open Google Apps Script</a>'+
+    '<ol style="margin:4px 0 0;padding-left:18px;line-height:1.6;font-size:14px">'+
+    '<li>Open <b>script.google.com/home</b> and sign in with the <b>Gmail account that gets your bank alerts</b>.</li>'+
+    '<li>Click <b>+ New project</b> (top left). An editor opens with <code>function myFunction() {}</code>.</li>'+
+    '<li>Click inside it, press <b>Ctrl+A</b>, then <b>Delete</b>, then paste your script (<b>Ctrl+V</b>).</li>'+
+    '<li>Click <b>Untitled project</b> at the top and rename it <b>Gharwise</b>.</li>'+
+    '<li>Click <b>Save</b> (the 💾 icon).</li>'+
+    '<li>In the toolbar, open the function list next to <b>Debug</b>, choose <b>setup</b>, and click <b>▶ Run</b>.</li>'+
+    '<li>“Authorization required” appears: <b>Review permissions</b> → choose your Gmail → “Google hasn’t verified this app” → <b>Advanced</b> → <b>Go to Gharwise (unsafe)</b> → <b>Allow</b>. It is your own script, so this warning is normal.</li>'+
+    '<li>The <b>Execution log</b> at the bottom ends with “Connected”. Come back here and tap <b>Check now</b>.</li></ol></div>';
   return h+'<button class="btn ghost" data-mail="off" style="margin:6px 0 20px">Turn off email tracking</button>'}
 document.addEventListener("change",function(e){if(e.target&&e.target.id==="mmo2")MS.months=+e.target.value});
+document.addEventListener("click",function(e){var a=e.target&&e.target.closest&&e.target.closest("[data-limp]");if(!a)return;e.preventDefault();go("track");S.trkTab="sms";render();window.scrollTo(0,0);try{quiet(loadSc())}catch(x){}});
+document.addEventListener("click",async function(e){var b=e.target&&e.target.closest&&e.target.closest("[data-lsmsperm]");if(!b)return;b.disabled=true;
+  try{var P=smsPlugin();await P.requestPermissions({permissions:["sms"]});S.nsms=await P.status()}catch(x){showErr("SMS access was not allowed. Allow it in Android Settings → Apps → Gharwise Local → Permissions.")}render()});
 document.addEventListener("click",async function(e){var b=e.target&&e.target.closest&&e.target.closest("[data-mail]");if(!b)return;var a=b.getAttribute("data-mail");
   try{
     if(a==="on"){b.disabled=true;await GWL.mailEnable(MS.months);MS.st=null;render();if(await copyText(GWL.mailScript()))toast("Script copied. Paste it in Google Script.")}
