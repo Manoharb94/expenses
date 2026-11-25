@@ -57,7 +57,7 @@ GWL.crypto={b64e:b64e,b64d:b64d,hmac:hmac};
 
 /* ---------- usage numbers for the owner (no amounts, no payees) ---------- */
 async function ping(open){
-  if(!SESS)return;var db=GWL.db();if(!db||!db.profile)return;
+  if(!SESS||GWL.testing)return;var db=GWL.db();if(!db||!db.profile)return;
   var sms=false,ver="";try{var P=smsPlugin();if(P){var st=await P.status();sms=!!(st&&st.enabled)}}catch(e){}
   try{var P2=smsPlugin();if(P2&&P2.appInfo){var a=await P2.appInfo();ver=String(a.versionName||"")}}catch(e){}
   if(db.family&&db.family.key){try{var fi=await srv("lm_family_info",{});if(fi&&fi.members)db.family.members=fi.members}catch(e){}}
@@ -74,7 +74,7 @@ function codeOf(f){var b=new Uint8Array(48);b.set(uuidBytes(f.id),0);b.set(b64d(
 function parseCode(c){c=String(c||"").trim().replace(/\s+/g,"");var m=/GW1-([A-Za-z0-9_-]{60,70})/.exec(c);if(!m)throw new Error("That family code doesn't look right. Copy the whole code that starts with GW1-");
   var b=b64ud(m[1]);if(b.length!==48)throw new Error("That family code is incomplete. Copy the whole code.");return {id:bytesUuid(b.slice(0,16)),key:b64e(b.slice(16))}}
 async function joinHash(keyB64){return sha256hex("gharwise-family-join-v1:"+keyB64)}
-GWL.famCode=function(){var f=fam();return f?codeOf(f):""};
+GWL.famCodec={codeOf:codeOf,parseCode:parseCode,joinHash:joinHash};GWL.aesKey=aesKey;GWL.famCode=function(){var f=fam();return f?codeOf(f):""};
 GWL.famCreate=async function(){if(!SESS)throw new Error("Log in first");var key=b64e(rnd(32)),id=await srv("lm_family_create",{p_join_hash:await joinHash(key)});
   GWL.db().family={id:id,key:key,created:new Date().toISOString(),seq:0,pushed:{},members:1};GWL.mark("data",true);await GWL.flush();await sync();ping(false);return codeOf(GWL.db().family)};
 GWL.famJoin=async function(code){if(!SESS)throw new Error("Log in first");var c=parseCode(code),n=await srv("lm_family_join",{p_family:c.id,p_join_hash:await joinHash(c.key)});

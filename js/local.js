@@ -41,11 +41,12 @@ async function fread(name){var P=LF();if(!P){var v=null;try{v=localStorage.getIt
 async function fdelete(name){var P=LF();if(!P){try{localStorage.removeItem("gwfile:"+name)}catch(e){}return}if(P.deleteFile)try{await P.deleteFile({name:name})}catch(e){}}
 
 var dirty={data:false,bills:false,family:false},stimer=null,saving=null;
-function mark(kind,quiet){dirty[kind||"data"]=true;dirty.data=true;clearTimeout(stimer);stimer=setTimeout(flush,1200);if(!quiet&&kind!=="family"&&GWL.syncSoon)GWL.syncSoon()}
+function mark(kind,quiet){dirty[kind||"data"]=true;dirty.data=true;if(GWL.testing)return;clearTimeout(stimer);stimer=setTimeout(flush,1200);if(!quiet&&kind!=="family"&&GWL.syncSoon)GWL.syncSoon()}
 GWL.mark=mark;
 function mainCopy(){var c={v:1,app:"gharwise-local",saved_at:now(),profile:DB.profile,family:DB.family||null,mail:DB.mail||null,t:{}};
   TABLES.forEach(function(t){if(t!=="txn_bills"&&t!=="family_txns")c.t[t]=DB.t[t]});return c}
 async function flush(){
+  if(GWL.testing)return;
   if(saving){await saving;}
   if(!dirty.data&&!dirty.bills&&!dirty.family)return;
   var d=dirty;dirty={data:false,bills:false,family:false};
@@ -175,7 +176,7 @@ function ingestVoice(it){var p=GWSMS.parseVoice(it.t);if(!p)return false;
   mark();return true}
 GWL.addVoice=function(text){return ingestVoice({t:text,ms:Date.now()})};
 var draining=false;
-async function drain(){var P=smsP();if(draining||!P||!P.takeInbox||!DB||!DB.profile)return;draining=true;
+async function drain(){var P=smsP();if(GWL.testing||draining||!P||!P.takeInbox||!DB||!DB.profile)return;draining=true;
   try{var r=await P.takeInbox(),items=r&&r.items||[];if(!items.length)return;
     var sms=items.filter(function(i){return i.k==="sms"}),voice=items.filter(function(i){return i.k==="voice"}),undo=items.filter(function(i){return i.k==="undo"});
     var g=ingestSms(sms),v=0;voice.forEach(function(i){if(ingestVoice(i))v++});
@@ -212,11 +213,11 @@ async function toPdfB64(rows,r){
     J.text(t.txn_date||"",cols[0][0],y);J.text(asc(t.merchant).slice(0,34),cols[1][0],y);J.text(asc(t.category||"-").slice(0,22),cols[2][0],y);J.text(asc(t.person||"").slice(0,16),cols[3][0],y);
     J.text((t.type==="in"?"+":"-")+rs(t.amount),cols[4][0],y,{align:"right"});y+=14});
   var out64=J.output("datauristring");return out64.slice(out64.indexOf(",")+1)}
-GWL.exportData=async function(fmt,r,how){
-  var rows=rangeRows(r),stamp=day(),name,mime,text=null,b64=null;
+GWL.exportData=async function(fmt,r,how,pre){
+  var rows=rangeRows(r),stamp=day(),name,mime,text=null,b64=null;pre=pre||"gharwise-";
   if(!rows.length&&fmt!=="json"){toast("No payments in "+RL[r].toLowerCase());return}
-  if(fmt==="csv"){name="gharwise-"+r+"-"+stamp+".csv";mime="text/csv";text=toCsv(rows)}
-  else if(fmt==="pdf"){name="gharwise-"+r+"-"+stamp+".pdf";mime="application/pdf";b64=await toPdfB64(rows,r)}
+  if(fmt==="csv"){name=pre+r+"-"+stamp+".csv";mime="text/csv";text=toCsv(rows)}
+  else if(fmt==="pdf"){name=pre+r+"-"+stamp+".pdf";mime="application/pdf";b64=await toPdfB64(rows,r)}
   else{name="gharwise-full-backup-"+stamp+".json";mime="application/json";var c=mainCopy();c.t.txn_bills=T("txn_bills");c.t.family_txns=T("family_txns");text=JSON.stringify(c)}
   var P=LF();
   if(how==="share"){if(!P){toast("Sharing works in the app");return}
@@ -319,7 +320,7 @@ function localMenu(){
   return topbar("Menu","home")+'<div class="msec">App settings</div><div class="card" style="padding:0 12px">'+rowB("","⚙️","Settings","Language, look, lock and reminders","rgba(120,130,150,.20)","set")+rowB("","🗂️","Categories","What each category has this month","rgba(255,150,40,.22)","cats")+'</div>'+
     '<div class="msec">Tracking & family</div><div class="card" style="padding:0 12px">'+rowB("","💬","Automated tracking","SMS, email, voice and bank statements","rgba(60,130,255,.20)","track")+rowB("","👨‍👩‍👧","Family sharing",fam,"rgba(140,100,255,.20)","fam")+rowB("","🎯","Goals","Save for things together","rgba(240,80,150,.20)","goals")+'</div>'+
     '<div class="msec">Your data</div><div class="card" style="padding:0 12px">'+rowB("folder","📁","Storage folder",GWL.folder.ok?esc(GWL.folder.name||"Chosen")+(GWL.lastBackup?" · backed up "+new Date(GWL.lastBackup).toLocaleTimeString("en-IN",{hour:"numeric",minute:"2-digit"}):""):"⚠ Not available","rgba(40,180,100,.20)")+rowB("export","📤","Export my data","PDF or CSV (Excel)","rgba(60,130,255,.20)")+'<a class="mr" href="privacy.html" target="_blank" rel="noopener" style="text-decoration:none"><i class="mt" style="background:rgba(120,130,150,.20)">🔒</i><span><b>Privacy</b><span>Payments stay on this phone; family data is encrypted</span></span><span class="go">›</span></a>'+
-    rowB("login","📱","Account",li?"+"+esc(String(GWL.phone()).replace(/^\+?91/,"91 ")):"⚠ Logged out · tap to log in","rgba(120,130,150,.20)")+rowB("erase","🗑️",'<span class="out">Erase all data on this phone</span>',"Payments, settings and family data","rgba(230,70,70,.18)")+'</div><div class="note" style="text-align:center;margin:14px 0">Gharwise on-phone version · '+T("transactions").length+' payments stored here</div>'}
+    rowB("login","📱","Account",li?"+"+esc(String(GWL.phone()).replace(/^\+?91/,"91 ")):"⚠ Logged out · tap to log in","rgba(120,130,150,.20)")+rowB("erase","🗑️",'<span class="out">Erase all data on this phone</span>',"Payments, settings and family data","rgba(230,70,70,.18)")+'</div>'+(ls("gwdev")==="1"?'<div class="msec">Testing</div><div class="card" style="padding:0 12px"><button class="mr" data-st="run"><i class="mt" style="background:rgba(40,180,100,.20)">🧪</i><span><b>Run self-check</b><span>Tests every feature on this phone. Your data is not touched.</span></span><span class="go">›</span></button></div>':'')+'<div class="note" id="gwver" style="text-align:center;margin:14px 0;user-select:none">Gharwise on-phone version · '+T("transactions").length+' payments stored here</div>'}
 var EX={f:"pdf",r:"month"};
 function exportSheet(){var sh=document.getElementById("sheet");if(!sh)return;
   var chip=function(k,v,l){return '<button type="button" class="'+(EX[k]===v?'on':'')+'" data-ex="'+k+':'+v+'">'+l+'</button>'};
@@ -381,5 +382,5 @@ document.addEventListener("click",async function(e){var b=e.target&&e.target.clo
     else if(a==="pull"){b.disabled=true;var n=await GWL.mailPull();MS.st=null;b.disabled=false;render();if(!n)toast("No new bank emails")}
     else if(a==="off"){if(!confirm("Turn off email tracking? Then delete the project in script.google.com too."))return;await GWL.mailOff();MS.st=null;render()}
   }catch(x){b.disabled=false;showErr(x&&x.message||String(x))}});
-GWL.db=function(){return DB};GWL.FILES=FILES;GWL.T=T;GWL.flush=flush;
+GWL.db=function(){return DB};GWL.swapDb=function(d){var o=DB;DB=d;return o};GWL.blankDb=blank;GWL.files={write:fwrite,writeB64:fwriteB64,read:fread,del:fdelete};GWL.prep=prep;GWL.FILES=FILES;GWL.T=T;GWL.flush=flush;
 })();
