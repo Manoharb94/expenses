@@ -96,7 +96,7 @@ GWL.grpc=function(fn,a){return H[fn]?H[fn](a||{}):undefined};GWL.grpcHas=functio
 function notify(id){if(GWL.testing&&!GWL.pushInTests)return;try{GWL.fn("lm-push",{invite:id,delay:GWL.pushDelay||0}).catch(function(){})}catch(e){}}
 function pushP(){try{return window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.PushNotifications||null}catch(e){return null}}
 var pushOn=false;
-GWL.pushSetup=async function(){var P=pushP();if(!P||!GWL.loggedIn()||GWL.testing)return "no";
+GWL.pushSetup=async function(){var P=pushP();if(!P)return "not in this build";if(!GWL.loggedIn()||GWL.testing)return "no";
   try{var S2=Capacitor.Plugins.SmsTracker,a=S2&&S2.appInfo?await S2.appInfo():null;if(!a||!a.pushReady)return "not in this build"}catch(e){return "no"}
   if(!pushOn){pushOn=true;
     P.addListener("registration",async function(t){var tok=t&&t.value;if(!tok)return;var tag=GWL.uid()+":"+tok;if(ls("gwpush")===tag)return;try{await srv("lm_set_push",{p_token:tok,p_platform:"android"});ls("gwpush",tag)}catch(e){}});
