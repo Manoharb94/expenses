@@ -168,6 +168,25 @@ async function run(){if(running)return;running=true;R=[];FT={};ui();
       try{var m=await t[2]();row.s="pass";if(typeof m==="string")row.m=m;if(row.n==="App version")GWL.selftestVersion=m}catch(e){row.s=e&&e.skip?"skip":"fail";row.m=e&&e.message||String(e)}
       row.ms=Date.now()-t0;ui()}}
   finally{try{await cleanupFamily()}catch(e){}FT={};GWL.swapDb(real);GWL.testing=false;running=false;try{await load(true);go("menu")}catch(e){}ui()}}
+
+/* ---- one-phone test of a real invite push: this phone pretends to be test member B, test member A invites B ---- */
+async function pair(){var nums=testNums(),otp=testOtp(),own=String(GWL.phone()||"").replace(/\D/g,"").slice(-10);
+  var use=nums.filter(function(n){return n.replace(/\D/g,"").slice(-10)!==own});if(use.length<2)throw new Error("needs two test numbers that are not this phone's login. Menu → Testing → Self-check → Test numbers.");
+  FT={};for(var i=0;i<2;i++){var who=i?"B":"A";FT[who]={num:use[i],sess:await GWL._loginTest(use[i],otp)};var d=GWL.blankDb();d.profile={name:"Test "+who,created:new Date().toISOString()};FT[who].db=d;await asDev(who,function(){return GWL.publishKey()})}}
+GWL.inviteTestCleanup=async function(){if(ls("gwinvtest")!=="1"||running)return;var tok=ls("gwinvtok")||"";ls("gwinvtest","");
+  try{await pair();try{await asDev("A",async function(){var l=await GWL.srv("lm_invites_sent",{})||[];for(var x of l){try{await GWL.srv("lm_invite_cancel",{p_id:x.id})}catch(e){}}})}catch(e){}for(var w of ["A","B"])try{await asDev(w,function(){return GWL.srv("lm_family_leave",{})})}catch(e){}
+    if(tok)try{await asDev("B",function(){return GWL.srv("lm_drop_push",{p_token:tok})})}catch(e){}}catch(e){}
+  FT={};if(tok)try{await GWL.srv("lm_set_push",{p_token:tok,p_platform:"android"})}catch(e){}};
+GWL.inviteTest=async function(){if(running)throw new Error("The self-check is running");if(!GWL.loggedIn())throw new Error("Log in first (Menu → Account)");
+  var st=await GWL.pushSetup();if(st!=="on")throw new Error(st==="not in this build"?"This build has no Firebase file (google-services.json)":st==="not allowed"?"Allow notifications for Gharwise in Android settings":"Push notifications are not available");
+  await new Promise(function(r){setTimeout(r,1500)});var tag=String(ls("gwpush")||"");if(tag.indexOf(GWL.uid()+":")!==0)throw new Error("This phone is not registered for notifications yet. Reopen the app while online and try again.");
+  var tok=tag.slice(tag.indexOf(":")+1);await GWL.inviteTestCleanup();await pair();
+  ls("gwinvtok",tok);ls("gwinvtest","1");
+  await asDev("B",function(){return GWL.srv("lm_set_push",{p_token:tok,p_platform:"android"})});   /* from now this phone receives B's notifications */
+  var r;try{r=await asDev("A",async function(){try{await GWL.srv("lm_family_leave",{})}catch(e){}await GWL.famCreate();GWL.pushDelay=10;GWL.pushInTests=true;try{return await GWL.invite("family",GWL.db().family.id,FT.B.num)}finally{GWL.pushDelay=0;GWL.pushInTests=false}})}
+  catch(e){await GWL.inviteTestCleanup();throw e}
+  if(!r||r.status!=="invited"){await GWL.inviteTestCleanup();throw new Error("The invite was not sent ("+(r&&r.status)+")")}
+  FT={}};
 GWL.selftest=run;GWL.selftestResults=function(){return R};
 document.addEventListener("click",async function(e){var b=e.target&&e.target.closest&&e.target.closest("[data-st]");if(b){var a=b.getAttribute("data-st");
     if(a==="nums"){e.preventDefault();var v=prompt("Two Supabase test phone numbers for the family check, separated by a comma",testNums().join(","));if(v){ls("gwtestnums",v)}var c=prompt("Their test code (6 digits)",testOtp());if(c&&/^\d{6}$/.test(c.trim()))ls("gwtestotp",c.trim());ui();return}

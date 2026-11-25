@@ -101,16 +101,27 @@ Deno.serve(async (req) => {
     if (!tokens.length) return json({ sent: 0 });
 
     const family = t.kind === "family";
-    const access = await googleToken(sa);
-    let sent = 0;
-    for (const token of tokens) {
-      if (await send(sa.project_id, access, token,
-        family ? "Family invite" : "Group invite",
-        family
-          ? "Someone invited you to their family on Gharwise. Open the app to accept or reject."
-          : "Someone invited you to a group on Gharwise. Open the app to accept or reject.",
-        { kind: "invite", invite: String(invite) }, sb)) sent++;
+    const delay = Math.min(Math.max(Number(body.delay) || 0, 0), 30) * 1000; // the one-phone invite test waits so the person can leave the app
+    const job = (async () => {
+      if (delay) await new Promise((r) => setTimeout(r, delay));
+      const access = await googleToken(sa);
+      let n = 0;
+      for (const token of tokens) {
+        if (await send(sa.project_id, access, token,
+          family ? "Family invite" : "Group invite",
+          family
+            ? "Someone invited you to their family on Gharwise. Open the app to accept or reject."
+            : "Someone invited you to a group on Gharwise. Open the app to accept or reject.",
+          { kind: "invite", invite: String(invite) }, sb)) n++;
+      }
+      return n;
+    })();
+    if (delay) {
+      // deno-lint-ignore no-explicit-any
+      const rt = (globalThis as any).EdgeRuntime;
+      if (rt?.waitUntil) { rt.waitUntil(job); return json({ queued: tokens.length }); }
     }
+    const sent = await job;
     return json({ sent });
   } catch (e) {
     return json({ error: String((e as Error)?.message || e) }, 500);

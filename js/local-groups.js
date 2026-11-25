@@ -93,7 +93,7 @@ GWL.grpc=function(fn,a){return H[fn]?H[fn](a||{}):undefined};GWL.grpcHas=functio
 
 /* ---------- push notifications (Firebase), so an invite is noticed while the app is closed ---------- */
 /* tell the invitee's phone: the server sends only "Someone invited you…"; it never knows names */
-function notify(id){if(GWL.testing&&!GWL.pushInTests)return;try{GWL.fn("lm-push",{invite:id}).catch(function(){})}catch(e){}}
+function notify(id){if(GWL.testing&&!GWL.pushInTests)return;try{GWL.fn("lm-push",{invite:id,delay:GWL.pushDelay||0}).catch(function(){})}catch(e){}}
 function pushP(){try{return window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.PushNotifications||null}catch(e){return null}}
 var pushOn=false;
 GWL.pushSetup=async function(){var P=pushP();if(!P||!GWL.loggedIn()||GWL.testing)return "no";
@@ -101,8 +101,8 @@ GWL.pushSetup=async function(){var P=pushP();if(!P||!GWL.loggedIn()||GWL.testing
   if(!pushOn){pushOn=true;
     P.addListener("registration",async function(t){var tok=t&&t.value;if(!tok)return;var tag=GWL.uid()+":"+tok;if(ls("gwpush")===tag)return;try{await srv("lm_set_push",{p_token:tok,p_platform:"android"});ls("gwpush",tag)}catch(e){}});
     P.addListener("registrationError",function(){});
-    P.addListener("pushNotificationReceived",function(){GWL.groupsSync(true)});
-    P.addListener("pushNotificationActionPerformed",function(ev){try{var dt=ev&&ev.notification&&ev.notification.data||{};if(dt.kind==="test"){setTimeout(function(){toast("Push notification works ✓")},800);return}}catch(e){}GWL.groupsSync(true)})}
+    P.addListener("pushNotificationReceived",function(ev){try{var d0=ev&&ev.data||{};if(d0.kind==="invite"&&ls("gwinvtest")==="1"){toast("Invite push works ✓");GWL.inviteTestCleanup&&GWL.inviteTestCleanup();return}}catch(e){}GWL.groupsSync(true)});
+    P.addListener("pushNotificationActionPerformed",function(ev){try{var dt=ev&&ev.notification&&ev.notification.data||{};if(dt.kind==="test"){setTimeout(function(){toast("Push notification works ✓")},800);return}if(dt.kind==="invite"&&ls("gwinvtest")==="1"){setTimeout(function(){toast("Invite push works ✓")},800);GWL.inviteTestCleanup&&GWL.inviteTestCleanup();return}}catch(e){}GWL.groupsSync(true)})}
   try{await P.createChannel({id:"invites",name:"Invites",description:"When someone invites you to their family or a group",importance:4,visibility:1})}catch(e){}
   var pm=await P.checkPermissions();if(pm.receive==="prompt"||pm.receive==="prompt-with-rationale")pm=await P.requestPermissions();
   if(pm.receive!=="granted")return "not allowed";
