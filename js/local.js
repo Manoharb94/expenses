@@ -300,6 +300,8 @@ GWL.hook=function(){
   /* put the cursor in the setup box straight away (helps people and the Maestro test robot) */
   var _r2=render;render=function(){var out=_r2.apply(this,arguments);if(LV[S.view])setTimeout(function(){var i=document.getElementById("lotp")||document.getElementById("lphone")||document.getElementById("lname");if(i&&document.activeElement!==i){try{i.focus()}catch(e){}}},150);return out};
   boot=function(){return GWL.start()};
+  /* Quick Add: put the cursor in the Amount box straight away */
+  var _add=addSheet;addSheet=function(){var r=_add.apply(this,arguments);setTimeout(function(){var x=document.getElementById("xa");if(x&&!x.value&&document.activeElement!==x){try{x.focus()}catch(e){}}},250);return r};
   phoneNudge=function(){};joinCheck=function(){};touch=function(){};
   logoutLocal=function(){if(GWL.logout)GWL.logout();if(GWL.loginBar)GWL.loginBar()};
   try{loadGroups=function(){};gOKUI=function(){return false}}catch(e){}
