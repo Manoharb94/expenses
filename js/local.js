@@ -433,3 +433,9 @@ document.addEventListener("click",async function(e){var b=e.target&&e.target.clo
   }catch(x){b.disabled=false;showErr(x&&x.message||String(x))}});
 GWL.newId=uid;GWL.db=function(){return DB};GWL.swapDb=function(d){var o=DB;DB=d;return o};GWL.blankDb=blank;GWL.files={write:fwrite,writeB64:fwriteB64,read:fread,del:fdelete};GWL.prep=prep;GWL.FILES=FILES;GWL.T=T;GWL.flush=flush;
 })();
+/* while typing, hide the bottom bar and the round ＋ button: with the keyboard open they float up and cover buttons such as Send Invite */
+(function(){if(!window.GWL||!GWL.on)return;
+  var st=document.createElement("style");st.textContent="body.typing #nav,body.typing .fab,body.typing #fab{display:none!important}";document.head.appendChild(st);
+  function isText(e){if(!e||!e.tagName)return false;if(e.tagName==="TEXTAREA")return true;if(e.tagName!=="INPUT")return false;return !/^(checkbox|radio|button|submit|range|color|file)$/i.test(e.type||"")}
+  document.addEventListener("focusin",function(e){if(isText(e.target))document.body.classList.add("typing")});
+  document.addEventListener("focusout",function(){setTimeout(function(){if(!isText(document.activeElement))document.body.classList.remove("typing")},50)})})();
