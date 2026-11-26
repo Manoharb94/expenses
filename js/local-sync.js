@@ -23,6 +23,7 @@ async function fresh(force){
     var r=await fetch(AUTHB+"token?grant_type=refresh_token",{method:"POST",headers:{apikey:KEY,"Content-Type":"application/json"},body:JSON.stringify({refresh_token:SESS.refresh})});
     /* only a real "this login is no longer valid" logs out; too many requests or a timeout just tries again later */
     if(r.status>=400&&r.status<500&&r.status!==408&&r.status!==429){var why="";try{var jo=await r.clone().json();why=jo.error_code||jo.error||jo.msg||""}catch(x){}
+      if(why==="refresh_token_already_used"&&!GWL.inDev){try{var sv=JSON.parse(localStorage.getItem("gwsess")||"null");if(sv&&sv.refresh&&sv.refresh!==SESS.refresh){SESS=sv;return}}catch(x){}}
       if(!GWL.inDev)ls("gwlogoutwhy",r.status+" "+why+" · "+new Date().toLocaleString());sessDrop();if(!GWL.inDev)loginBar();throw new Error("LOGIN")}
     if(!r.ok)throw new Error("NET");
     sessSave(await r.json())}finally{refreshing=null}})();
@@ -53,11 +54,8 @@ GWL.resetCode=async function(ph){await authFetch("otp","POST",{phone:ph,create_u
 GWL.setPassword=async function(pw){await fresh();await authFetch("user","PUT",{password:pw},SESS.access)};
 GWL.sendOtp=async function(ph){await authFetch("otp","POST",{phone:ph,create_user:true})};
 GWL.verifyOtp=async function(ph,code){var o=await authFetch("verify","POST",{type:"sms",phone:ph,token:code});if(!o||!o.access_token)throw new Error("That code did not work.");sessSave(o);ls("gwlogoutwhy","");return true};
-function loginBar(){if(!GWL.db()||!GWL.db().profile||ls("gwout")==="1")return;var b=document.getElementById("lgbar");if(SESS){if(b)b.remove();return}if(b)return;
-  b=document.createElement("button");b.id="lgbar";b.style.cssText="position:fixed;left:12px;right:12px;bottom:calc(92px + env(safe-area-inset-bottom));z-index:65;border:0;border-radius:12px;padding:10px 14px;background:#92400e;color:#fff;font:inherit;font-size:14px;text-align:left";
-  b.textContent="Log in again to keep family and email in sync. Your data on this phone is safe.";
-  var why=ls("gwlogoutwhy");if(why){var sm=document.createElement("small");sm.style.cssText="display:block;opacity:.75;margin-top:2px;font-size:11px";sm.textContent="Reason: "+why;b.appendChild(sm)}
-  b.onclick=function(){S.view="llogin";GWL.su.mode="login";GWL.su.step=2;render()};document.body.appendChild(b)}
+/* no banner any more: a logged-out phone shows "Logged out · tap to log in" in Settings, and the login screen after Log out */
+function loginBar(){var b=document.getElementById("lgbar");if(b)b.remove()}
 GWL.loginBar=loginBar;
 
 /* ---------- small crypto helpers ---------- */
