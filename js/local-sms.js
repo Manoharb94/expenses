@@ -56,8 +56,26 @@ function parseSms(text){
 }
 /** Reads a spoken expense like "spent 100 rs for auto" or "received 1000 from Manohar". */
 var VCAT=[[/\b(auto|rickshaw|bus|metro|cab|uber|ola|rapido|taxi|train|ticket|parking|toll)\b/,"Transport"],[/\b(petrol|diesel|fuel|cng)\b/,"Fuel"],[/\b(grocery|groceries|vegetables?|sabzi|milk|kirana|fruits?|rice|dal|atta)\b/,"Groceries"],[/\b(food|lunch|dinner|breakfast|tea|chai|coffee|snacks?|restaurant|swiggy|zomato|biryani)\b/,"Food"],[/\b(medicines?|doctor|hospital|pharmacy|clinic|dawai)\b/,"Health"],[/\brent\b/,"House Rent"],[/\b(electricity|current|bill|recharge|wifi|internet|gas|water)\b/,"Bills & Utilities"],[/\b(movie|cinema|netflix|games?)\b/,"Entertainment"],[/\b(school|fees|tuition|books|class)\b/,"Education"],[/\b(clothes|shirt|shoes|shopping|amazon|flipkart)\b/,"Shopping"]];
+/* spoken numbers: "one thousand", "five hundred", "fifteen hundred", "two lakh", "ek hazaar" -> digits */
+var NSM={zero:0,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,sixteen:16,seventeen:17,eighteen:18,nineteen:19,twenty:20,thirty:30,forty:40,fourty:40,fifty:50,sixty:60,seventy:70,eighty:80,ninety:90},
+  NHI={ek:1,do:2,teen:3,char:4,paanch:5,panch:5,das:10,bees:20,pachas:50},
+  NMG={hundred:100,hundreds:100,sau:100,thousand:1000,thousands:1000,hazaar:1000,hazar:1000,lakh:1e5,lakhs:1e5,lac:1e5,lacs:1e5,crore:1e7,crores:1e7};
+function wordsToDigits(t){var tk=t.split(/(\s+)/),out=[],i=0;
+  function isN(w){return w in NSM||w in NMG||w in NHI}
+  while(i<tk.length){var w=tk[i];
+    if(i%2===0&&(isN(w)||(w==="a"&&NMG[(tk[i+2]||"")]>=1000))){
+      var j=i,run=[],mag=false,hi=false;
+      while(j<tk.length){var x=tk[j];if(j%2===1){if(j+1<tk.length&&(isN(tk[j+1])||tk[j+1]==="and"&&isN(tk[j+3]||""))){j++;continue}break}
+        if(x==="and"&&run.length){run.push(x);j++;continue}
+        if(isN(x)||(x==="a"&&run.length===0&&NMG[(tk[j+2]||"")]>=1000)){run.push(x);if(x in NMG)mag=true;if(x in NHI)hi=true;j++;continue}break}
+      while(run.length&&run[run.length-1]==="and"){run.pop();j-=2}
+      var ok=mag||!hi;
+      if(ok){var tot=0,cur=0;run.forEach(function(x){if(x==="and")return;if(x==="a")cur=1;else if(x in NMG){var m=NMG[x];if(m===100)cur=(cur||1)*100;else{tot+=(cur||1)*m;cur=0}}else cur+=(NSM[x]!=null?NSM[x]:NHI[x])});
+        out.push(String(tot+cur));i=j;continue}}
+    out.push(w);i++}
+  return out.join("")}
 function parseVoice(text){
-  var t=String(text||"").toLowerCase().replace(/,/g,"").replace(/\b(?:please|add|expenses?|(?:in|to|on)\s+gharwise|gharwise)\b/g," ").replace(/\s+/g," ").trim();if(!t)return null;
+  var t=String(text||"").toLowerCase().replace(/,/g,"").replace(/\b(?:please|add|expenses?|(?:in|to|on)\s+gharwise|gharwise)\b/g," ").replace(/\s+/g," ").trim();t=t.replace(/[०-९]/g,function(d){return "०१२३४५६७८९".indexOf(d)});t=wordsToDigits(t);if(!t)return null;
   var a=/([0-9]+(?:\.[0-9]+)?)\s*(k\b|thousand|hazaar|hazar|lakh)?/.exec(t);if(!a)return null;
   var amt=parseFloat(a[1]);if(a[2]==="k"||a[2]==="thousand"||a[2]==="hazaar"||a[2]==="hazar")amt*=1000;else if(a[2]==="lakh")amt*=100000;if(!(amt>0))return null;
   var inn=/\b(received|receive|got|credited|credit|refund|salary|earned|income|mila|mile)\b/.test(t),m=null;

@@ -22,7 +22,7 @@ var SMS=[
 ["Your OTP for transaction of Rs 500 is 123456. Do not share.",0],
 ["Payment of Rs 3,499 is due on 15-11-26 for your credit card. Pay now.",0],
 ["Hi! Are we meeting at 6? Bring Rs 200 for snacks",0]];
-var VOICE=[["spent 100 rs for auto",100,"out","Auto","Transport"],["paid ₹250 for groceries",250,"out","Groceries","Groceries"],["petrol 500",500,"out","Petrol","Fuel"],["received 1000 rupees from manohar",1000,"in","Manohar",null],["got 2k rupees from amma",2000,"in","Amma",null],["add expense 50 curves in gharwise",50,"out","Curves",null]];
+var VOICE=[["spent 100 rs for auto",100,"out","Auto","Transport"],["paid ₹250 for groceries",250,"out","Groceries","Groceries"],["petrol 500",500,"out","Petrol","Fuel"],["received 1000 rupees from manohar",1000,"in","Manohar",null],["got 2k rupees from amma",2000,"in","Amma",null],["add expense 50 curves in gharwise",50,"out","Curves",null],["received one thousand from amma",1000,"in","Amma",null],["spent fifteen hundred on rent",1500,"out","Rent","House Rent"],["paid two lakh for rent",200000,"out","Rent","House Rent"]];
 
 var R=[],running=false,FT={};
 function testNums(){return String(ls("gwtestnums")||"919000000001,919000000002,919000000003").split(/[\s,]+/).filter(Boolean).map(function(n){n=n.replace(/\D/g,"");return n.length===10?"91"+n:n})}
