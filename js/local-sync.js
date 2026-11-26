@@ -10,8 +10,9 @@ var GWL=window.GWL;if(!GWL||!GWL.on)return;
 
 /* ---------- login session (kept apart from the website's) ---------- */
 var SESS=null;try{SESS=JSON.parse(localStorage.getItem("gwsess")||"null")}catch(e){}
-function sessSave(o){SESS={access:o.access_token,refresh:o.refresh_token,exp:o.expires_at||(Math.floor(Date.now()/1000)+(o.expires_in||3600)),phone:(o.user&&o.user.phone)||(SESS&&SESS.phone)||"",uid:(o.user&&o.user.id)||(SESS&&SESS.uid)||""};try{localStorage.setItem("gwsess",JSON.stringify(SESS))}catch(e){}}
-function sessDrop(){SESS=null;try{localStorage.removeItem("gwsess")}catch(e){}}
+function sessSave(o){SESS={access:o.access_token,refresh:o.refresh_token,exp:o.expires_at||(Math.floor(Date.now()/1000)+(o.expires_in||3600)),phone:(o.user&&o.user.phone)||(SESS&&SESS.phone)||"",uid:(o.user&&o.user.id)||(SESS&&SESS.uid)||""};if(GWL.inDev)return;try{localStorage.setItem("gwsess",JSON.stringify(SESS))}catch(e){}}
+/* while the self-check acts as a test number, its login lives only in memory: the phone's own saved login is never touched */
+function sessDrop(){SESS=null;if(GWL.inDev)return;try{localStorage.removeItem("gwsess")}catch(e){}}
 GWL.loggedIn=function(){return !!SESS};GWL.uid=function(){return SESS&&SESS.uid||""};GWL.phone=function(){return SESS&&SESS.phone||""};GWL.logout=sessDrop;
 var refreshing=null;
 async function fresh(force){
@@ -20,7 +21,9 @@ async function fresh(force){
   if(refreshing)return refreshing;
   refreshing=(async function(){try{
     var r=await fetch(AUTHB+"token?grant_type=refresh_token",{method:"POST",headers:{apikey:KEY,"Content-Type":"application/json"},body:JSON.stringify({refresh_token:SESS.refresh})});
-    if(r.status>=400&&r.status<500){sessDrop();loginBar();throw new Error("LOGIN")}
+    /* only a real "this login is no longer valid" logs out; too many requests or a timeout just tries again later */
+    if(r.status>=400&&r.status<500&&r.status!==408&&r.status!==429){var why="";try{var jo=await r.clone().json();why=jo.error_code||jo.error||jo.msg||""}catch(x){}
+      if(!GWL.inDev)ls("gwlogoutwhy",r.status+" "+why+" · "+new Date().toLocaleString());sessDrop();if(!GWL.inDev)loginBar();throw new Error("LOGIN")}
     if(!r.ok)throw new Error("NET");
     sessSave(await r.json())}finally{refreshing=null}})();
   return refreshing}
@@ -42,10 +45,11 @@ GWL._loginTest=async function(num,otp){num=String(num).replace(/\D/g,"");await a
 GWL._swapSess=function(o){var x=SESS;SESS=o;return x};
 GWL.idle=async function(){try{if(syncing)await syncing}catch(e){}var n=0;while(pulling&&n++<100)await new Promise(function(r){setTimeout(r,100)})};
 GWL.sendOtp=async function(ph){await authFetch("otp","POST",{phone:ph,create_user:true})};
-GWL.verifyOtp=async function(ph,code){var o=await authFetch("verify","POST",{type:"sms",phone:ph,token:code});if(!o||!o.access_token)throw new Error("That code did not work.");sessSave(o);return true};
-function loginBar(){if(!GWL.db()||!GWL.db().profile)return;var b=document.getElementById("lgbar");if(SESS){if(b)b.remove();return}if(b)return;
+GWL.verifyOtp=async function(ph,code){var o=await authFetch("verify","POST",{type:"sms",phone:ph,token:code});if(!o||!o.access_token)throw new Error("That code did not work.");sessSave(o);ls("gwlogoutwhy","");return true};
+function loginBar(){if(!GWL.db()||!GWL.db().profile||ls("gwout")==="1")return;var b=document.getElementById("lgbar");if(SESS){if(b)b.remove();return}if(b)return;
   b=document.createElement("button");b.id="lgbar";b.style.cssText="position:fixed;left:12px;right:12px;bottom:calc(92px + env(safe-area-inset-bottom));z-index:65;border:0;border-radius:12px;padding:10px 14px;background:#92400e;color:#fff;font:inherit;font-size:14px;text-align:left";
   b.textContent="Log in again to keep family and email in sync. Your data on this phone is safe.";
+  var why=ls("gwlogoutwhy");if(why){var sm=document.createElement("small");sm.style.cssText="display:block;opacity:.75;margin-top:2px;font-size:11px";sm.textContent="Reason: "+why;b.appendChild(sm)}
   b.onclick=function(){S.view="llogin";GWL.su.step=2;render()};document.body.appendChild(b)}
 GWL.loginBar=loginBar;
 
