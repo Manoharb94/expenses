@@ -525,20 +525,21 @@ GWL.ios=function(){try{return !!(window.Capacitor&&Capacitor.getPlatform&&Capaci
       (st.waiting?'<p class="note">'+st.waiting+' waiting to be added.</p>':'')+'<button class="btn" data-lios="drain">Add waiting SMS now</button>';
     return [['Turn on live SMS',live],['Add older SMS (optional)',past],['Check it works',done]]};
   /* SMS tracking (iPhone): 4 short steps; the chips are tappable and show where to tap */
-  window.GSTLEN={voice:5,sms:3};
+  window.GSTLEN={voice:5,sms:4};
   var playBtn=function(name,m){return '<a class="btn ghost" href="shortcuts://run-shortcut?name='+encodeURIComponent(name)+'" style="display:block;text-align:center;text-decoration:none;margin-top:'+(m||12)+'px">▶ Play shortcut</a><div class="note" style="margin-top:8px">Added it? Tap ▶ once and tap <b>Allow</b> when asked.</div>'};
 
   vSms=function(){var st=S.nsms||{},n=st.count||0,added=scAdded();
     var openSc='<a class="btn ghost" href="shortcuts://" style="display:block;text-align:center;text-decoration:none;margin-top:14px">Open Shortcuts</a>';
-    var b0=gHead("💬","Add the bank SMS shortcut","One tap, then Add Shortcut.")+(added?'<div class="gok">✅ Shortcut added</div>'+playBtn("Gharwise SMS",14)+'<a href="#" data-scx class="note" style="color:var(--acc);display:block;margin-top:14px">Add again</a>':scBtn("Add shortcut").replace('style="','style="margin-top:18px;'));
+    var b0=gHead("💬","Add the bank SMS shortcut","One tap, then Add Shortcut.")+(added?'<div class="gok">✅ Shortcut added</div><a href="#" data-scx class="note" style="color:var(--acc);display:block;margin-top:10px">Add again</a>':scBtn("Add shortcut").replace('style="','style="margin-top:18px;'));
+    var bR=gHead("▶️","Run it once","Allow when asked.")+playBtn("Gharwise SMS",18)+gChips("sms0",[["Tap ▶","",""],["Allow","",""]]);
     var b1=gHead("⚙️","Make the automation","Starts by itself when a bank SMS arrives.")+openSc+gChips("sms1",[["Automation","lib","Open the Automation tab"],["New Automation","newauto","Tap New Automation"],["Message","message","Tap Message"],["Message Contains","contains","Tap Choose, press the space bar once, then tap Done"],["Run Immediately","runimm","Pick Run Immediately"],["Next","next","Tap Next"],["Gharwise SMS","pick","Pick the Gharwise SMS shortcut"]]);
     var b2=n?gHead("✅","Live tracking is on",n+" bank SMS saved"+(st.last?" · last "+esc(ago(new Date(st.last).toISOString())):""))+'<button class="btn ghost" data-limp style="margin-top:16px">Import older SMS</button>'
       :gHead("🧪","Check it works","Send yourself “Rs 10 debited from a/c XX1234” from another phone, then open Gharwise.")+'<div class="note" style="margin-top:14px;font-weight:700">Waiting for the first bank SMS…</div>';
-    return topbar("SMS tracking","track")+gSteps("sms",["Add the shortcut","Make the automation","Check it works"],[b0,b1,b2])};
+    return topbar("SMS tracking","track")+gSteps("sms",["Add the shortcut","Run it once","Make the automation","Check it works"],[b0,bR,b1,b2])};
   /* Voice expense (iPhone): 4 short steps. "Voice is on" once a real voice expense has come in. */
   var VOICE_LINK="https://www.icloud.com/shortcuts/13d1373c661a4dc5a39b553d9218bc0f";
   window.vVoice=function(){var vOK=ls("gwvsc")==="1",last=null;try{last=JSON.parse(ls("gwvlast")||"null")}catch(x){}
-    var b0=gHead("🎤","Add the voice shortcut","One tap, then Add Shortcut.")+(vOK?'<div class="gok">✅ Voice shortcut added</div><a href="#" data-vcx class="note" style="color:var(--acc);display:block;margin-top:10px">Add again</a>':'<a class="btn" data-vca href="'+esc(VOICE_LINK)+'" target="_blank" rel="noopener" style="display:block;text-align:center;text-decoration:none;margin-top:18px">Add voice shortcut</a>')+playBtn("Gharwise Voice",12);
+    var b0=gHead("🎤","Add the voice shortcut","One tap, then Add Shortcut.")+(vOK?'<div class="gok">✅ Voice shortcut added</div><a href="#" data-vcx class="note" style="color:var(--acc);display:block;margin-top:10px">Add again</a>':'<a class="btn" data-vca href="'+esc(VOICE_LINK)+'" target="_blank" rel="noopener" style="display:block;text-align:center;text-decoration:none;margin-top:18px">Add voice shortcut</a>');
     var b1=gHead("▶️","Run it once","Allow when asked. Then say “Grocery 120”.")+playBtn("Gharwise Voice",18)+gChips("voice1",[["Tap ▶","",""],["Allow","",""],["Say “Grocery 120”","",""]]);
     var b2=gHead("👆","Double-tap the back","Optional. Start voice without opening anything.")+gChips("voice2",[["Settings","settings","Open Settings"],["Accessibility","access","Tap Accessibility"],["Touch","touch","Tap Touch"],["Back Tap","backtap","Scroll down, tap Back Tap"],["Double Tap","double","Tap Double Tap"],["Gharwise Voice","voice_pick","Pick Gharwise Voice"]])+'<button class="btn ghost" data-gstep="voice|next" style="margin-top:14px">Skip this step</button>';
     var rows=[["Grocery 150","Groceries","₹150"],["Auto 80","Transport","₹80"],["Spent 100 rupees for petrol","Fuel","₹100"],["Paid 250 for lunch","Food","₹250"],["Five hundred for petrol","Fuel","₹500"],["Twenty five thousand for rent","House Rent","₹25,000"],["Received 1000 from Amma","Income","+₹1,000 · Amma"],["Got 2k from Manohar","Income","+₹2,000 · Manohar"],["Received one lakh from office","Income","+₹1,00,000 · Office"]];
@@ -559,7 +560,7 @@ GWL.ios=function(){try{return !!(window.Capacitor&&Capacitor.getPlatform&&Capaci
       '<a class="btn" id="impgo" style="display:block;text-align:center;text-decoration:none" href="'+esc(impHref(d))+'">Import SMS</a></div>'};
   /* Live Tracking tab: the one SMS shortcut card, short */
   scCard=function(){
-    if(scAdded())return '<div class="card"><div class="sxh" style="margin-bottom:6px"><div class="t">✅</div><div><b>Shortcut added</b><small>Live and old bank SMS</small></div></div>'+playBtn("Gharwise SMS",6)+'<a href="#" data-scx class="note" style="color:var(--acc)">Add again</a></div>';
+    if(scAdded())return '<div class="card"><div class="sxh" style="margin-bottom:6px"><div class="t">✅</div><div><b>Shortcut added</b><small>Live and old bank SMS</small></div></div><a href="#" data-scx class="note" style="color:var(--acc)">Add again</a></div>';
     return '<div class="card" style="border:2px solid var(--acc)"><div class="sxh" style="margin-bottom:12px"><div class="t">💬</div><div><b>Bank SMS shortcut</b><small>Live and old messages</small></div></div>'+scBtn("Add shortcut")+'</div>'};
   /* back from Shortcuts after "Import SMS": add whatever it handed over */
   document.addEventListener("click",function(e){if(e.target&&e.target.closest&&e.target.closest("#impgo"))ls("gwpastrun","1")});
