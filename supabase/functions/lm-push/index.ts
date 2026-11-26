@@ -50,7 +50,8 @@ async function send(project: string, access: string, token: string, title: strin
   const r = await fetch(`https://fcm.googleapis.com/v1/projects/${project}/messages:send`, {
     method: "POST",
     headers: { Authorization: "Bearer " + access, "Content-Type": "application/json" },
-    body: JSON.stringify({ message: { token, notification: { title, body }, data, android: { priority: "HIGH", notification: { channel_id: "invites" } } } }),
+    body: JSON.stringify({ message: { token, notification: { title, body }, data, android: { priority: "HIGH", ttl: "120s", notification: { channel_id: "invites", notification_priority: "PRIORITY_MAX", default_sound: true } },
+      apns: { headers: { "apns-priority": "10", "apns-push-type": "alert" }, payload: { aps: { sound: "default" } } } } }),
   });
   if (r.ok) return true;
   const e = await r.text();
@@ -82,9 +83,8 @@ Deno.serve(async (req) => {
       const job = (async () => {
         await new Promise((r) => setTimeout(r, delay));
         const access = await googleToken(sa);
-        for (const token of toks) {
-          await send(sa.project_id, access, token, "Gharwise test notification", "Push notifications work ✓ Tap to open Gharwise.", { kind: "test" }, sb);
-        }
+        await Promise.all(toks.map((token) =>
+          send(sa.project_id, access, token, "Gharwise test notification", "Push notifications work ✓ Tap to open Gharwise.", { kind: "test" }, sb)));
       })();
       // answer straight away so the person can leave the app; keep sending in the background
       // deno-lint-ignore no-explicit-any
@@ -105,15 +105,13 @@ Deno.serve(async (req) => {
     const job = (async () => {
       if (delay) await new Promise((r) => setTimeout(r, delay));
       const access = await googleToken(sa);
-      let n = 0;
-      for (const token of tokens) {
-        if (await send(sa.project_id, access, token,
-          family ? "Family invite" : "Group invite",
-          family
-            ? "Someone invited you to their family on Gharwise. Open the app to accept or reject."
-            : "Someone invited you to a group on Gharwise. Open the app to accept or reject.",
-          { kind: "invite", invite: String(invite) }, sb)) n++;
-      }
+      const res = await Promise.all(tokens.map((token) => send(sa.project_id, access, token,
+        family ? "Family invite" : "Group invite",
+        family
+          ? "Someone invited you to their family on Gharwise. Open the app to accept or reject."
+          : "Someone invited you to a group on Gharwise. Open the app to accept or reject.",
+        { kind: "invite", invite: String(invite) }, sb)));
+      const n = res.filter(Boolean).length;
       return n;
     })();
     if (delay) {
