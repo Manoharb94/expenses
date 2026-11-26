@@ -359,7 +359,7 @@ GWL.hook=function(){
   logoutLocal=function(){if(GWL.logout)GWL.logout();if(GWL.loginBar)GWL.loginBar()};
   try{loadGroups=function(){};gOKUI=function(){return false}}catch(e){}
   var _can=canEditT;canEditT=function(t){return t&&t.source==="family"?false:_can(t)};
-  vMenu=localMenu;vFam=localFam;vMail=localMail;
+  vMenu=localMenu;vFam=localFam;vMail=localMail;vProfile=localProfile;bindProfile=localBindProfile;famPhoto=localFamPhoto;
   /* Settings: "Delete all my data" lives here (moved from the Menu) */
   var _vSet=vSet;vSet=function(){var h=_vSet(),k=h.indexOf("About this app"),i=k<0?-1:h.lastIndexOf('<div class="card">',k),
     c='<div class="msec">Your data</div><div class="card" style="padding:0 12px">'+rowB("erase","🗑️",'<span class="out">Delete all my data</span>',"Removes everything from this phone","rgba(230,70,70,.18)")+'</div>';
@@ -385,9 +385,27 @@ GWL.hook=function(){
 };
 function rowB(id,i,a,b,bg,go){return '<button class="mr" '+(go?'data-go="'+go+'"':'data-lmenu="'+id+'"')+'><i class="mt" style="background:'+bg+'">'+i+'</i><span><b>'+a+'</b>'+(b?'<span>'+b+'</span>':'')+'</span><span class="go">›</span></button>'}
 function familyPeopleCount(){var s={};T("family_txns").forEach(function(r){s[r.member||r.person]=1});return Object.keys(s).length}
+/* ===== Profile: photo + name, like the main app. The photo is small (about 128px) so it can travel encrypted to the family ===== */
+var PH_OK=/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/=]+$/;
+function localFamPhoto(name){if(!DB||!DB.profile)return null;if(name===S.name||name===me())return DB.profile.photo||null;var m=(DB.family&&DB.family.mem)||{};for(var k in m){if(m[k]&&m[k].name===name&&m[k].photo)return m[k].photo}return null}
+function myPhoneShow(){var ph=GWL.loggedIn&&GWL.loggedIn()?GWL.phone():"";return ph?"+"+String(ph).replace(/^\+?91/,"91 "):""}
+function profCardL(){return '<button class="mr" data-go="prof" style="border:1px solid var(--line);border-radius:16px;margin:0 0 6px;padding:14px;background:var(--card)"><span class="pring">'+famAv(me(),56)+'</span><span><b style="font-size:17px">'+esc(me())+'</b><span>'+esc(myPhoneShow())+'</span><span><em class="pchip">Edit profile</em></span></span><span class="go">›</span></button>'}
+function localProfile(){var ph=DB.profile.photo;
+  return topbar("Profile","menu")+'<div class="card" style="text-align:center">'+famAv(me(),120)+'<div class="note" style="margin:8px 0 12px">'+(ph?'Your photo is shown to your family.':'No photo yet. Your first letter is shown instead.')+'</div><div class="row" style="gap:8px;justify-content:center;flex-wrap:wrap"><button class="btn s" id="pfc">🖼️ '+(ph?'Change photo':'Choose photo')+'</button>'+(ph?'<button class="btn ghost s" id="pfr">Remove photo</button>':'')+'</div><input type="file" id="pfile" accept="image/*" style="display:none"></div>'+
+   '<div class="card">'+sxHead('👤','Your details','Your name and mobile')+'<div class="mute">Name</div><input id="pname" type="text" maxlength="30" value="'+esc(me())+'" autocomplete="off" style="margin-bottom:8px"><button class="btn ghost s" id="pnsv">Save name</button><div class="mute" style="margin-top:14px">Mobile</div><div style="font-weight:600">'+esc(myPhoneShow()||"Not logged in")+'</div></div>'}
+function localBindProfile(el){
+  var a=el.querySelector("#pfile"),c=el.querySelector("#pfc");
+  if(a&&c){c.onclick=function(){a.click()};a.onchange=function(){var f=a.files&&a.files[0];a.value="";if(!f)return;cropSheet(f,128,11000,function(d){DB.profile.photo=d;mark("data");render();toast("Photo saved")})}}
+  var r=el.querySelector("#pfr");if(r)r.onclick=function(){delete DB.profile.photo;mark("data");render();toast("Photo removed")};
+  var sv=el.querySelector("#pnsv");if(sv)sv.onclick=function(){var nn=String((el.querySelector("#pname")||{}).value||"").replace(/\s+/g," ").trim().slice(0,30),old=me();
+    if(!nn){toast("Type your name");return}if(nn===old){toast("Name is the same");return}
+    var clash=T("family_txns").some(function(x){return x.person===nn})||Object.keys((DB.family&&DB.family.mem)||{}).some(function(k){return DB.family.mem[k]&&DB.family.mem[k].name===nn});
+    if(clash){toast("Someone in your family already uses that name");return}
+    TABLES.forEach(function(t){if(t==="family_txns")return;T(t).forEach(function(x){if(x&&x.person===old)x.person=nn})});
+    DB.profile.name=nn;S.name=nn;if(S.pf===old)S.pf=nn;mark("data");render();toast("Name changed")}}
 function localMenu(){
   var fam=DB.family?(DB.family.members||familyPeopleCount()+1)+" people · encrypted":"Not set up",li=GWL.loggedIn&&GWL.loggedIn();
-  return topbar("Menu","home")+'<div class="msec">App settings</div><div class="card" style="padding:0 12px">'+rowB("","⚙️","Settings","Language, look, lock and reminders","rgba(120,130,150,.20)","set")+rowB("","🗂️","Categories","What each category has this month","rgba(255,150,40,.22)","cats")+'</div>'+
+  return topbar("Menu","home")+profCardL()+'<div class="msec">App settings</div><div class="card" style="padding:0 12px">'+rowB("","⚙️","Settings","Language, look, lock and reminders","rgba(120,130,150,.20)","set")+rowB("","🗂️","Categories","What each category has this month","rgba(255,150,40,.22)","cats")+'</div>'+
     '<div class="msec">Tracking & family</div><div class="card" style="padding:0 12px">'+rowB("","💬","Automated tracking","SMS, email, voice and bank statements","rgba(60,130,255,.20)","track")+rowB("","👨‍👩‍👧","Family sharing",fam,"rgba(140,100,255,.20)","fam")+rowB("","🎯","Goals","Save for things together","rgba(240,80,150,.20)","goals")+'</div>'+
     '<div class="msec">Your data</div><div class="card" style="padding:0 12px">'+rowB("folder","📁","Storage folder",GWL.folder.ok?esc(GWL.folder.name||"Chosen")+(GWL.lastBackup?" · backed up "+new Date(GWL.lastBackup).toLocaleTimeString("en-IN",{hour:"numeric",minute:"2-digit"}):""):"⚠ Not available","rgba(40,180,100,.20)")+rowB("export","📤","Export my data","PDF or CSV (Excel)","rgba(60,130,255,.20)")+'<a class="mr" href="privacy.html" target="_blank" rel="noopener" style="text-decoration:none"><i class="mt" style="background:rgba(120,130,150,.20)">🔒</i><span><b>Privacy</b><span>Payments stay on this phone; family data is encrypted</span></span><span class="go">›</span></a>'+
     rowB("login","📱","Account",li?"+"+esc(String(GWL.phone()).replace(/^\+?91/,"91 ")):"⚠ Logged out · tap to log in","rgba(120,130,150,.20)")+(li?rowB("logout","⏻","Log out","Locks the app until you log in again","rgba(120,130,150,.20)"):"")+'</div>'+(ls("gwdev")==="1"?'<div class="msec">Testing</div><div class="card" style="padding:0 12px"><button class="mr" data-st="run"><i class="mt" style="background:rgba(40,180,100,.20)">🧪</i><span><b>Run self-check</b><span>Tests every feature on this phone. Your data is not touched.</span></span><span class="go">›</span></button>'+rowB("pushtest","📲","Send me a test push in 10 seconds","Firebase → this phone. Leave the app after tapping.","rgba(60,130,255,.20)")+rowB("pushinvite","📨","Send me a test family invite in 10 seconds","A real invite push with one phone. Leave the app after tapping.","rgba(60,130,255,.20)")+'</div>':'')+'<div class="note" id="gwver" style="text-align:center;margin:14px 0;user-select:none">Gharwise on-phone version · '+T("transactions").length+' payments stored here</div>'}
@@ -484,7 +502,7 @@ function localFam(){
   Object.keys(ppl).forEach(function(k){if(!ids[k])ids[k]=ppl[k].name});
   var tot=DB.family.members||0,shown=Object.keys(ids).length+1,unk=Math.max(0,tot-shown);
   function cnt(k){return ppl[k]?ppl[k].n:0}
-  function av(n){return '<span style="flex:none;width:40px;height:40px;border-radius:50%;background:var(--chip);display:inline-flex;align-items:center;justify-content:center;font-weight:700;margin-right:10px">'+esc(String(n||"?").charAt(0).toUpperCase())+'</span>'}
+  function av(n){return '<span style="flex:none;display:inline-flex;margin-right:10px">'+(n&&n!=="?"?famAv(n,40):avBig("?",40))+'</span>'}
   h+='<div class="sec">People in your family</div><div class="card">'+
     '<div class="row" style="padding:8px 0;justify-content:flex-start">'+av(me())+'<div style="flex:1"><b>'+esc(me())+' (you)</b><div class="mute" style="font-size:13px">'+T("transactions").filter(function(t){return !t.hidden&&t.person===me()}).length+' payments</div></div></div>'+
     Object.keys(ids).map(function(k){return '<div class="row" style="padding:8px 0;justify-content:flex-start">'+av(ids[k])+'<div style="flex:1"><b>'+esc(ids[k])+'</b><div class="mute" style="font-size:13px">Joined · '+cnt(k)+' payments</div></div></div>'}).join('')+
