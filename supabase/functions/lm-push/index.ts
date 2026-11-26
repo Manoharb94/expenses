@@ -121,10 +121,10 @@ Deno.serve(async (req) => {
       if (delay) await new Promise((r) => setTimeout(r, delay));
       const access = await googleToken(sa);
       const res = await Promise.all(tokens.map((token) => send(sa.project_id, access, token,
-        family ? "Family invite" : "Group invite",
+        family ? "👨‍👩‍👧 Family invite" : "👥 Group invite",
         family
-          ? "Someone invited you to their family on Gharwise. Open the app to accept or reject."
-          : "Someone invited you to a group on Gharwise. Open the app to accept or reject.",
+          ? "Someone invited you to their family. Tap to open Gharwise and accept ✓ or reject ✕."
+          : "Someone invited you to a group. Tap to open Gharwise and accept ✓ or reject ✕.",
         { kind: "invite", invite: String(invite) }, sb)));
       const n = res.filter(Boolean).length;
       return n;
