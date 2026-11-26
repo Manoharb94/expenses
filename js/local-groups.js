@@ -23,7 +23,8 @@ async function myKeys(){var d=D();if(d.keys&&d.keys.priv&&d.keys.pub)return d.ke
   var kp=await crypto.subtle.generateKey(EC,true,["deriveBits"]);
   d.keys={priv:await crypto.subtle.exportKey("jwk",kp.privateKey),pub:C.b64e(await crypto.subtle.exportKey("raw",kp.publicKey)),at:now()};GWL.mark("data",true);return d.keys}
 async function pubHash(pub){return (await sha("gharwise-pub-v1:"+pub)).slice(0,32)}
-async function publishKey(){var k=await myKeys(),tag=myId()+":"+k.pub;if(k.sent===tag)return;await srv("lm_set_pubkey",{p_key:k.pub});k.sent=tag;GWL.mark("data",true)}
+var keyDone={};   /* keys sent to the server in this app session: sent again every launch, in case the server's copy was replaced */
+async function publishKey(force){var k=await myKeys(),tag=myId()+":"+k.pub;if(!force&&keyDone[tag]&&k.sent===tag)return;await srv("lm_set_pubkey",{p_key:k.pub});keyDone[tag]=1;if(k.sent!==tag){k.sent=tag;GWL.mark("data",true)}}
 GWL.publishKey=publishKey;
 async function hk(bits){var base=await crypto.subtle.importKey("raw",bits,"HKDF",false,["deriveKey"]);
   return crypto.subtle.deriveKey({name:"HKDF",hash:"SHA-256",salt:te.encode("gharwise-invite-v1"),info:new Uint8Array(0)},base,{name:"AES-GCM",length:256},false,["encrypt","decrypt"])}
@@ -46,6 +47,8 @@ async function fetchInbox(){var dbg={n:0,other:0,fail:[],err:"",at:Date.now()};G
   dbg.n=(list||[]).length;
   for(var i=0;i<(list||[]).length;i++){var x=list[i];if(x.sealed_for!==h){dbg.other++;continue}
     try{var o=await unseal(x.sealed);if(o.target!==x.target||o.kind!==x.kind||!o.key){dbg.fail.push("contents do not match");continue}out.push({id:x.id,kind:x.kind,target:x.target,key:o.key,name:o.name||"",by:o.by||"Someone",at:x.created_at})}catch(e){dbg.fail.push((e&&(e.name+": "+e.message))||String(e))}}
+  if(dbg.other&&!GWL.testing){try{await publishKey(true)}catch(e){}
+    var lr=+ls("gwrekey")||0;if(Date.now()-lr>10*60000){ls("gwrekey",String(Date.now()));try{GWL.fn("lm-push",{rekey:true}).catch(function(){})}catch(e){}}}
   var ch=JSON.stringify(out.map(function(x){return x.id}))!==JSON.stringify(inbox().map(function(x){return x.id}));setInbox(out);return ch}
 GWL.fetchInbox=fetchInbox;
 
@@ -57,7 +60,8 @@ function inviterName(kind,target,from){if(!from||from===myId())return me();
   var r=GWL.T("family_txns").filter(function(x){return x.member===from})[0];return r&&r.person||me()}
 async function sealFor(id,kind,target,pub,from){var k=keyOf(kind,target);if(!k)return false;
   await srv("lm_invite_seal",{p_id:id,p_sealed:await seal(pub,{v:1,kind:kind,target:target,key:k.key,name:k.name,by:inviterName(kind,target,from)}),p_for:await pubHash(pub)});notify(id);return true}
-GWL.invite=async function(kind,target,phone){need();var r=await srv("lm_invite",{p_kind:kind,p_target:target,p_phone:String(phone||"")});
+GWL.invite=async function(kind,target,phone){need();var r;try{r=await srv("lm_invite",{p_kind:kind,p_target:target,p_phone:String(phone||"")})}
+  catch(e){if(kind==="family"&&/not in this family/i.test(e&&e.message||"")){if(GWL.famInfo)await GWL.famInfo();throw new Error("This phone’s family is out of step with the server. Tap “Fix it” at the top of Family sharing, then send the invite again.")}throw e}
   if(r&&r.status==="invited"){if(r.pubkey)await sealFor(r.id,kind,target,r.pubkey);else r.status="waiting"}
   return r};
 /* invites waiting for someone who has now opened the app (or got a new phone): lock the key for them */
@@ -80,12 +84,13 @@ GWL.inviteRespond=async function(id,accept){need();var inv=inbox().filter(functi
   await srv("lm_invite_respond",{p_id:id,p_accept:false});setInbox(inbox().filter(function(x){return x.id!==id}));return null};
 
 var gsync=null,lastInbox=0;
-GWL.groupsSync=function(full){if(!GWL.loggedIn()||!D()||!D().profile)return Promise.resolve(false);if(gsync)return gsync;
+GWL.groupsSync=function(full){if(GWL.testing&&!GWL.inDev)return Promise.resolve(false);if(!GWL.loggedIn()||!D()||!D().profile)return Promise.resolve(false);if(gsync)return gsync;
   gsync=(async function(){var ch=false;
     try{await publishKey()}catch(e){}
     if(full||Date.now()-lastInbox>110000){lastInbox=Date.now();
       try{if(await fetchInbox())ch=true}catch(e){}
       try{await resealSent()}catch(e){}
+      if(D().family&&!GWL.testing&&GWL.famInfo)try{await GWL.famInfo()}catch(e){}
       if(D().family)try{var p=await srv("lm_family_pending",{});if(JSON.stringify(p)!==JSON.stringify(D().family.invites||[])){D().family.invites=p;GWL.mark("data",true);ch=true}}catch(e){}}
     return ch})();
   return gsync.then(function(ch){gsync=null;try{if(!GWL.testing&&GWL.invitePrompt)GWL.invitePrompt()}catch(e){}return ch},function(e){gsync=null;return false})};
@@ -97,6 +102,7 @@ GWL.grpc=function(fn,a){return H[fn]?H[fn](a||{}):undefined};GWL.grpcHas=functio
 /* ---------- push notifications (Firebase), so an invite is noticed while the app is closed ---------- */
 /* tell the invitee's phone: the server sends only "Someone invited you…"; it never knows names */
 function notify(id){if(GWL.testing&&!GWL.pushInTests)return;try{GWL.fn("lm-push",{invite:id,delay:GWL.pushDelay||0}).catch(function(){})}catch(e){}}
+function isTestPush(d){return !!(d&&d.kind==="invite"&&ls("gwinvtest")==="1"&&d.invite&&d.invite===ls("gwinvid"))}
 function pushP(){try{return window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.PushNotifications||null}catch(e){return null}}
 var pushOn=false,saved={};   /* saved: tokens already sent to the server in this app session (sent again next launch, in case the server dropped it) */
 GWL.pushWait=async function(){for(var i=0;i<24;i++){if(String(ls("gwpush")||"").indexOf(GWL.uid()+":")===0&&saved[ls("gwpush")])return true;if(ls("gwpusherr"))return false;await new Promise(function(r){setTimeout(r,500)})}return false};
@@ -107,8 +113,8 @@ GWL.pushSetup=async function(){var P=pushP();if(!P)return "not in this build";GW
     P.addListener("registration",async function(t){var tok=t&&t.value;if(!tok){ls("gwpusherr","the phone gave an empty push token");return}var tag=GWL.uid()+":"+tok;if(saved[tag])return;
       try{await srv("lm_set_push",{p_token:tok,p_platform:(Capacitor.getPlatform&&Capacitor.getPlatform())||"android"});saved[tag]=1;ls("gwpush",tag);ls("gwpusherr","")}catch(e){ls("gwpusherr","the server did not accept the token: "+((e&&e.message)||e))}});
     P.addListener("registrationError",function(ev){ls("gwpusherr","the phone could not register: "+((ev&&(ev.error||ev.message))||"unknown reason"))});
-    P.addListener("pushNotificationReceived",function(ev){try{var d0=ev&&ev.data||{};if(d0.kind==="invite"&&ls("gwinvtest")==="1"){toast("Invite push works ✓");GWL.inviteTestCleanup&&GWL.inviteTestCleanup();return}}catch(e){}GWL.groupsSync(true)});
-    P.addListener("pushNotificationActionPerformed",function(ev){try{var dt=ev&&ev.notification&&ev.notification.data||{};if(dt.kind==="test"){setTimeout(function(){toast("Push notification works ✓")},800);return}if(dt.kind==="invite"&&ls("gwinvtest")==="1"){setTimeout(function(){toast("Invite push works ✓")},800);GWL.inviteTestCleanup&&GWL.inviteTestCleanup();return}}catch(e){}GWL.groupsSync(true)})}
+    P.addListener("pushNotificationReceived",function(ev){if(GWL.testing)return;try{var d0=ev&&ev.data||{};if(isTestPush(d0)){toast("Invite push works ✓");GWL.inviteTestCleanup&&GWL.inviteTestCleanup();return}}catch(e){}GWL.groupsSync(true)});
+    P.addListener("pushNotificationActionPerformed",function(ev){if(GWL.testing)return;try{var dt=ev&&ev.notification&&ev.notification.data||{};if(dt.kind==="test"){setTimeout(function(){toast("Push notification works ✓")},800);return}if(isTestPush(dt)){setTimeout(function(){toast("Invite push works ✓")},800);GWL.inviteTestCleanup&&GWL.inviteTestCleanup();return}}catch(e){}GWL.groupsSync(true)})}
   try{await P.createChannel({id:"invites",name:"Invites",description:"When someone invites you to their family or a group",importance:4,visibility:1})}catch(e){}
   var pm=await P.checkPermissions();if(pm.receive==="prompt"||pm.receive==="prompt-with-rationale")pm=await P.requestPermissions();
   if(pm.receive!=="granted")return "not allowed";

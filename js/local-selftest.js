@@ -28,7 +28,7 @@ var R=[],running=false,FT={};
 function testNums(){return String(ls("gwtestnums")||"919000000001,919000000002,919000000003").split(/[\s,]+/).filter(Boolean).map(function(n){n=n.replace(/\D/g,"");return n.length===10?"91"+n:n})}
 function testOtp(){return ls("gwtestotp")||"123456"}
 function need(){if(!FT.A||!FT.B)skip("test members could not log in")}
-async function asDev(who,fn){var d=FT[who],os=GWL._swapSess(d.sess),od=GWL.swapDb(d.db);try{return await fn()}finally{GWL.swapDb(od);GWL._swapSess(os)}}
+async function asDev(who,fn){var d=FT[who],os=GWL._swapSess(d.sess),od=GWL.swapDb(d.db);GWL.inDev=(GWL.inDev||0)+1;try{return await fn()}finally{GWL.inDev--;GWL.swapDb(od);GWL._swapSess(os)}}
 async function cleanupFamily(){for(var w of ["A","B"]){if(!FT[w])continue;try{await asDev(w,function(){return GWL.famLeave()})}catch(e){try{await asDev(w,function(){return GWL.srv("lm_family_leave",{})})}catch(x){}}}}
 function P(n){try{return window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins[n]||null}catch(e){return null}}
 function IOS(){try{return Capacitor.getPlatform()==="ios"}catch(e){return false}}
@@ -177,7 +177,7 @@ async function run(){if(running)return;running=true;R=[];FT={};ui();
 async function pair(){var nums=testNums(),otp=testOtp(),own=String(GWL.phone()||"").replace(/\D/g,"").slice(-10);
   var use=nums.filter(function(n){return n.replace(/\D/g,"").slice(-10)!==own});if(use.length<2)throw new Error("needs two test numbers that are not this phone's login. Menu → Testing → Self-check → Test numbers.");
   FT={};for(var i=0;i<2;i++){var who=i?"B":"A";FT[who]={num:use[i],sess:await GWL._loginTest(use[i],otp)};var d=GWL.blankDb();d.profile={name:"Test "+who,created:new Date().toISOString()};FT[who].db=d;await asDev(who,function(){return GWL.publishKey()})}}
-GWL.inviteTestCleanup=async function(){if(ls("gwinvtest")!=="1"||running)return;var tok=ls("gwinvtok")||"";ls("gwinvtest","");
+GWL.inviteTestCleanup=async function(){if(ls("gwinvtest")!=="1"||running)return;var tok=ls("gwinvtok")||"";ls("gwinvtest","");ls("gwinvid","");
   try{await pair();try{await asDev("A",async function(){var l=await GWL.srv("lm_invites_sent",{})||[];for(var x of l){try{await GWL.srv("lm_invite_cancel",{p_id:x.id})}catch(e){}}})}catch(e){}for(var w of ["A","B"])try{await asDev(w,function(){return GWL.srv("lm_family_leave",{})})}catch(e){}
     if(tok)try{await asDev("B",function(){return GWL.srv("lm_drop_push",{p_token:tok})})}catch(e){}}catch(e){}
   FT={};if(tok)try{await GWL.srv("lm_set_push",{p_token:tok,p_platform:(Capacitor.getPlatform&&Capacitor.getPlatform())||"android"})}catch(e){}};
@@ -190,7 +190,11 @@ GWL.inviteTest=async function(){if(running)throw new Error("The self-check is ru
   var r;try{r=await asDev("A",async function(){try{await GWL.srv("lm_family_leave",{})}catch(e){}await GWL.famCreate();GWL.pushDelay=10;GWL.pushInTests=true;try{return await GWL.invite("family",GWL.db().family.id,FT.B.num)}finally{GWL.pushDelay=0;GWL.pushInTests=false}})}
   catch(e){await GWL.inviteTestCleanup();throw e}
   if(!r||r.status!=="invited"){await GWL.inviteTestCleanup();throw new Error("The invite was not sent ("+(r&&r.status)+")")}
+  ls("gwinvid",String(r.id||""));ls("gwinvat",String(Date.now()));
   FT={}};
+/* a test notification that never arrived: after 10 minutes give this phone's notifications back to your own account */
+setTimeout(function(){if(ls("gwinvtest")==="1"&&Date.now()-(+ls("gwinvat")||0)>10*60000)GWL.inviteTestCleanup()},8000);
+setInterval(function(){if(ls("gwinvtest")==="1"&&Date.now()-(+ls("gwinvat")||0)>10*60000)GWL.inviteTestCleanup()},60000);
 GWL.selftest=run;GWL.selftestResults=function(){return R};
 document.addEventListener("click",async function(e){var b=e.target&&e.target.closest&&e.target.closest("[data-st]");if(b){var a=b.getAttribute("data-st");
     if(a==="nums"){e.preventDefault();var v=prompt("Two Supabase test phone numbers for the family check, separated by a comma",testNums().join(","));if(v){ls("gwtestnums",v)}var c=prompt("Their test code (6 digits)",testOtp());if(c&&/^\d{6}$/.test(c.trim()))ls("gwtestotp",c.trim());ui();return}

@@ -91,7 +91,18 @@ GWL.famCreate=async function(){if(!SESS)throw new Error("Log in first");var key=
 GWL.famJoin=async function(code){if(!SESS)throw new Error("Log in first");var c=parseCode(code),n=await srv("lm_family_join",{p_family:c.id,p_join_hash:await joinHash(c.key)});
   GWL.db().family={id:c.id,key:c.key,created:new Date().toISOString(),seq:0,pushed:{},members:n};GWL.mark("data",true);await GWL.flush();await sync();ping(false);return n};
 GWL.famLeave=async function(){try{await srv("lm_family_leave",{})}catch(e){if(!/not logged/i.test(e.message))throw e}var d=GWL.db();d.family=null;d.t.family_txns=[];GWL.mark("family",true);await GWL.flush();ping(false)};
-GWL.famInfo=async function(){var f=fam();if(!f||!SESS)return;try{var r=await srv("lm_family_info",{});if(r&&r.members){f.members=r.members;GWL.mark("data",true)}if(!r){GWL.db().family=null;GWL.db().t.family_txns=[];GWL.mark("family",true)}}catch(e){}};
+/* does the server agree which family this phone is in? If not, sync pauses and Family sharing offers "Fix it" */
+GWL.famInfo=async function(){var f=fam();if(!f||!SESS)return;try{var r=await srv("lm_family_info",{});
+  var off=!r?"none":r.family_id!==f.id?"other":null;
+  if(off!==(f.off||null)){f.off=off;GWL.mark("data",true)}
+  if(!off&&r.members&&r.members!==f.members){f.members=r.members;GWL.mark("data",true)}}catch(e){}};
+/* put this account back into the family this phone holds the key for (the phone's key decides: a family it can't read is no use) */
+GWL.famRepair=async function(){var f=fam();if(!f)throw new Error("No family on this phone");if(!SESS)throw new Error("Log in first");
+  var r=await srv("lm_family_info",{});
+  if(r&&r.family_id!==f.id)await srv("lm_family_leave",{});
+  var n;try{n=await srv("lm_family_join",{p_family:f.id,p_join_hash:await joinHash(f.key)})}
+  catch(e){if(/not valid/i.test(e&&e.message||""))throw new Error("Your family no longer exists on the server. Tap “Leave this family”, then create a new one or join with a code.");throw e}
+  f.off=null;f.members=n;f.seq=0;f.pushed={};GWL.mark("data",true);await GWL.flush();await sync();ping(false);return n};
 function payloadOf(t){return {id:t.id,amount:t.amount,type:t.type,merchant:t.merchant,merchant_key:t.merchant_key,category:t.category||null,txn_date:t.txn_date,note:t.note||null,person:t.person}}
 async function push(){
   var f=fam(),db=GWL.db(),me=db.profile.name,key=await aesKey(f.key);if(!f.pushed)f.pushed={};
@@ -128,8 +139,8 @@ async function pull(){
   if(changed)GWL.mark("family",true);else if((f.seq||0)!==seq0)GWL.mark("data",true);
   return changed}
 var syncing=null;
-async function sync(){if(!fam()||!SESS)return;if(syncing)return syncing;
-  syncing=(async function(){try{await push();var n=await pull();GWL.lastSync=Date.now();if(n&&typeof load==="function"&&S.code){await GWL.flush();await load(true)}}catch(e){if(/not in a family/i.test(e&&e.message)){var d=GWL.db();d.family=null;d.t.family_txns=[];GWL.mark("family",true)}}finally{syncing=null}})();
+async function sync(){if(!fam()||!SESS||fam().off)return;if(syncing)return syncing;
+  syncing=(async function(){try{await push();var n=await pull();GWL.lastSync=Date.now();if(n&&typeof load==="function"&&S.code){await GWL.flush();await load(true)}}catch(e){if(/not in a family/i.test(e&&e.message)){var f0=fam();if(f0&&f0.off!=="none"){f0.off="none";GWL.mark("data",true)}}}finally{syncing=null}})();
   return syncing}
 GWL.sync=sync;
 var stimer=null;GWL.syncSoon=function(){if(!fam())return;clearTimeout(stimer);stimer=setTimeout(sync,4000)};

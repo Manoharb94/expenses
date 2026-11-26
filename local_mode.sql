@@ -662,3 +662,34 @@ begin
   ) into r;
   return r;
 end $$;
+
+-- ============================================================================
+-- Part 5: invite repair. When an invited phone has a new key (new install, or its key was replaced),
+-- the invite stays locked for the old key until a family member's phone locks it again.
+-- The invited phone asks the lm-push Edge Function to nudge the family's phones; this returns their tokens.
+-- Run this once in the Supabase SQL editor, then deploy the updated lm-push function.
+-- ============================================================================
+alter table lm_invites add column if not exists rekey_at timestamptz;
+
+create or replace function lm_rekey_targets(p_caller uuid) returns jsonb
+language plpgsql security definer set search_path = public, auth as $$
+declare ph text; h text; ids uuid[]; toks jsonb;
+begin
+  select regexp_replace(coalesce(phone, ''), '\D', '', 'g') into ph from auth.users where id = p_caller;
+  select left(encode(sha256(convert_to('gharwise-pub-v1:' || pubkey, 'UTF8')), 'hex'), 32) into h from lm_users where user_id = p_caller;
+  if ph is null or h is null then return '[]'::jsonb; end if;
+  select array_agg(id) into ids from lm_invites
+   where to_phone = ph and sealed_for is distinct from h
+     and (rekey_at is null or rekey_at < now() - interval '10 minutes');
+  if ids is null then return '[]'::jsonb; end if;
+  update lm_invites set rekey_at = now() where id = any(ids);
+  select coalesce(jsonb_agg(distinct p.token), '[]'::jsonb) into toks
+    from lm_invites i
+    join lateral (select user_id from lm_family_members where i.kind = 'family' and family_id = i.target
+                  union select user_id from lm_group_members where i.kind = 'group' and group_id = i.target) m on true
+    join lm_push p on p.user_id = m.user_id
+   where i.id = any(ids) and m.user_id <> p_caller;
+  return toks;
+end $$;
+revoke all on function lm_rekey_targets(uuid) from public, anon, authenticated;
+grant execute on function lm_rekey_targets(uuid) to service_role;

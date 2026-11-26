@@ -96,6 +96,18 @@ Deno.serve(async (req) => {
       return json({ queued: toks.length });
     }
 
+    // the invited phone has a new key: ask the family's phones to lock the invite again (they do it when Gharwise opens)
+    if (body.rekey) {
+      const { data: rt, error: e2 } = await sb.rpc("lm_rekey_targets", { p_caller: u.user.id });
+      if (e2) return json({ error: e2.message }, 500);
+      const rtoks: string[] = rt || [];
+      if (!rtoks.length) return json({ sent: 0 });
+      const access = await googleToken(sa);
+      const res = await Promise.all(rtoks.map((token) => send(sa.project_id, access, token,
+        "Your invite needs a quick refresh", "Open Gharwise so the person you invited can accept.", { kind: "reseal" }, sb)));
+      return json({ sent: res.filter(Boolean).length });
+    }
+
     const invite = body.invite;
     if (!invite) return json({ error: "invite missing" }, 400);
     const { data: t, error } = await sb.rpc("lm_push_targets", { p_invite: invite, p_caller: u.user.id });
