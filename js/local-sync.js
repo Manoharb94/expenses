@@ -104,6 +104,10 @@ GWL.famLeave=async function(){try{await srv("lm_family_leave",{})}catch(e){if(!/
 GWL.famInfo=async function(){var f=fam();if(!f||!SESS)return;try{var r=await srv("lm_family_info",{});
   var off=!r?"none":r.family_id!==f.id?"other":null;
   if(off!==(f.off||null)){f.off=off;GWL.mark("data",true)}
+  /* Together or on your own, never half and half: a phone that is out of the family, or one whose family just got smaller (someone left), drops the other people's payments */
+  var gone=false;if(off){gone=GWL.T("family_txns").length>0||Object.keys(f.mem||{}).length>0}
+  else if(r.members&&f.members&&r.members<f.members){gone=true}
+  if(gone){GWL.db().t.family_txns=[];f.mem={};f.seq=0;GWL.mark("data",true);if(!off&&GWL.syncSoon)GWL.syncSoon()}
   if(!off&&r.members&&r.members!==f.members){f.members=r.members;GWL.mark("data",true)}}catch(e){}};
 /* put this account back into the family this phone holds the key for (the phone's key decides: a family it can't read is no use) */
 GWL.famRepair=async function(){var f=fam();if(!f)throw new Error("No family on this phone");if(!SESS)throw new Error("Log in first");
