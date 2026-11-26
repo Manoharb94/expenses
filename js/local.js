@@ -196,9 +196,10 @@ function rangeRows(r){var all=T("transactions").filter(function(t){return !t.hid
   else if(r==="last"){f=day(new Date(n.getFullYear(),n.getMonth()-1,1).getTime());to=day(new Date(n.getFullYear(),n.getMonth(),0).getTime())}
   else if(r==="year"){f=n.getFullYear()+"-01-01"}
   return sortRows(all.filter(function(t){return t.txn_date>=f&&t.txn_date<=to}),"txn_date.asc,created_at.asc")}
+function manyPeople(rows){var m={};rows.forEach(function(t){if(t.person)m[t.person]=1});return Object.keys(m).length>1}
 function csvCell(v){v=v==null?"":String(v);return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
-function toCsv(rows){var h=["Date","Type","Amount","Payee","Category","Person","Note","Source"];
-  return "﻿"+[h.join(",")].concat(rows.map(function(t){return [t.txn_date,t.type==="in"?"Income":"Expense",Number(t.amount).toFixed(2),t.merchant,t.category||"",t.person||"",t.note||"",t.source==="statement"?"Bank statement":t.source==="family"?"Family":t.raw?"SMS":t.client?"Voice":"Added by hand"].map(csvCell).join(",")})).join("\r\n")}
+function toCsv(rows){var mp=manyPeople(rows),h=["Date","Type","Amount","Payee","Category"].concat(mp?["Person"]:[],["Note","Source"]);
+  return "﻿"+[h.join(",")].concat(rows.map(function(t){return [t.txn_date,t.type==="in"?"Income":"Expense",Number(t.amount).toFixed(2),t.merchant,t.category||""].concat(mp?[t.person||""]:[],[t.note||"",t.source==="statement"?"Bank statement":t.source==="family"?"Family":t.raw?"SMS":t.client?"Voice":"Added by hand"]).map(csvCell).join(",")})).join("\r\n")}
 var RL={month:"This month",last:"Last month",year:"This year",all:"All time"};
 function loadScript(src){return new Promise(function(res,rej){var s=document.createElement("script");s.src=src;s.onload=res;s.onerror=function(){rej(new Error("Could not load "+src))};document.head.appendChild(s)})}
 async function toPdfB64(rows,r){
@@ -210,12 +211,12 @@ async function toPdfB64(rows,r){
   J.setFont("helvetica","normal");J.setFontSize(10);J.text(asc(me())+" · "+RL[r]+" · made "+new Date().toLocaleString("en-IN"),M,y);y+=24;
   var inn=0,out=0;rows.forEach(function(t){if(t.type==="in")inn+=Number(t.amount);else out+=Number(t.amount)});
   J.setFontSize(11);J.text("Income: "+rs(inn)+"     Expenses: "+rs(out)+"     Payments: "+rows.length,M,y);y+=22;
-  var cols=[[M,"Date"],[M+70,"Payee"],[M+250,"Category"],[M+370,"Person"],[W-M,"Amount"]];
-  var head=function(){J.setFont("helvetica","bold");J.setFontSize(9);cols.forEach(function(c,i){J.text(c[1],c[0],y,i===4?{align:"right"}:undefined)});y+=6;J.line(M,y,W-M,y);y+=12;J.setFont("helvetica","normal")};
+  var mp=manyPeople(rows),cols=mp?[[M,"Date"],[M+70,"Payee"],[M+250,"Category"],[M+370,"Person"],[W-M,"Amount"]]:[[M,"Date"],[M+70,"Payee"],[M+330,"Category"],[W-M,"Amount"]],ai=cols.length-1;
+  var head=function(){J.setFont("helvetica","bold");J.setFontSize(9);cols.forEach(function(c,i){J.text(c[1],c[0],y,i===ai?{align:"right"}:undefined)});y+=6;J.line(M,y,W-M,y);y+=12;J.setFont("helvetica","normal")};
   head();
   rows.forEach(function(t){if(y>H-50){J.addPage();y=50;head()}
-    J.text(t.txn_date||"",cols[0][0],y);J.text(asc(t.merchant).slice(0,34),cols[1][0],y);J.text(asc(t.category||"-").slice(0,22),cols[2][0],y);J.text(asc(t.person||"").slice(0,16),cols[3][0],y);
-    J.text((t.type==="in"?"+":"-")+rs(t.amount),cols[4][0],y,{align:"right"});y+=14});
+    J.text(t.txn_date||"",cols[0][0],y);J.text(asc(t.merchant).slice(0,mp?34:48),cols[1][0],y);J.text(asc(t.category||"-").slice(0,22),cols[2][0],y);if(mp)J.text(asc(t.person||"").slice(0,16),cols[3][0],y);
+    J.text((t.type==="in"?"+":"-")+rs(t.amount),cols[ai][0],y,{align:"right"});y+=14});
   var out64=J.output("datauristring");return out64.slice(out64.indexOf(",")+1)}
 GWL.exportData=async function(fmt,r,how,pre){
   var rows=rangeRows(r),stamp=day(),name,mime,text=null,b64=null;pre=pre||"gharwise-";
@@ -496,7 +497,7 @@ GWL.ios=function(){try{return !!(window.Capacitor&&Capacitor.getPlatform&&Capaci
   vSms=function(){var st=S.nsms||{},n=st.count||0,added=scAdded();
     var openSc='<a class="btn ghost" href="shortcuts://" style="display:block;text-align:center;text-decoration:none;margin-top:14px">Open Shortcuts</a>';
     var b0=gHead("💬","Add the bank SMS shortcut","One tap, then Add Shortcut.")+(added?'<div class="gok">✅ Shortcut added</div><a href="#" data-scx class="note" style="color:var(--acc);display:block;margin-top:10px">Add again</a>':scBtn("Add shortcut").replace('style="','style="margin-top:18px;'));
-    var b1=gHead("⚙️","Make the automation","Starts by itself when a bank SMS arrives.")+openSc+gChips("sms1",[["Automation","lib","Open the Automation tab"],["New Automation","newauto","Tap New Automation"],["Message","message","Tap Message"],["Message Contains","contains","Tap Choose, then type a space"],["Run Immediately","runimm","Pick Run Immediately"],["Next","next","Tap Next"],["Gharwise SMS","pick","Pick the Gharwise SMS shortcut"]]);
+    var b1=gHead("⚙️","Make the automation","Starts by itself when a bank SMS arrives.")+openSc+gChips("sms1",[["Automation","lib","Open the Automation tab"],["New Automation","newauto","Tap New Automation"],["Message","message","Tap Message"],["Message Contains","contains","Tap Choose, press the space bar once, then tap Done"],["Run Immediately","runimm","Pick Run Immediately"],["Next","next","Tap Next"],["Gharwise SMS","pick","Pick the Gharwise SMS shortcut"]]);
     var b2=n?gHead("✅","Live tracking is on",n+" bank SMS saved"+(st.last?" · last "+esc(ago(new Date(st.last).toISOString())):""))+'<button class="btn ghost" data-limp style="margin-top:16px">Import older SMS</button>'
       :gHead("🧪","Check it works","Send yourself “Rs 10 debited from a/c XX1234” from another phone, then open Gharwise.")+'<div class="note" style="margin-top:14px;font-weight:700">Waiting for the first bank SMS…</div>';
     return topbar("SMS tracking","track")+gSteps("sms",["Add the shortcut","Make the automation","Check it works"],[b0,b1,b2])};
