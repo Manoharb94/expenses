@@ -95,12 +95,15 @@ GWL.grpc=function(fn,a){return H[fn]?H[fn](a||{}):undefined};GWL.grpcHas=functio
 /* tell the invitee's phone: the server sends only "Someone invited you…"; it never knows names */
 function notify(id){if(GWL.testing&&!GWL.pushInTests)return;try{GWL.fn("lm-push",{invite:id,delay:GWL.pushDelay||0}).catch(function(){})}catch(e){}}
 function pushP(){try{return window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.PushNotifications||null}catch(e){return null}}
-var pushOn=false;
+var pushOn=false,saved={};   /* saved: tokens already sent to the server in this app session (sent again next launch, in case the server dropped it) */
+GWL.pushWait=async function(){for(var i=0;i<24;i++){if(String(ls("gwpush")||"").indexOf(GWL.uid()+":")===0&&saved[ls("gwpush")])return true;if(ls("gwpusherr"))return false;await new Promise(function(r){setTimeout(r,500)})}return false};
+GWL.pushWhy=function(){return "This phone is not registered for notifications: "+(ls("gwpusherr")||"no push token arrived from the phone (check Notifications are allowed for Gharwise, then try again)")};
 GWL.pushSetup=async function(){var P=pushP();if(!P)return "not in this build";if(!GWL.loggedIn()||GWL.testing)return "no";
   try{var S2=Capacitor.Plugins.SmsTracker,a=S2&&S2.appInfo?await S2.appInfo():null;if(!a||!a.pushReady)return "not in this build"}catch(e){return "no"}
   if(!pushOn){pushOn=true;
-    P.addListener("registration",async function(t){var tok=t&&t.value;if(!tok)return;var tag=GWL.uid()+":"+tok;if(ls("gwpush")===tag)return;try{await srv("lm_set_push",{p_token:tok,p_platform:(Capacitor.getPlatform&&Capacitor.getPlatform())||"android"});ls("gwpush",tag)}catch(e){}});
-    P.addListener("registrationError",function(){});
+    P.addListener("registration",async function(t){var tok=t&&t.value;if(!tok){ls("gwpusherr","the phone gave an empty push token");return}var tag=GWL.uid()+":"+tok;if(saved[tag])return;
+      try{await srv("lm_set_push",{p_token:tok,p_platform:(Capacitor.getPlatform&&Capacitor.getPlatform())||"android"});saved[tag]=1;ls("gwpush",tag);ls("gwpusherr","")}catch(e){ls("gwpusherr","the server did not accept the token: "+((e&&e.message)||e))}});
+    P.addListener("registrationError",function(ev){ls("gwpusherr","the phone could not register: "+((ev&&(ev.error||ev.message))||"unknown reason"))});
     P.addListener("pushNotificationReceived",function(ev){try{var d0=ev&&ev.data||{};if(d0.kind==="invite"&&ls("gwinvtest")==="1"){toast("Invite push works ✓");GWL.inviteTestCleanup&&GWL.inviteTestCleanup();return}}catch(e){}GWL.groupsSync(true)});
     P.addListener("pushNotificationActionPerformed",function(ev){try{var dt=ev&&ev.notification&&ev.notification.data||{};if(dt.kind==="test"){setTimeout(function(){toast("Push notification works ✓")},800);return}if(dt.kind==="invite"&&ls("gwinvtest")==="1"){setTimeout(function(){toast("Invite push works ✓")},800);GWL.inviteTestCleanup&&GWL.inviteTestCleanup();return}}catch(e){}GWL.groupsSync(true)})}
   try{await P.createChannel({id:"invites",name:"Invites",description:"When someone invites you to their family or a group",importance:4,visibility:1})}catch(e){}

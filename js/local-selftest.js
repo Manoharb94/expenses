@@ -183,7 +183,7 @@ GWL.inviteTestCleanup=async function(){if(ls("gwinvtest")!=="1"||running)return;
   FT={};if(tok)try{await GWL.srv("lm_set_push",{p_token:tok,p_platform:(Capacitor.getPlatform&&Capacitor.getPlatform())||"android"})}catch(e){}};
 GWL.inviteTest=async function(){if(running)throw new Error("The self-check is running");if(!GWL.loggedIn())throw new Error("Log in first (Menu → Account)");
   var st=await GWL.pushSetup();if(st!=="on")throw new Error(st==="not in this build"?"This build has no Firebase file (google-services.json)":st==="not allowed"?"Allow notifications for Gharwise in Android settings":"Push notifications are not available");
-  await new Promise(function(r){setTimeout(r,1500)});var tag=String(ls("gwpush")||"");if(tag.indexOf(GWL.uid()+":")!==0)throw new Error("This phone is not registered for notifications yet. Reopen the app while online and try again.");
+  ls("gwpusherr","");if(!await GWL.pushWait())throw new Error(GWL.pushWhy());var tag=String(ls("gwpush")||"");
   var tok=tag.slice(tag.indexOf(":")+1);await GWL.inviteTestCleanup();await pair();
   ls("gwinvtok",tok);ls("gwinvtest","1");
   await asDev("B",function(){return GWL.srv("lm_set_push",{p_token:tok,p_platform:(Capacitor.getPlatform&&Capacitor.getPlatform())||"android"})});   /* from now this phone receives B's notifications */
