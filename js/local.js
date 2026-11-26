@@ -258,9 +258,15 @@ function setupView(){
   if(S.view==="lfolder")return h+'<h3 style="margin:0 0 8px">Choose your storage folder again</h3><p class="mute" style="margin:0 0 12px">Gharwise keeps a copy of all your data in a folder on this phone. The phone no longer lets the app use the folder you chose. Pick it again (or a new one) to keep going.</p>'+err+'<button class="btn" data-l="pick">'+(SU.busy?'Waiting…':'Choose folder')+'</button></div>';
   if(S.view!=="llogin")h+=dots();
   if(SU.step===1)h+='<h3 style="margin:0 0 8px">Your payments stay on this phone</h3><ul style="margin:0 0 14px;padding-left:18px;line-height:1.6"><li>Payments, budgets and bank SMS are saved <b>only on this phone</b> and in a folder you choose.</li><li>You log in with your mobile number, so your family can find you and you can switch phones.</li><li>Family sharing is <b>encrypted on the phone</b>. Our server only passes on scrambled data it can’t read.</li></ul><button class="btn" data-l="next">Get started</button>';
-  else if(SU.step===2)h+='<h3 style="margin:0 0 8px">'+(S.view==="llogin"?(ls("gwout")==="1"?'Log in':'Log in again'):'Your mobile number')+'</h3><p class="mute" style="margin:0 0 10px">We send a 6-digit code by SMS. This needs the internet once.</p><div style="display:flex;gap:8px;align-items:center"><span style="font-weight:600">+91</span><input id="lphone" type="tel" inputmode="numeric" maxlength="14" placeholder="98765 43210" value="'+esc(SU.phone)+'" autocomplete="tel-national"></div>'+err+'<button class="btn" data-l="sendotp" style="margin-top:10px"'+(SU.busy?' disabled':'')+'>'+(SU.busy?'Sending…':'Send code')+'</button>'+(S.view==="llogin"&&ls("gwout")!=="1"?'<button class="btn ghost" data-l="later" style="margin-top:8px">Later</button>':'')+(S.view==="llogin"&&ls("gwout")==="1"&&DB&&DB.profile&&DB.profile.phone?'<p class="mute" style="margin:12px 0 0;font-size:13px">This phone has Gharwise data for '+esc(DB.profile.name||"")+' (+'+esc(String(DB.profile.phone).replace(/^\+?91/,"91 "))+'). Log in with that number to open it.</p>':'');
-  else if(SU.step===3)h+='<h3 style="margin:0 0 8px">Enter the code</h3><p class="mute" style="margin:0 0 10px">Sent by SMS to <b>+91 '+esc(SU.phone)+'</b>.</p><input id="lotp" class="otpin" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••">'+err+'<button class="btn" data-l="verify" style="margin-top:10px"'+(SU.busy?' disabled':'')+'>'+(SU.busy?'Checking…':'Continue')+'</button><button class="btn ghost" data-l="resend" style="margin-top:8px">Send the code again</button><button class="btn ghost" data-l="back" style="margin-top:8px">Change number</button>';
+  else if(SU.step===2){var md=SU.mode||(S.view==="llogin"?"login":"signup"),pw=function(id,ph,ac){return '<div class="pwrap"><input id="'+id+'" type="password" placeholder="'+ph+'" autocomplete="'+ac+'"><button type="button" class="eye" data-eye="'+id+'" aria-label="Show password">'+(typeof EYE!=="undefined"?EYE:"👁")+'</button></div>'},
+      mob='<div class="mobw"><span class="mcc">+91</span><input id="lphone" type="tel" inputmode="numeric" maxlength="14" placeholder="Mobile number" value="'+esc(SU.phone)+'" autocomplete="tel-national"></div>',
+      lk=function(a,t){return '<div style="text-align:center"><button class="alink" data-l="'+a+'">'+t+'</button></div>'},bz=SU.busy;
+    if(md==="login")h+='<h3 style="margin:0 0 10px">'+(S.view==="llogin"&&ls("gwout")!=="1"?'Log in again':'Log in')+'</h3>'+mob+pw("lpw","Password","current-password")+err+'<button class="btn" data-l="pwlogin"'+(bz?' disabled':'')+'>'+(bz?'Please wait…':'Log in')+'</button>'+lk("goforgot","Forgot password?")+lk("gosignup","New here? Create an account")+(S.view==="llogin"&&ls("gwout")!=="1"?'<button class="btn ghost" data-l="later" style="margin-top:8px">Later</button>':'')+(S.view==="llogin"&&ls("gwout")==="1"&&DB&&DB.profile&&DB.profile.phone?'<p class="mute" style="margin:12px 0 0;font-size:13px">This phone has Gharwise data for '+esc(DB.profile.name||"")+' (+'+esc(String(DB.profile.phone).replace(/^\+?91/,"91 "))+'). Log in with that number to open it.</p>':'');
+    else if(md==="signup")h+='<h3 style="margin:0 0 10px">Create account</h3><input id="lsname" maxlength="30" placeholder="Your name, e.g. Manohar" value="'+esc(SU.name)+'" autocomplete="given-name">'+mob+pw("lpw","Password (8+ characters)","new-password")+'<p class="mute" style="margin:0 0 8px;font-size:13px">We send a 6-digit code by SMS to confirm your mobile. This needs the internet once.</p>'+err+'<button class="btn" data-l="signup"'+(bz?' disabled':'')+'>'+(bz?'Please wait…':'Create account')+'</button>'+lk("gologin","I already have an account");
+    else h+='<h3 style="margin:0 0 8px">Reset password</h3><p class="mute" style="margin:0 0 10px">Enter your mobile number and we will send a code by SMS to choose a new password.</p>'+mob+err+'<button class="btn" data-l="forgot"'+(bz?' disabled':'')+'>'+(bz?'Sending…':'Send code')+'</button>'+lk("gologin","Back to log in")}
+  else if(SU.step===3)h+='<h3 style="margin:0 0 8px">'+(SU.mode==='forgot'?'Reset password':'Confirm your mobile')+'</h3><p class="mute" style="margin:0 0 10px">Sent by SMS to <b>+91 '+esc(SU.phone)+'</b>.</p><input id="lotp" class="otpin" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••">'+err+'<button class="btn" data-l="verify" style="margin-top:10px"'+(SU.busy?' disabled':'')+'>'+(SU.busy?'Checking…':'Continue')+'</button><button class="btn ghost" data-l="resend" style="margin-top:8px">Send the code again</button><button class="btn ghost" data-l="back" style="margin-top:8px">Change number</button>';
   else if(SU.step===4)h+='<h3 style="margin:0 0 8px">What should we call you?</h3><p class="mute" style="margin:0 0 10px">Your family sees this name next to your payments.</p><input id="lname" maxlength="30" placeholder="Your name" value="'+esc(SU.name)+'" autocomplete="given-name">'+err+'<button class="btn" data-l="name" style="margin-top:10px">Next</button>';
+  else if(SU.step===6)h+='<h3 style="margin:0 0 8px">Choose a new password</h3><div class="pwrap"><input id="lpw" type="password" placeholder="New password (8+ characters)" autocomplete="new-password"><button type="button" class="eye" data-eye="lpw" aria-label="Show password">'+(typeof EYE!=="undefined"?EYE:"👁")+'</button></div><div class="pwrap"><input id="lpw2" type="password" placeholder="Repeat new password" autocomplete="new-password"><button type="button" class="eye" data-eye="lpw2" aria-label="Show password">'+(typeof EYE!=="undefined"?EYE:"👁")+'</button></div>'+err+'<button class="btn" data-l="savepw" style="margin-top:6px"'+(SU.busy?' disabled':'')+'>'+(SU.busy?'Saving…':'Save password')+'</button>';
   else{h+='<h3 style="margin:0 0 8px">Pick a folder for your data</h3><p class="mute" style="margin:0 0 10px">Tracking and adding payments start after this. Pick or create a folder such as <b>Documents › Gharwise</b>. Keep it: if you change phones, copy it across and pick it again.</p>';
     if(SU.found)h+='<div class="note" style="margin:0 0 10px">We found Gharwise data in <b>'+esc(GWL.folder.name||"this folder")+'</b>: '+((SU.found.t.transactions||[]).length)+' payments, saved '+esc(String(SU.found.saved_at||"").slice(0,10))+(SU.found.profile?' for '+esc(SU.found.profile.name):'')+'.</div><button class="btn" data-l="restore">Restore my data</button><button class="btn ghost" data-l="fresh" style="margin-top:8px">Start fresh here (replaces it)</button><button class="btn ghost" data-l="pick" style="margin-top:8px">Choose a different folder</button>';
     else h+=(GWL.folder.ok?'<div class="note" style="margin:0 0 10px">✓ Folder: <b>'+esc(GWL.folder.name)+'</b></div><button class="btn" data-l="done">Start using Gharwise</button><button class="btn ghost" data-l="pick" style="margin-top:8px">Choose a different folder</button>':'<button class="btn" data-l="pick">'+(SU.busy?'Waiting…':'Choose folder')+'</button>');
@@ -275,26 +281,54 @@ async function afterLogin(){
     ls("gwout","");DB=blank();TABLES.forEach(function(t){if(!DB.t[t])DB.t[t]=[]});try{await idbPut("db",DB)}catch(e){}
     ["gs_sms","gs_voice","gs_budget","gwsc2","gwvsc","gwpastrun","gwvc","gwwc","gwvlast"].forEach(function(k){try{localStorage.removeItem(k)}catch(e){}});
     S.view="lsetup";SU.step=4;render();return}
+  SU.mode="";SU.pw="";
   if(S.view==="llogin"&&!APPON){ls("gwout","");S.view="";SU.step=1;startApp();toast("Logged in");return}
   if(S.view==="llogin"){ls("gwout","");S.view="";SU.step=1;var b=document.getElementById("lgbar");if(b)b.remove();render();if(GWL.online)GWL.online();toast("Logged in. Sync is back on.");return}
-  SU.step=4;render()}
+  SU.mode="";SU.pw="";SU.step=SU.name&&SU.name.length>=2?5:4;render()}
 document.addEventListener("click",async function(e){var b=e.target&&e.target.closest&&e.target.closest("[data-l]");if(!b)return;var a=b.getAttribute("data-l");SU.err="";
-  if(a==="next"){SU.step=GWL.loggedIn&&GWL.loggedIn()?4:2;render()}
-  else if(a==="later"){S.view="";SU.step=1;render()}
-  else if(a==="back"){SU.step=2;render()}
-  else if(a==="sendotp"||a==="resend"){var v=a==="resend"?SU.phone:((document.getElementById("lphone")||{}).value||"");v=phDigits(v);
-    if(!isMob(v)){SU.err="Please type a 10-digit Indian mobile number";render();return}
-    SU.phone=v;SU.busy=true;render();
-    try{await GWL.sendOtp(phE164(v));SU.busy=false;SU.step=3;SU.sent=Date.now();render();if(a==="resend")toast("New code sent")}
-    catch(x){SU.busy=false;SU.err=x&&x.name==="TypeError"?"No internet. Logging in needs the internet once.":(x&&x.message||String(x));render()}}
+  if(a==="next"){SU.mode="signup";SU.step=GWL.loggedIn&&GWL.loggedIn()?(SU.name&&SU.name.length>=2?5:4):2;render()}
+  else if(a==="later"){S.view="";SU.step=1;SU.mode="";render()}
+  else if(a==="back"){SU.step=2;SU.pw="";render()}
+  else if(a==="gologin"||a==="gosignup"||a==="goforgot"){SU.mode={gologin:"login",gosignup:"signup",goforgot:"forgot"}[a];SU.err="";SU.phone=phDigits((document.getElementById("lphone")||{}).value||SU.phone);var sn=document.getElementById("lsname");if(sn)SU.name=sn.value;render()}
+  else if(a==="pwlogin"||a==="signup"||a==="forgot"||a==="resend"){
+    var md=SU.mode||(S.view==="llogin"?"login":"signup"),v=a==="resend"?SU.phone:phDigits((document.getElementById("lphone")||{}).value||""),pwv=(document.getElementById("lpw")||{}).value||"";
+    var nm=a==="signup"?((document.getElementById("lsname")||{}).value||"").trim().replace(/\s+/g," "):SU.name;
+    SU.phone=v;if(a==="signup")SU.name=nm;
+    if(a!=="resend"&&!isMob(v)){SU.err="Enter a 10-digit mobile number";render();return}
+    if(a==="signup"){if(nm.length<2){SU.err="Enter your name";render();return}if(pwv.length<8){SU.err="Password needs at least 8 characters";render();return}SU.pw=pwv}
+    if(a==="pwlogin"&&!pwv){SU.err="Enter your password";render();return}
+    SU.busy=true;SU.err="";render();var ph=phE164(v);
+    try{
+      if(a==="pwlogin"){try{await GWL.pwLogin(ph,pwv)}catch(x){
+          if(x&&x.code==="phone_not_confirmed"){SU.mode="signup";SU.pw=pwv;try{await GWL.smsResend(ph)}catch(y){}SU.busy=false;SU.step=3;SU.err="Your mobile is not verified yet. We sent you a code.";render();return}
+          if(x&&x.code==="invalid_credentials")throw new Error("Wrong mobile number or password. If you have not set a password yet, tap Forgot password.");throw x}
+        SU.busy=false;await afterLogin();return}
+      if(a==="signup"){var st=await GWL.phoneStatus(ph);
+        if(st==="confirmed"){SU.busy=false;SU.err="This mobile number already has an account. Log in, or tap Forgot password.";render();return}
+        SU.mode="signup";
+        if(st==="unconfirmed")await GWL.smsResend(ph);else await GWL.pwSignup(ph,pwv);
+        SU.busy=false;SU.step=3;SU.sent=Date.now();render();return}
+      if(a==="forgot"){var st2=await GWL.phoneStatus(ph);
+        if(st2==="none"||st2==="unconfirmed"){SU.busy=false;SU.err="No account with this mobile number. Check it, or create an account.";render();return}
+        await GWL.resetCode(ph);SU.mode="forgot";SU.busy=false;SU.step=3;SU.sent=Date.now();render();return}
+      if(a==="resend"){if(Date.now()-(SU.sent||0)<30000){SU.busy=false;toast("Please wait a little before asking again");render();return}
+        if(SU.mode==="forgot")await GWL.resetCode(ph);else await GWL.smsResend(ph);SU.sent=Date.now();SU.busy=false;render();toast("New code sent")}
+    }catch(x){SU.busy=false;SU.err=x&&x.name==="TypeError"?"No internet. This needs the internet once.":(x&&x.message||String(x));render()}}
   else if(a==="verify"){var c=((document.getElementById("lotp")||{}).value||"").replace(/\D/g,"");if(c.length!==6){SU.err="Type the 6-digit code";render();return}
-    SU.busy=true;render();try{await GWL.verifyOtp(phE164(SU.phone),c);SU.busy=false;await afterLogin()}catch(x){SU.busy=false;SU.err=x&&x.message||String(x);render()}}
+    SU.busy=true;SU.err="";render();try{await GWL.verifyOtp(phE164(SU.phone),c);
+      if(SU.mode==="forgot"){SU.busy=false;SU.step=6;render();return}
+      if(SU.pw){try{await GWL.setPassword(SU.pw)}catch(y){}SU.pw=""}
+      SU.busy=false;await afterLogin()}catch(x){SU.busy=false;SU.err=x&&x.message||String(x);render()}}
+  else if(a==="savepw"){var p1=(document.getElementById("lpw")||{}).value||"",p2=(document.getElementById("lpw2")||{}).value||"";
+    if(p1.length<8){SU.err="Password needs at least 8 characters";render();return}if(p1!==p2){SU.err="The two passwords do not match";render();return}
+    SU.busy=true;SU.err="";render();try{await GWL.setPassword(p1);SU.busy=false;toast("Password changed");await afterLogin()}catch(x){SU.busy=false;SU.err=x&&x.message||String(x);render()}}
   else if(a==="name"){var n=(document.getElementById("lname")||{}).value||"";n=n.trim().replace(/\s+/g," ");if(n.length<2){SU.err="Please type your name";render();return}SU.name=n;SU.step=5;render()}
   else if(a==="pick"){SU.busy=true;render();try{var r=await pickFolder();SU.busy=false;if(r&&r.ok){SU.found=S.view==="lfolder"?null:await peekFolder();if(S.view==="lfolder"){dirty.data=dirty.bills=dirty.family=true;await flush();S.view="";startApp();return}}else if(!(r&&r.cancelled))SU.err="That folder can't be used. Pick a folder on the phone, for example in Documents."}catch(x){SU.busy=false;SU.err=String(x&&x.message||x)}render()}
   else if(a==="restore"){try{await restoreFrom(SU.found);S.view="";toast("Your data is back");startApp()}catch(x){SU.err="Could not read the data in this folder";render()}}
   else if(a==="fresh"){if(!confirm("Start fresh? The Gharwise data in this folder will be replaced the first time the app saves."))return;SU.found=null;finishSetup()}
   else if(a==="done")finishSetup()});
-document.addEventListener("keydown",function(e){if(e.key!=="Enter")return;var id=e.target&&e.target.id,m={lphone:"sendotp",lotp:"verify",lname:"name"}[id];if(m){var b=document.querySelector('[data-l="'+m+'"]');if(b)b.click()}});
+document.addEventListener("click",function(e){var b=e.target&&e.target.closest&&e.target.closest("[data-eye]");if(!b)return;var i=document.getElementById(b.getAttribute("data-eye"));if(i)i.type=i.type==="password"?"text":"password"});
+document.addEventListener("keydown",function(e){if(e.key!=="Enter")return;var id=e.target&&e.target.id,m={lphone:(SU.mode==="forgot"?"forgot":SU.mode==="signup"?"signup":"pwlogin"),lpw:(SU.step===6?"savepw":SU.mode==="signup"?"signup":"pwlogin"),lpw2:"savepw",lsname:"signup",lotp:"verify",lname:"name"}[id];if(m){var b=document.querySelector('[data-l="'+m+'"]');if(b)b.click()}});
 
 /* ---------- start ---------- */
 var APPON=false;
@@ -305,7 +339,7 @@ GWL.start=async function(){
   await folderStatus();
   if(!DB.profile){S.view="lsetup";SU.step=1;render();return}
   if(!GWL.folder.ok){S.view="lfolder";render();return}
-  if(ls("gwout")==="1"&&!(GWL.loggedIn&&GWL.loggedIn())){S.name=me();S.view="llogin";SU.step=2;render();return}
+  if(ls("gwout")==="1"&&!(GWL.loggedIn&&GWL.loggedIn())){S.name=me();S.view="llogin";SU.mode="login";SU.step=2;render();return}
   startApp()};
 document.addEventListener("visibilitychange",function(){if(!document.hidden&&DB&&DB.profile)setTimeout(drain,400)});
 setInterval(function(){if(!document.hidden&&DB&&DB.profile)drain()},15000);
@@ -373,8 +407,8 @@ document.addEventListener("click",async function(e){var t=e.target&&e.target.clo
     else if(a==="logout"){if(!confirm("Log out? Your data stays on this phone. You need to log in again to open the app."))return;
       try{var pt=String(ls("gwpush")||"").split(":").slice(1).join(":");if(pt)await GWL.srv("lm_drop_push",{p_token:pt})}catch(e){}ls("gwpush","");
       try{await flush()}catch(e){}GWL.logout();ls("gwout","1");var lb=document.getElementById("lgbar");if(lb)lb.remove();
-      S.view="llogin";SU.step=2;SU.phone="";SU.err="";render();toast("Logged out")}
-    else if(a==="login"){if(GWL.loggedIn()){toast("Logged in as +"+String(GWL.phone()).replace(/^\+/,""));return}S.view="llogin";SU.step=2;render()}
+      S.view="llogin";SU.mode="login";SU.step=2;SU.phone="";SU.err="";render();toast("Logged out")}
+    else if(a==="login"){if(GWL.loggedIn()){toast("Logged in as +"+String(GWL.phone()).replace(/^\+/,""));return}S.view="llogin";SU.mode="login";SU.step=2;render()}
     else if(a==="folder"){if(!confirm("Choose a different folder for your data? A full copy is saved there straight away."))return;var r=await pickFolder();if(r&&r.ok){dirty.data=dirty.bills=dirty.family=true;await flush();folderBar();toast("Saved to "+(r.name||"the new folder"));render()}}
     else if(a==="erase"){if(!confirm("Delete all your Gharwise data on this phone? Payments, budgets, settings and family data are removed. This can't be undone."))return;
       var alsoFiles=confirm("Also delete the backup files in your folder ("+(GWL.folder.name||"folder")+")?\n\nOK = delete them too. Cancel = keep them, so you can restore later.");
@@ -391,7 +425,7 @@ document.addEventListener("click",async function(e){var t=e.target&&e.target.clo
     render()}catch(x){fx.disabled=false;showErr(x&&x.message||String(x))}return}
   var fb=t.closest("[data-fam]");if(fb){var f=fb.getAttribute("data-fam");
     try{
-      if(!GWL.loggedIn()&&f!=="copy"){S.view="llogin";SU.step=2;render();return}
+      if(!GWL.loggedIn()&&f!=="copy"){S.view="llogin";SU.mode="login";SU.step=2;render();return}
       var oldFam=async function(fn){try{return await fn()}catch(x){if(/already in a family/i.test(x&&x.message||"")&&confirm("This number is still in a family from before (for example, from an old install). Leave that family and continue?\n\nIf you want to rejoin it instead, paste its family code under “Someone already created one?”.")){await GWL.srv("lm_family_leave",{});return await fn()}throw x}};
       if(f==="create"){fb.disabled=true;await oldFam(function(){return GWL.famCreate()});render();toast("Family created. Now invite them by mobile number.")}
       else if(f==="join"){fb.disabled=true;var code=(document.getElementById("famcode")||{}).value;var n=await oldFam(function(){return GWL.famJoin(code)});render();toast("Joined. "+n+" people in your family.")}

@@ -44,13 +44,20 @@ GWL._loginTest=async function(num,otp){num=String(num).replace(/\D/g,"");await a
   return {access:o.access_token,refresh:o.refresh_token,exp:o.expires_at||(Math.floor(Date.now()/1000)+(o.expires_in||3600)),phone:num,uid:o.user&&o.user.id||""}};
 GWL._swapSess=function(o){var x=SESS;SESS=o;return x};
 GWL.idle=async function(){try{if(syncing)await syncing}catch(e){}var n=0;while(pulling&&n++<100)await new Promise(function(r){setTimeout(r,100)})};
+/* mobile + password accounts, the same as the main app: create (code by SMS), log in, forgot password (code by SMS) */
+GWL.phoneStatus=async function(ph){try{var r=await fetch(URLB+"rpc/phone_status",{method:"POST",headers:{apikey:KEY,"Content-Type":"application/json"},body:JSON.stringify({p_phone:ph})});if(!r.ok)return null;var t=await r.json();return typeof t==="string"?t:null}catch(x){return null}};
+GWL.pwLogin=async function(ph,pw){var o=await authFetch("token?grant_type=password","POST",{phone:ph,password:pw});if(!o||!o.access_token)throw new Error("Could not log in.");sessSave(o);ls("gwlogoutwhy","");return true};
+GWL.pwSignup=async function(ph,pw){await authFetch("signup","POST",{phone:ph,password:pw})};
+GWL.smsResend=async function(ph){await authFetch("resend","POST",{type:"sms",phone:ph})};
+GWL.resetCode=async function(ph){await authFetch("otp","POST",{phone:ph,create_user:false})};
+GWL.setPassword=async function(pw){await fresh();await authFetch("user","PUT",{password:pw},SESS.access)};
 GWL.sendOtp=async function(ph){await authFetch("otp","POST",{phone:ph,create_user:true})};
 GWL.verifyOtp=async function(ph,code){var o=await authFetch("verify","POST",{type:"sms",phone:ph,token:code});if(!o||!o.access_token)throw new Error("That code did not work.");sessSave(o);ls("gwlogoutwhy","");return true};
 function loginBar(){if(!GWL.db()||!GWL.db().profile||ls("gwout")==="1")return;var b=document.getElementById("lgbar");if(SESS){if(b)b.remove();return}if(b)return;
   b=document.createElement("button");b.id="lgbar";b.style.cssText="position:fixed;left:12px;right:12px;bottom:calc(92px + env(safe-area-inset-bottom));z-index:65;border:0;border-radius:12px;padding:10px 14px;background:#92400e;color:#fff;font:inherit;font-size:14px;text-align:left";
   b.textContent="Log in again to keep family and email in sync. Your data on this phone is safe.";
   var why=ls("gwlogoutwhy");if(why){var sm=document.createElement("small");sm.style.cssText="display:block;opacity:.75;margin-top:2px;font-size:11px";sm.textContent="Reason: "+why;b.appendChild(sm)}
-  b.onclick=function(){S.view="llogin";GWL.su.step=2;render()};document.body.appendChild(b)}
+  b.onclick=function(){S.view="llogin";GWL.su.mode="login";GWL.su.step=2;render()};document.body.appendChild(b)}
 GWL.loginBar=loginBar;
 
 /* ---------- small crypto helpers ---------- */
