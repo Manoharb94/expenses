@@ -457,16 +457,39 @@ GWL.ios=function(){try{return !!(window.Capacitor&&Capacitor.getPlatform&&Capaci
       '<li>Do it once more with <b>INR</b> instead of Rs, for banks that write INR.</li></ol>'+
       '<a class="btn ghost" style="display:block;text-align:center;text-decoration:none" href="shortcuts://">Open Shortcuts</a>'+
       '<p class="note">The SMS stays on this iPhone. Gharwise adds it as a payment the next time you open the app.</p>';
-    var past='<p>Live tracking only sees new SMS. To add older bank SMS once, make this shortcut in <b>Shortcuts</b> → <b>+</b>, name it <b>Gharwise past SMS</b>:</p><ol>'+
-      '<li><b>Find Messages</b>. Filter: <b>Content</b> contains <b>Rs</b>; tap <b>+</b> and add <b>Content</b> contains <b>INR</b>; change “All” to <b>Any</b>. Add <b>Date Sent</b> is in the last <b>3 months</b>. Limit <b>500</b>.</li>'+
-      '<li><b>Repeat with Each</b> (the messages).</li>'+
-      '<li>Inside it: <b>Add SMS to Gharwise</b>. Message = <b>Repeat Item</b> → <b>Content</b>. Date Received = <b>Repeat Item</b> → <b>Date Sent</b>.</li></ol>'+
-      '<p>Run it once and allow access to Messages. Then open Gharwise: the payments are added. Running it again is safe; payments already in the app are skipped.</p>';
+    var past='<p>Live tracking only sees new SMS. To add older bank SMS once, open <b>Import SMS</b> (the tab next to <b>Live Tracking</b>): add the <b>Gharwise past SMS</b> shortcut, then choose how many days to import.</p>';
     var done='<p>'+(n?'✅ <b>'+n+' bank SMS</b> have come in through the automation'+(st.last?', the last one '+esc(ago(new Date(st.last).toISOString())):'')+'.':'Waiting for the first bank SMS. Send yourself a test like “Rs 10 debited from a/c XX1234” from another phone, or wait for a real one.')+'</p>'+
       (st.waiting?'<p class="note">'+st.waiting+' waiting to be added.</p>':'')+'<button class="btn" data-lios="drain">Add waiting SMS now</button>';
     return [['Turn on live SMS',live],['Add older SMS (optional)',past],['Check it works',done]]};
   vSms=function(){if(S.smsStep>=3)S.smsStep=2;return wz("SMS tracking",smsSteps(),S.smsStep||0,"track")};
-  vImportSms=function(){var s=smsSteps()[1];return '<h2 style="margin:14px 0 2px">Import SMS</h2><div class="mute" style="margin-bottom:12px">Add older bank messages, once.</div><div class="card" style="font-size:14px;line-height:1.55"><b>'+s[0]+'</b>'+s[1]+'</div>'};
+  var PAST_URL=function(n){return "shortcuts://run-shortcut?name="+encodeURIComponent("Gharwise past SMS")+"&input=text&text="+encodeURIComponent(String(n))};
+  vImportSms=function(){var ok=ls("gwpastsc")==="1",days=Math.min(365,Math.max(1,parseInt(ls("gwpastdays")||"90",10)||90));
+    var h='<h2 style="margin:14px 0 2px">Import SMS</h2><div class="mute" style="margin-bottom:12px">Add older bank messages, once.</div>';
+    if(!ok){
+      return h+'<div class="card" style="font-size:14px;line-height:1.55"><b>Add the shortcut first</b>'+
+        '<p>Importing older SMS uses a shortcut called <b>Gharwise past SMS</b>. It is not added yet. Make it once in <b>Shortcuts</b> → <b>+</b>:</p><ol>'+
+        '<li>Name it <b>Gharwise past SMS</b>.</li>'+
+        '<li>Add <b>Get Numbers from Input</b> (the input is <b>Shortcut Input</b>). Gharwise sends it the number of days.</li>'+
+        '<li>Add <b>Find Messages</b>. Filter: <b>Date Sent</b> is in the last, then tap the number and choose the variable <b>Numbers</b>, <b>days</b>. Limit <b>500</b>.</li>'+
+        '<li>Add <b>Repeat with Each</b> (the messages).</li>'+
+        '<li>Inside it add <b>Add SMS to Gharwise</b>. Message = <b>Repeat Item</b> → <b>Content</b>. Date Received = <b>Repeat Item</b> → <b>Date Sent</b>.</li></ol>'+
+        '<a class="btn ghost" style="display:block;text-align:center;text-decoration:none;margin-bottom:8px" href="shortcuts://">Open Shortcuts</a>'+
+        '<button class="btn" data-lios="scok">I have added the shortcut</button>'+
+        '<p class="note">Messages that are not bank alerts are skipped by Gharwise. Importing twice is safe: payments already in the app are skipped.</p></div>'}
+    return h+'<div class="card" style="font-size:14px;line-height:1.55"><b>How many days back?</b>'+
+      '<p class="note" style="margin:4px 0 10px">Gharwise asks the <b>Gharwise past SMS</b> shortcut for the bank SMS of the last days you choose.</p>'+
+      '<div class="mobw" style="margin-bottom:10px"><input id="lidays" type="number" inputmode="numeric" min="1" max="365" value="'+days+'" style="width:100%"></div>'+
+      '<button class="btn" data-lios="runpast">Import last <span id="lidn">'+days+'</span> days</button>'+
+      '<p class="note">Shortcuts opens, reads your messages (allow access the first time) and brings you back here. If it says the shortcut can’t be found, <a href="#" data-lios="scno" style="color:var(--acc)">add the shortcut first</a>.</p></div>'};
+  document.addEventListener("input",function(e){var t=e.target;if(t&&t.id==="lidays"){var n=Math.min(365,Math.max(1,parseInt(t.value,10)||0));var sp=document.getElementById("lidn");if(sp)sp.textContent=n||"…"}});
+  document.addEventListener("click",function(e){var b=e.target&&e.target.closest&&e.target.closest('[data-lios="scok"],[data-lios="scno"],[data-lios="runpast"]');if(!b)return;e.preventDefault();var k=b.getAttribute("data-lios");
+    if(k==="scok"){ls("gwpastsc","1");render();return}
+    if(k==="scno"){ls("gwpastsc","");render();return}
+    var inp=document.getElementById("lidays"),n=Math.min(365,Math.max(1,parseInt(inp&&inp.value,10)||90));ls("gwpastdays",String(n));ls("gwpastrun","1");
+    var a=document.createElement("a");a.href=PAST_URL(n);document.body.appendChild(a);a.click();a.remove()});
+  /* back from Shortcuts after "Import last N days": add whatever it handed over */
+  document.addEventListener("visibilitychange",function(){if(document.hidden||ls("gwpastrun")!=="1")return;ls("gwpastrun","");
+    setTimeout(async function(){try{await GWL.drain();toast("Older SMS added ✓")}catch(x){}render()},1500)});
   document.addEventListener("click",async function(e){var b=e.target&&e.target.closest&&e.target.closest('[data-lios="drain"]');if(!b)return;b.disabled=true;try{await GWL.drain();toast(S.nsms&&S.nsms.waiting?"Some SMS could not be added":"Up to date ✓")}finally{b.disabled=false;render()}});
   /* Home: "Live tracking is on" line from the automation's counter */
   trackLine=function(){var st=S.nsms;if(!st||!st.count||!S.loaded)return "";var days=st.last?Math.floor((Date.now()-st.last)/864e5):-1;
