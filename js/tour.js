@@ -123,3 +123,13 @@ document.addEventListener("click",function(e){
 var GR={d:null,ex:null,ok:true,exok:true,t:0,seen:Number(ls("gseen")||0),shown:{},cat:{}};
 var PHOTO_RE=/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/=]+$/;
 var GCATS=["Stay","Food","Travel","Fun","Shopping","Rent","Bills","Other"];
+
+/* while a tip or guide is showing, the page behind it cannot be scrolled or tapped */
+(function(){
+  var st=document.createElement("style");st.textContent="#tour,#tour *{touch-action:none}";document.head.appendChild(st);
+  function blk(e){var o=document.getElementById("tour");if(o&&o.contains(e.target)&&e.cancelable)e.preventDefault()}
+  document.addEventListener("touchmove",blk,{passive:false});
+  document.addEventListener("wheel",blk,{passive:false});
+  function lock(){var on=!!document.getElementById("tour");document.documentElement.style.overflow=on?"hidden":"";document.body.style.overflow=on?"hidden":""}
+  try{new MutationObserver(lock).observe(document.body,{childList:true})}catch(e){}
+})();
