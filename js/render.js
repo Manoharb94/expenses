@@ -49,5 +49,7 @@ function addBudgetSheet(pre){
   var sel=document.getElementById("abc"),am=document.getElementById("aba");
   sel.onchange=function(){if(bm[sel.value]&&!am.value)am.value=bm[sel.value]};
   document.getElementById("abx").onclick=function(){sh.innerHTML=""};
-  document.getElementById("abok").onclick=function(){var c=sel.value,v=parseFloat(am.value);if(!c){alert("Choose a category");return}if(!(v>0)){alert("Enter the monthly amount");return}
-    S.newBud=S.newBud||{};S.newBud[c]=v;sh.innerHTML="";render();toast("Added. Tap Save Budget to keep it.")}}
+  document.getElementById("abok").onclick=async function(){var c=sel.value,v=parseFloat(am.value);if(!c){alert("Choose a category");return}if(!(v>0)){alert("Enter the monthly amount");return}
+    /* a new budget is saved straight away; only edits to existing budgets need Save Budget */
+    try{await api("budgets?on_conflict=household_id,category",{method:"POST",headers:{Prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify([{category:c,amount:v}])});
+      if(S.newBud)delete S.newBud[c];sh.innerHTML="";await load();toast("Budget added")}catch(e){alert("Could not save: "+e.message)}}}
