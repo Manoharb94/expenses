@@ -97,7 +97,9 @@ async function push(){
   var f=fam(),db=GWL.db(),me=db.profile.name,key=await aesKey(f.key);if(!f.pushed)f.pushed={};
   var now={},out=[];
   GWL.T("transactions").forEach(function(t){if(t.hidden||t.person!==me)return;var p=payloadOf(t),fp=JSON.stringify(p);now[t.id]=fp;if(f.pushed[t.id]!==fp)out.push({id:t.id,p:p,fp:fp})});
-  var gone=Object.keys(f.pushed).filter(function(id){return !now[id]});
+  var gone=Object.keys(f.pushed).filter(function(id){return id!=="__me"&&!now[id]});
+  /* tell the family who this phone is: the name travels encrypted like everything else */
+  if(f.pushed.__me!==me){var pp={profile:true,name:me};out.push({id:"__me",p:pp,fp:me})}
   if(!out.length&&!gone.length)return 0;
   var items=[];
   for(var i=0;i<out.length;i++){var iv=rnd(12),ct=await crypto.subtle.encrypt({name:"AES-GCM",iv:iv},key,te.encode(JSON.stringify(out[i].p)));items.push({item_id:out[i].id,iv:b64e(iv),ct:b64e(ct),fp:out[i].fp})}
@@ -112,6 +114,9 @@ async function pull(){
     var list=await srv("lm_pull",{p_since:f.seq||0});if(!Array.isArray(list)||!list.length)break;
     var rows=GWL.T("family_txns"),byId={};rows.forEach(function(r,i){byId[r.id]=i});
     for(var i=0;i<list.length;i++){var e=list[i],rid="fam-"+e.user+"-"+e.item_id;
+      if(e.item_id==="__me"){if(!f.mem)f.mem={};
+        if(e.deleted){delete f.mem[e.user]}else{try{var pt0=await crypto.subtle.decrypt({name:"AES-GCM",iv:b64d(e.iv)},key,b64d(e.ct)),p0=JSON.parse(td.decode(pt0));if(p0&&p0.name)f.mem[e.user]={name:String(p0.name).slice(0,60)}}catch(x){}}
+        f.seq=Math.max(f.seq||0,Number(e.seq)||0);changed++;continue}
       if(e.deleted){if(byId[rid]!==undefined){rows[byId[rid]]=null;changed++}}
       else{try{var pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:b64d(e.iv)},key,b64d(e.ct)),p=JSON.parse(td.decode(pt));
           var row={id:rid,amount:Number(p.amount)||0,type:p.type==="in"?"in":"out",merchant:p.merchant||"",merchant_key:p.merchant_key||GWSMS.mkey(p.merchant),category:p.category||null,txn_date:p.txn_date,note:p.note||null,
