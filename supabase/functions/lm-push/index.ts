@@ -123,6 +123,8 @@ Deno.serve(async (req) => {
       if (rt?.waitUntil) { rt.waitUntil(job); return json({ queued: tokens.length }); }
     }
     const sent = await job;
+    // nothing was delivered: allow the next try to notify again
+    if (!sent) await sb.from("lm_invites").update({ notified_for: null }).eq("id", invite);
     return json({ sent });
   } catch (e) {
     return json({ error: String((e as Error)?.message || e) }, 500);

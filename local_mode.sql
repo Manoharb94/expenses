@@ -549,10 +549,11 @@ begin
   if not found or i.sealed is null then return jsonb_build_object('kind', null, 'tokens', '[]'::jsonb); end if;
   if not lm_is_member(i.kind, i.target, p_caller) then raise exception 'not allowed'; end if;
   if i.notified_for is not distinct from i.sealed_for then return jsonb_build_object('kind', i.kind, 'tokens', '[]'::jsonb); end if;
-  update lm_invites set notified_for = sealed_for where id = p_invite;
   select coalesce(jsonb_agg(p.token), '[]'::jsonb) into toks
     from lm_push p join auth.users u on u.id = p.user_id
    where regexp_replace(coalesce(u.phone, ''), '\D', '', 'g') = i.to_phone;
+  -- remember "already notified" only when there was a phone to notify, so a late-registering phone still gets its notification
+  if jsonb_array_length(toks) > 0 then update lm_invites set notified_for = sealed_for where id = p_invite; end if;
   return jsonb_build_object('kind', i.kind, 'tokens', toks);
 end $$;
 
