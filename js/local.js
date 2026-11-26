@@ -432,6 +432,56 @@ document.addEventListener("click",async function(e){var b=e.target&&e.target.clo
     else if(a==="off"){if(!confirm("Turn off email tracking? Then delete the project in script.google.com too."))return;await GWL.mailOff();MS.st=null;render()}
   }catch(x){b.disabled=false;showErr(x&&x.message||String(x))}});
 GWL.newId=uid;GWL.db=function(){return DB};GWL.swapDb=function(d){var o=DB;DB=d;return o};GWL.blankDb=blank;GWL.files={write:fwrite,writeB64:fwriteB64,read:fread,del:fdelete};GWL.prep=prep;GWL.FILES=FILES;GWL.T=T;GWL.flush=flush;
+/* ===== iPhone (Gharwise Local for iOS) =====
+   iPhone apps can't read SMS. Bank SMS come in through the person's own Shortcuts automation, which runs the app's
+   "Add SMS to Gharwise" action. That action keeps the SMS on this iPhone (no server); the app collects them (drain). */
+GWL.ios=function(){try{return !!(window.Capacitor&&Capacitor.getPlatform&&Capacitor.getPlatform()==="ios"&&Capacitor.isNativePlatform())}catch(e){return false}};
+(function(){var _h=GWL.hook;GWL.hook=function(){_h.apply(this,arguments);if(!GWL.ios())return;
+  async function smsStatus(){try{var P=smsPlugin();S.nsms=P&&P.status?await P.status():null}catch(e){S.nsms=null}}
+  smsStatus();setTimeout(function(){try{if(DB&&DB.profile&&Capacitor.Plugins.GharwiseNative)Capacitor.Plugins.GharwiseNative.setWidget({lang:(typeof LANG!=="undefined"?LANG:"en")})}catch(e){}},3000);
+  document.addEventListener("visibilitychange",function(){if(!document.hidden)setTimeout(function(){smsStatus().then(function(){if(S.tab==="sms"||S.tab==="track"||S.tab==="home")render()})},900)});
+  var _dr=GWL.drain;GWL.drain=async function(){await _dr();await smsStatus()};
+  /* first launch: no folder to pick on iPhone */
+  var _sv=setupView;setupView=function(){var h=_sv.apply(this,arguments);
+    return h.replace('<h3 style="margin:0 0 8px">Pick a folder for your data</h3>','<h3 style="margin:0 0 8px">Where your data is kept</h3>')
+      .replace(/Tracking and adding payments start after this\. Pick or create a folder such as <b>Documents › Gharwise<\/b>\. Keep it: if you change phones, copy it across and pick it again\./,'Everything stays on this iPhone, in <b>Files › On My iPhone › Gharwise Local</b>, and is included in your iPhone backup (iCloud or computer). If you change phones, restore your backup or copy that folder across.')
+      .replace('>Choose folder<','>Use this iPhone<').replace(/<button class="btn ghost" data-l="pick" style="margin-top:8px">Choose a different folder<\/button>/g,'')};
+  /* SMS tracking page: the Shortcuts automation */
+  var smsSteps=function(){var st=S.nsms||{},n=st.count||0;
+    var live='<p>Apple lets only you switch on message automations. It takes about a minute:</p><ol>'+
+      '<li>Open <b>Shortcuts</b> → <b>Automation</b> → <b>New Automation</b> (or <b>+</b>) → <b>Message</b>.</li>'+
+      '<li><b>Message Contains</b>: type <b>Rs</b>. Choose <b>Run Immediately → Next</b>.</li>'+
+      '<li><b>New Blank Automation</b> → <b>Add Action</b> → search <b>Gharwise</b> → <b>Add SMS to Gharwise</b>.</li>'+
+      '<li>Tap <b>Message</b> in the action and pick <b>Shortcut Input</b>. Tap <b>Done</b>.</li>'+
+      '<li>Do it once more with <b>INR</b> instead of Rs, for banks that write INR.</li></ol>'+
+      '<a class="btn ghost" style="display:block;text-align:center;text-decoration:none" href="shortcuts://">Open Shortcuts</a>'+
+      '<p class="note">The SMS stays on this iPhone. Gharwise adds it as a payment the next time you open the app.</p>';
+    var past='<p>Live tracking only sees new SMS. To add older bank SMS once, make this shortcut in <b>Shortcuts</b> → <b>+</b>, name it <b>Gharwise past SMS</b>:</p><ol>'+
+      '<li><b>Find Messages</b>. Filter: <b>Content</b> contains <b>Rs</b>; tap <b>+</b> and add <b>Content</b> contains <b>INR</b>; change “All” to <b>Any</b>. Add <b>Date Sent</b> is in the last <b>3 months</b>. Limit <b>500</b>.</li>'+
+      '<li><b>Repeat with Each</b> (the messages).</li>'+
+      '<li>Inside it: <b>Add SMS to Gharwise</b>. Message = <b>Repeat Item</b> → <b>Content</b>. Date Received = <b>Repeat Item</b> → <b>Date Sent</b>.</li></ol>'+
+      '<p>Run it once and allow access to Messages. Then open Gharwise: the payments are added. Running it again is safe; payments already in the app are skipped.</p>';
+    var done='<p>'+(n?'✅ <b>'+n+' bank SMS</b> have come in through the automation'+(st.last?', the last one '+esc(ago(new Date(st.last).toISOString())):'')+'.':'Waiting for the first bank SMS. Send yourself a test like “Rs 10 debited from a/c XX1234” from another phone, or wait for a real one.')+'</p>'+
+      (st.waiting?'<p class="note">'+st.waiting+' waiting to be added.</p>':'')+'<button class="btn" data-lios="drain">Add waiting SMS now</button>';
+    return [['Turn on live SMS',live],['Add older SMS (optional)',past],['Check it works',done]]};
+  vSms=function(){if(S.smsStep>=3)S.smsStep=2;return wz("SMS tracking",smsSteps(),S.smsStep||0,"track")};
+  vImportSms=function(){var s=smsSteps()[1];return '<h2 style="margin:14px 0 2px">Import SMS</h2><div class="mute" style="margin-bottom:12px">Add older bank messages, once.</div><div class="card" style="font-size:14px;line-height:1.55"><b>'+s[0]+'</b>'+s[1]+'</div>'};
+  document.addEventListener("click",async function(e){var b=e.target&&e.target.closest&&e.target.closest('[data-lios="drain"]');if(!b)return;b.disabled=true;try{await GWL.drain();toast(S.nsms&&S.nsms.waiting?"Some SMS could not be added":"Up to date ✓")}finally{b.disabled=false;render()}});
+  /* Home: "Live tracking is on" line from the automation's counter */
+  trackLine=function(){var st=S.nsms;if(!st||!st.count||!S.loaded)return "";var days=st.last?Math.floor((Date.now()-st.last)/864e5):-1;
+    if(days>=3)return '<button class="dc stl" data-go="sms" style="border:1.5px solid #e0a020;display:block"><span style="display:flex;justify-content:space-between;width:100%"><span><i class="dot r"></i><b>Live tracking stopped</b></span><span class="note" style="margin:0;color:var(--acc)">Fix it ›</span></span><div class="note" style="margin:6px 0 0">No bank SMS for '+days+' days. Check the automation in Shortcuts.</div></button>';
+    return '<button class="dc stl" data-go="sms"><span><i class="dot"></i><b>Live tracking is on</b></span><span class="note" style="margin:0">Last SMS '+esc(ago(new Date(st.last).toISOString()))+' ›</span></button>'};
+  /* Tracking page: describe the iPhone way */
+  var _vt=vTrack;vTrack=function(){return _vt().replace(/<b>SMS<\/b>: bank alerts are read on this phone the moment they arrive and saved here\./,'<b>SMS</b>: your Shortcuts automation hands each bank SMS to the app on this iPhone. It is saved here, nowhere else.')};
+  /* Settings: voice = Siri / Back Tap / widget, all on this iPhone */
+  var _nc=nativeCard;nativeCard=function(){var h=_nc.apply(this,arguments),i=h.indexOf(sxHead('🎤','Add an expense by voice','Say it, it is saved'));if(i<0)return h;
+    var j=h.lastIndexOf('</div></div>');var card='<div class="card">'+sxHead('🎤','Add an expense by voice','Say it, it is saved')+'<div class="note" style="margin:0;line-height:1.55">'+
+      '<p class="vi">Say <b>“Hey Siri, add expense in Gharwise Local”</b>, then “Grocery 120”. Nothing to set up.</p>'+
+      '<div class="vs"><span class="vn">1</span><div><b>Double-tap the back of the iPhone</b><p>Settings → Accessibility → Touch → Back Tap → Double Tap → <b>Add Expense</b> (Gharwise Local).</p></div></div>'+
+      '<div class="vs"><span class="vn">2</span><div><b>Home-screen widget</b><p>Press and hold the home screen → <b>+</b> → Gharwise Local → Quick add. Tap the mic and speak.</p></div></div>'+
+      '<p class="note" style="margin:8px 0 0">What you say waits on this iPhone and becomes a payment when you open Gharwise.</p></div></div>';
+    return h.slice(0,h.lastIndexOf('<div class="card">',i))+card+h.slice(j+12)};
+}})();
 })();
 /* while typing, hide the bottom bar and the round ＋ button: with the keyboard open they float up and cover buttons such as Send Invite */
 (function(){if(!window.GWL||!GWL.on)return;

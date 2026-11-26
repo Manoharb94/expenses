@@ -31,6 +31,7 @@ function need(){if(!FT.A||!FT.B)skip("test members could not log in")}
 async function asDev(who,fn){var d=FT[who],os=GWL._swapSess(d.sess),od=GWL.swapDb(d.db);try{return await fn()}finally{GWL.swapDb(od);GWL._swapSess(os)}}
 async function cleanupFamily(){for(var w of ["A","B"]){if(!FT[w])continue;try{await asDev(w,function(){return GWL.famLeave()})}catch(e){try{await asDev(w,function(){return GWL.srv("lm_family_leave",{})})}catch(x){}}}}
 function P(n){try{return window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins[n]||null}catch(e){return null}}
+function IOS(){try{return Capacitor.getPlatform()==="ios"}catch(e){return false}}
 function native(){try{return typeof nativeApp==="function"&&nativeApp()}catch(e){return false}}
 function skip(why){var e=new Error(why);e.skip=1;throw e}
 function must(c,why){if(!c)throw new Error(why||"not as expected")}
@@ -89,14 +90,14 @@ var TESTS=[
 ["Encryption","Email from Gmail opens on this phone",async function(){var k=GWL.crypto.b64e(crypto.getRandomValues(new Uint8Array(32))),it=await gmailEncrypt(k,JSON.stringify({t:"Rs.99 debited ₹ ✓ test",d:"2026-01-01"}));var o=await GWL.mailDecrypt(k,it);must(o&&o.t==="Rs.99 debited ₹ ✓ test")}],
 ["Encryption","Tampered email is rejected",async function(){var k=GWL.crypto.b64e(crypto.getRandomValues(new Uint8Array(32))),it=await gmailEncrypt(k,'{"t":"x"}');var c=GWL.crypto.b64d(it.c);c[0]^=1;it.c=GWL.crypto.b64e(c);must(await GWL.mailDecrypt(k,it)===null)}],
 /* ---- phone features ---- */
-["Android","SMS permission",async function(){var s=P("SmsTracker");if(!s)skip("not in the app");var st=await s.status();must(st.permission==="granted","not allowed yet: turn on SMS tracking in Automated tracking");return st.enabled?"tracking on":"allowed, tracking off"}],
-["Android","SMS tracking is in on-phone mode",async function(){var s=P("SmsTracker");if(!s)skip("not in the app");var st=await s.status();if(!st.enabled)skip("SMS tracking is off");must(typeof s.takeInbox==="function","old app build: no on-phone inbox")}],
-["Android","Can read recent SMS",async function(){var s=P("SmsTracker");if(!s)skip("not in the app");var st=await s.status();if(st.permission!=="granted")skip("no SMS permission");var r=await s.importRecent({days:3,local:true});must(r&&typeof r.found==="number","inbox not readable");must(Array.isArray(r.items),"old app build: sends SMS instead of keeping them");return r.found+" bank SMS in the last 3 days"}],
-["Android","Voice widget is set up",async function(){var g=P("GharwiseNative");if(!g)skip("not in the app");must(typeof g.setWidget==="function")}],
-["Android","Notifications allowed",async function(){var n=P("LocalNotifications");if(!n)skip("not in the app");var p=await n.checkPermissions();must(p.display==="granted","not allowed: Settings → Remind me to categorise")}],
-["Android","A test notification appears in 5 seconds",async function(){var n=P("LocalNotifications");if(!n)skip("not in the app");var p=await n.checkPermissions();if(p.display!=="granted")skip("notifications not allowed");
+["Phone","SMS permission",async function(){var s=P("SmsTracker");if(!s)skip("not in the app");if(IOS())skip("iPhone: SMS come through Shortcuts (see below)");var st=await s.status();must(st.permission==="granted","not allowed yet: turn on SMS tracking in Automated tracking");return st.enabled?"tracking on":"allowed, tracking off"}],
+["Phone","SMS tracking is in on-phone mode",async function(){var s=P("SmsTracker");if(!s)skip("not in the app");if(IOS())skip("iPhone: see the iPhone checks");var st=await s.status();if(!st.enabled)skip("SMS tracking is off");must(typeof s.takeInbox==="function","old app build: no on-phone inbox")}],
+["Phone","Can read recent SMS",async function(){var s=P("SmsTracker");if(!s)skip("not in the app");if(IOS())skip("iPhone apps can't read SMS");var st=await s.status();if(st.permission!=="granted")skip("no SMS permission");var r=await s.importRecent({days:3,local:true});must(r&&typeof r.found==="number","inbox not readable");must(Array.isArray(r.items),"old app build: sends SMS instead of keeping them");return r.found+" bank SMS in the last 3 days"}],
+["Phone","Voice widget is set up",async function(){var g=P("GharwiseNative");if(!g)skip("not in the app");must(typeof g.setWidget==="function")}],
+["Phone","Notifications allowed",async function(){var n=P("LocalNotifications");if(!n)skip("not in the app");var p=await n.checkPermissions();must(p.display==="granted","not allowed: Settings → Remind me to categorise")}],
+["Phone","A test notification appears in 5 seconds",async function(){var n=P("LocalNotifications");if(!n)skip("not in the app");var p=await n.checkPermissions();if(p.display!=="granted")skip("notifications not allowed");
   await n.schedule({notifications:[{id:9598,title:"Gharwise self-check",body:"If you see this, notifications work ✓",schedule:{at:new Date(Date.now()+5000)}}]});return "leave the app to see it"}],
-["Android","Categorise reminders are scheduled",async function(){var n=P("LocalNotifications");if(!n)skip("not in the app");if(ls("ndion")==="0")skip("reminders are off in Settings");
+["Phone","Categorise reminders are scheduled",async function(){var n=P("LocalNotifications");if(!n)skip("not in the app");if(ls("ndion")==="0")skip("reminders are off in Settings");
   var p=await n.checkPermissions();if(p.display!=="granted")skip("notifications not allowed");
   var un=(S.txns||[]).filter(function(t){return !t.category&&t.type==="out"&&canEditT(t)}).length;
   try{if(typeof ndiSched==="function")await ndiSched()}catch(e){}
@@ -104,9 +105,12 @@ var TESTS=[
   if(!un){must(!pend.length,"reminders are scheduled although everything is categorised");return "everything categorised, so none scheduled ✓"}
   must(pend.length>0,un+" uncategorised payments but no reminder is scheduled");var at=pend.map(function(x){return x.schedule&&x.schedule.at}).filter(Boolean).sort()[0];
   return pend.length+" scheduled"+(at?", next "+new Date(at).toLocaleString("en-IN",{weekday:"short",hour:"numeric",minute:"2-digit"}):"")}],
-["Android","Invite notifications (push) are on",async function(){var s=P("SmsTracker"),pn=P("PushNotifications");if(!s||!pn)skip("not in the app / old build");var a=await s.appInfo();if(!a.pushReady)skip("this build has no Firebase file (google-services.json)");
+["Phone","Invite notifications (push) are on",async function(){var s=P("SmsTracker"),pn=P("PushNotifications");if(!s||!pn)skip("not in the app / old build");var a=await s.appInfo();if(!a.pushReady)skip("this build has no Firebase file (google-services.json)");if(IOS()){var pm0=await pn.checkPermissions();must(pm0.receive==="granted","notifications not allowed: iPhone Settings → Gharwise Local → Notifications");must(String(ls("gwpush")||"").indexOf(GWL.uid()+":")===0,"this iPhone is not registered yet: reopen the app while online");return "registered (Apple push)"}
   var pm=await pn.checkPermissions();must(pm.receive==="granted","notifications not allowed for Gharwise in Android settings");must(String(ls("gwpush")||"").indexOf(GWL.uid()+":")===0,"this phone is not registered yet: reopen the app while online");return "registered"}],
-["Android","App lock (fingerprint/face) available",async function(){var g=P("GharwiseNative");if(!g||!g.lockStatus)skip("not in the app");var s=await g.lockStatus();must(s&&s.available!==false,"this phone has no screen lock set")}],
+["iPhone","Shortcuts action can hand SMS to the app",async function(){if(!IOS())skip("Android phone");var s=P("SmsTracker");must(s&&s.inboxTest,"old build");var r=await s.inboxTest();must(r.group,"App Group is missing in this build");must(r.ok,"the on-phone inbox did not work")}],
+["iPhone","Live SMS automation is sending",async function(){if(!IOS())skip("Android phone");var st=await P("SmsTracker").status();if(!st.count)skip("no bank SMS yet: set up the automation (Automated tracking → SMS)");var d=Math.floor((Date.now()-st.last)/864e5);must(d<5,"no SMS for "+d+" days: check the automation in Shortcuts");return st.count+" SMS so far, last "+(d?d+" days ago":"today")}],
+["iPhone","Data folder is in the Files app",async function(){if(!IOS())skip("Android phone");var s=await P("LocalFiles").folderStatus();must(s.ok,"not writable");return s.name}],
+["Phone","App lock (fingerprint/face) available",async function(){var g=P("GharwiseNative");if(!g||!g.lockStatus)skip("not in the app");var s=await g.lockStatus();must(s&&s.available!==false,"this phone has no screen lock set")}],
 /* ---- family sync, end to end, between two Supabase TEST numbers (your real family is not touched) ---- */
 ["Family sync","Two test members log in",async function(){var nums=testNums(),otp=testOtp(),own=String(GWL.phone()||"").replace(/\D/g,"").slice(-10);
   var use=nums.filter(function(n){return n.replace(/\D/g,"").slice(-10)!==own});
@@ -176,13 +180,13 @@ async function pair(){var nums=testNums(),otp=testOtp(),own=String(GWL.phone()||
 GWL.inviteTestCleanup=async function(){if(ls("gwinvtest")!=="1"||running)return;var tok=ls("gwinvtok")||"";ls("gwinvtest","");
   try{await pair();try{await asDev("A",async function(){var l=await GWL.srv("lm_invites_sent",{})||[];for(var x of l){try{await GWL.srv("lm_invite_cancel",{p_id:x.id})}catch(e){}}})}catch(e){}for(var w of ["A","B"])try{await asDev(w,function(){return GWL.srv("lm_family_leave",{})})}catch(e){}
     if(tok)try{await asDev("B",function(){return GWL.srv("lm_drop_push",{p_token:tok})})}catch(e){}}catch(e){}
-  FT={};if(tok)try{await GWL.srv("lm_set_push",{p_token:tok,p_platform:"android"})}catch(e){}};
+  FT={};if(tok)try{await GWL.srv("lm_set_push",{p_token:tok,p_platform:(Capacitor.getPlatform&&Capacitor.getPlatform())||"android"})}catch(e){}};
 GWL.inviteTest=async function(){if(running)throw new Error("The self-check is running");if(!GWL.loggedIn())throw new Error("Log in first (Menu → Account)");
   var st=await GWL.pushSetup();if(st!=="on")throw new Error(st==="not in this build"?"This build has no Firebase file (google-services.json)":st==="not allowed"?"Allow notifications for Gharwise in Android settings":"Push notifications are not available");
   await new Promise(function(r){setTimeout(r,1500)});var tag=String(ls("gwpush")||"");if(tag.indexOf(GWL.uid()+":")!==0)throw new Error("This phone is not registered for notifications yet. Reopen the app while online and try again.");
   var tok=tag.slice(tag.indexOf(":")+1);await GWL.inviteTestCleanup();await pair();
   ls("gwinvtok",tok);ls("gwinvtest","1");
-  await asDev("B",function(){return GWL.srv("lm_set_push",{p_token:tok,p_platform:"android"})});   /* from now this phone receives B's notifications */
+  await asDev("B",function(){return GWL.srv("lm_set_push",{p_token:tok,p_platform:(Capacitor.getPlatform&&Capacitor.getPlatform())||"android"})});   /* from now this phone receives B's notifications */
   var r;try{r=await asDev("A",async function(){try{await GWL.srv("lm_family_leave",{})}catch(e){}await GWL.famCreate();GWL.pushDelay=10;GWL.pushInTests=true;try{return await GWL.invite("family",GWL.db().family.id,FT.B.num)}finally{GWL.pushDelay=0;GWL.pushInTests=false}})}
   catch(e){await GWL.inviteTestCleanup();throw e}
   if(!r||r.status!=="invited"){await GWL.inviteTestCleanup();throw new Error("The invite was not sent ("+(r&&r.status)+")")}

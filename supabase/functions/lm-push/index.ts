@@ -1,6 +1,7 @@
 // Gharwise on-phone app: sends a push notification when someone is invited to a family or group.
 // Deploy: Supabase → Edge Functions → Deploy a new function → name "lm-push" → paste this file.
 // Secret: Edge Functions → Secrets → FIREBASE_SERVICE_ACCOUNT = the whole service-account JSON from Firebase.
+// iPhone: also set APNS_KEY (the whole .p8 file from Apple), APNS_KEY_ID and APNS_TEAM_ID. iPhone push goes straight to Apple.
 // The text is general on purpose: names and group names are encrypted on the phones, so nobody else (incl. Google) sees them.
 import { createClient } from "npm:@supabase/supabase-js@2.49.4";
 
@@ -45,8 +46,47 @@ async function googleToken(sa: { client_email: string; private_key: string }): P
   return cached.token;
 }
 
+// ---- iPhone: Apple Push Notification service (APNs), token-based (.p8 key) ----
+let apnsCached: { jwt: string; at: number } | null = null;
+async function apnsJwt(): Promise<string | null> {
+  const p8 = Deno.env.get("APNS_KEY"), kid = Deno.env.get("APNS_KEY_ID"), team = Deno.env.get("APNS_TEAM_ID");
+  if (!p8 || !kid || !team) return null;
+  const now = Math.floor(Date.now() / 1000);
+  if (apnsCached && now - apnsCached.at < 45 * 60) return apnsCached.jwt;   // Apple wants a fresh one at least every hour
+  const enc = (o: unknown) => b64url(new TextEncoder().encode(JSON.stringify(o)));
+  const unsigned = enc({ alg: "ES256", kid }) + "." + enc({ iss: team, iat: now });
+  const pem = p8.replace(/-----[^-]+-----/g, "").replace(/\s+/g, "");
+  const der = Uint8Array.from(atob(pem), (c) => c.charCodeAt(0));
+  const key = await crypto.subtle.importKey("pkcs8", der, { name: "ECDSA", namedCurve: "P-256" }, false, ["sign"]);
+  const sig = new Uint8Array(await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, key, new TextEncoder().encode(unsigned)));
+  apnsCached = { jwt: unsigned + "." + b64url(sig), at: now };
+  return apnsCached.jwt;
+}
+// An iPhone push address is 64 hex characters; an Android (Firebase) one is much longer and has a colon.
+const isApns = (t: string) => /^[0-9a-f]{64}$/i.test(t);
+
+// deno-lint-ignore no-explicit-any
+async function sendApns(token: string, title: string, body: string, data: Record<string, string>, sb: any): Promise<boolean> {
+  const jwt = await apnsJwt();
+  if (!jwt) return false;                     // iPhone secrets not set yet
+  const host = Deno.env.get("APNS_HOST") || "api.push.apple.com";   // TestFlight and App Store use the production host
+  const topic = Deno.env.get("APNS_TOPIC") || "in.nestwise.app.local";
+  const r = await fetch(`https://${host}/3/device/${token}`, {
+    method: "POST",
+    headers: { authorization: "bearer " + jwt, "apns-topic": topic, "apns-push-type": "alert", "apns-priority": "10", "content-type": "application/json" },
+    body: JSON.stringify({ aps: { alert: { title, body }, sound: "default" }, ...data }),
+  });
+  if (r.ok) return true;
+  const e = await r.text();
+  if (r.status === 410 || /BadDeviceToken|Unregistered|DeviceTokenNotForTopic/.test(e)) await sb.rpc("lm_push_forget", { p_token: token });
+  console.log("apns", r.status, e.slice(0, 200));
+  return false;
+}
+
 // deno-lint-ignore no-explicit-any
 async function send(project: string, access: string, token: string, title: string, body: string, data: Record<string, string>, sb: any): Promise<boolean> {
+  if (isApns(token)) return await sendApns(token, title, body, data, sb);
+  if (!access) return false;
   const r = await fetch(`https://fcm.googleapis.com/v1/projects/${project}/messages:send`, {
     method: "POST",
     headers: { Authorization: "Bearer " + access, "Content-Type": "application/json" },
@@ -58,12 +98,19 @@ async function send(project: string, access: string, token: string, title: strin
   return false;
 }
 
+// Google sign-in only when there is an Android phone to reach (an iPhone-only setup needs no Firebase secret).
+// deno-lint-ignore no-explicit-any
+async function googleFor(sa: any, tokens: string[]): Promise<string> {
+  if (!sa || !tokens.some((t) => !isApns(t))) return "";
+  return await googleToken(sa);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   try {
     const raw = Deno.env.get("FIREBASE_SERVICE_ACCOUNT");
-    if (!raw) return json({ sent: 0, note: "FIREBASE_SERVICE_ACCOUNT secret not set" });
-    const sa = JSON.parse(raw);
+    const sa = raw ? JSON.parse(raw) : null;
+    if (!sa && !Deno.env.get("APNS_KEY")) return json({ sent: 0, note: "FIREBASE_SERVICE_ACCOUNT / APNS_KEY secrets not set" });
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 
     const jwt = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
@@ -81,9 +128,9 @@ Deno.serve(async (req) => {
       const delay = Math.min(Math.max(Number(body.delay) || 10, 0), 30) * 1000;
       const job = (async () => {
         await new Promise((r) => setTimeout(r, delay));
-        const access = await googleToken(sa);
+        const access = await googleFor(sa, toks);
         for (const token of toks) {
-          await send(sa.project_id, access, token, "Gharwise test notification", "Push notifications work ✓ Tap to open Gharwise.", { kind: "test" }, sb);
+          await send(sa?.project_id, access, token, "Gharwise test notification", "Push notifications work ✓ Tap to open Gharwise.", { kind: "test" }, sb);
         }
       })();
       // answer straight away so the person can leave the app; keep sending in the background
@@ -104,10 +151,10 @@ Deno.serve(async (req) => {
     const delay = Math.min(Math.max(Number(body.delay) || 0, 0), 30) * 1000; // the one-phone invite test waits so the person can leave the app
     const job = (async () => {
       if (delay) await new Promise((r) => setTimeout(r, delay));
-      const access = await googleToken(sa);
+      const access = await googleFor(sa, tokens);
       let n = 0;
       for (const token of tokens) {
-        if (await send(sa.project_id, access, token,
+        if (await send(sa?.project_id, access, token,
           family ? "Family invite" : "Group invite",
           family
             ? "Someone invited you to their family on Gharwise. Open the app to accept or reject."

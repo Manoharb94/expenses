@@ -99,7 +99,7 @@ var pushOn=false;
 GWL.pushSetup=async function(){var P=pushP();if(!P)return "not in this build";if(!GWL.loggedIn()||GWL.testing)return "no";
   try{var S2=Capacitor.Plugins.SmsTracker,a=S2&&S2.appInfo?await S2.appInfo():null;if(!a||!a.pushReady)return "not in this build"}catch(e){return "no"}
   if(!pushOn){pushOn=true;
-    P.addListener("registration",async function(t){var tok=t&&t.value;if(!tok)return;var tag=GWL.uid()+":"+tok;if(ls("gwpush")===tag)return;try{await srv("lm_set_push",{p_token:tok,p_platform:"android"});ls("gwpush",tag)}catch(e){}});
+    P.addListener("registration",async function(t){var tok=t&&t.value;if(!tok)return;var tag=GWL.uid()+":"+tok;if(ls("gwpush")===tag)return;try{await srv("lm_set_push",{p_token:tok,p_platform:(Capacitor.getPlatform&&Capacitor.getPlatform())||"android"});ls("gwpush",tag)}catch(e){}});
     P.addListener("registrationError",function(){});
     P.addListener("pushNotificationReceived",function(ev){try{var d0=ev&&ev.data||{};if(d0.kind==="invite"&&ls("gwinvtest")==="1"){toast("Invite push works ✓");GWL.inviteTestCleanup&&GWL.inviteTestCleanup();return}}catch(e){}GWL.groupsSync(true)});
     P.addListener("pushNotificationActionPerformed",function(ev){try{var dt=ev&&ev.notification&&ev.notification.data||{};if(dt.kind==="test"){setTimeout(function(){toast("Push notification works ✓")},800);return}if(dt.kind==="invite"&&ls("gwinvtest")==="1"){setTimeout(function(){toast("Invite push works ✓")},800);GWL.inviteTestCleanup&&GWL.inviteTestCleanup();return}}catch(e){}GWL.groupsSync(true)})}
