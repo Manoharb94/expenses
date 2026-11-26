@@ -53,9 +53,12 @@ async function send(project: string, access: string, token: string, title: strin
     body: JSON.stringify({ message: { token, notification: { title, body }, data, android: { priority: "HIGH", ttl: "120s", notification: { channel_id: "invites", notification_priority: "PRIORITY_MAX", default_sound: true } },
       apns: { headers: { "apns-priority": "10", "apns-push-type": "alert" }, payload: { aps: { sound: "default" } } } } }),
   });
-  if (r.ok) return true;
+  if (r.ok) { console.log("FCM ok", token.slice(0, 10)); return true; }
   const e = await r.text();
-  if (r.status === 404 || /UNREGISTERED|INVALID_ARGUMENT/.test(e)) await sb.rpc("lm_push_forget", { p_token: token });
+  // the reason shows in Supabase → Edge Functions → lm-push → Logs
+  console.error("FCM failed", r.status, token.slice(0, 10), e.slice(0, 400));
+  // forget a token only when Google says that phone is gone (not for other errors, so a good token is never thrown away)
+  if (r.status === 404 || /UNREGISTERED|not a valid FCM registration token/.test(e)) await sb.rpc("lm_push_forget", { p_token: token });
   return false;
 }
 
@@ -98,7 +101,7 @@ Deno.serve(async (req) => {
     const { data: t, error } = await sb.rpc("lm_push_targets", { p_invite: invite, p_caller: u.user.id });
     if (error) return json({ error: error.message }, 403);
     const tokens: string[] = t?.tokens || [];
-    if (!tokens.length) return json({ sent: 0 });
+    if (!tokens.length) { console.log("invite", invite, "no push token for the invited phone"); return json({ sent: 0 }); }
 
     const family = t.kind === "family";
     const delay = Math.min(Math.max(Number(body.delay) || 0, 0), 30) * 1000; // the one-phone invite test waits so the person can leave the app
