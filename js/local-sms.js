@@ -57,7 +57,7 @@ function parseSms(text){
 /** Reads a spoken expense like "spent 100 rs for auto" or "received 1000 from Manohar". */
 var VCAT=[[/\b(auto|rickshaw|bus|metro|cab|uber|ola|rapido|taxi|train|ticket|parking|toll)\b/,"Transport"],[/\b(petrol|diesel|fuel|cng)\b/,"Fuel"],[/\b(grocery|groceries|vegetables?|sabzi|milk|kirana|fruits?|rice|dal|atta)\b/,"Groceries"],[/\b(food|lunch|dinner|breakfast|tea|chai|coffee|snacks?|restaurant|swiggy|zomato|biryani)\b/,"Food"],[/\b(medicines?|doctor|hospital|pharmacy|clinic|dawai)\b/,"Health"],[/\brent\b/,"House Rent"],[/\b(electricity|current|bill|recharge|wifi|internet|gas|water)\b/,"Bills & Utilities"],[/\b(movie|cinema|netflix|games?)\b/,"Entertainment"],[/\b(school|fees|tuition|books|class)\b/,"Education"],[/\b(clothes|shirt|shoes|shopping|amazon|flipkart)\b/,"Shopping"]];
 function parseVoice(text){
-  var t=String(text||"").toLowerCase().replace(/,/g,"").trim();if(!t)return null;
+  var t=String(text||"").toLowerCase().replace(/,/g,"").replace(/\b(?:please|add|expenses?|(?:in|to|on)\s+gharwise|gharwise)\b/g," ").replace(/\s+/g," ").trim();if(!t)return null;
   var a=/([0-9]+(?:\.[0-9]+)?)\s*(k\b|thousand|hazaar|hazar|lakh)?/.exec(t);if(!a)return null;
   var amt=parseFloat(a[1]);if(a[2]==="k"||a[2]==="thousand"||a[2]==="hazaar"||a[2]==="hazar")amt*=1000;else if(a[2]==="lakh")amt*=100000;if(!(amt>0))return null;
   var inn=/\b(received|receive|got|credited|credit|refund|salary|earned|income|mila|mile)\b/.test(t),m=null;
