@@ -14,7 +14,7 @@ function startTour(i){
     var k=document.getElementById("tsk");if(k)k.onclick=endTour},st.tab&&S.tab!==st.tab?260:30)}
 function maybeTour(){if(S._tourChk||!S.loaded)return;S._tourChk=1;ls("tour6","1")}
 /* ===== Screen tours (v5.64): each screen explains itself the first time it is opened ===== */
-var VOICE_IOS="Add the Quick Expense shortcut, set it to Back Tap, then double-tap the back of your iPhone and say “Grocery 120”.",VOICE_AND="Add the widget to your home screen, tap the microphone and say “Grocery 120”. It is saved on your phone and syncs when you are online.";
+var VOICE_IOS="Tap Set up voice and follow the steps. Then say “Hey Siri, add expense in Gharwise”, double-tap the back of your iPhone, or tap the widget mic, and say “Grocery 120”.",VOICE_AND="Add the widget to your home screen, tap the microphone and say “Grocery 120”. It is saved on your phone and syncs when you are online.";
 var STOURS={
  home:[
   {sel:"^.hb",t:"Your month at a glance",d:"What your family has spent this month, with your daily average."},

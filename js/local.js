@@ -583,7 +583,7 @@ GWL.ios=function(){try{return !!(window.Capacitor&&Capacitor.getPlatform&&Capaci
     var vl=null;try{vl=JSON.parse(ls("gwvlast")||"null")}catch(x){}
     var card='<div class="card" style="text-align:center;padding:24px 16px"><div style="font-size:48px;line-height:1">🎤</div>'+
       '<div style="font-size:20px;font-weight:700;margin:10px 0 2px">Add expense by voice</div><div class="mute" style="margin-bottom:18px">Siri, Back Tap or the widget. Set up once, then just speak.</div>'+
-      (vOK&&!vl?playBtn("Gharwise Voice",0).replace('class="btn ghost"','class="btn"')+'<div style="height:10px"></div>':'')+(vl?'<div class="in" style="font-weight:600;margin-bottom:10px">✅ Voice is on</div><button class="btn ghost" data-go="voice">Show usage guide</button>':'<button class="btn" data-go="voice">Set up voice</button>')+'</div>';
+      (vl?'<div class="in" style="font-weight:600;margin-bottom:10px">✅ Voice is on</div><button class="btn ghost" data-go="voice">Show usage guide</button>':'<button class="btn" data-go="voice">Set up voice</button>')+'</div>';
     return h.slice(0,h.lastIndexOf('<div class="card">',i))+card+h.slice(j+12)};
 }})();
 })();
