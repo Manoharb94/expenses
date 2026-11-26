@@ -457,37 +457,24 @@ GWL.ios=function(){try{return !!(window.Capacitor&&Capacitor.getPlatform&&Capaci
       '<li>Do it once more with <b>INR</b> instead of Rs, for banks that write INR.</li></ol>'+
       '<a class="btn ghost" style="display:block;text-align:center;text-decoration:none" href="shortcuts://">Open Shortcuts</a>'+
       '<p class="note">The SMS stays on this iPhone. Gharwise adds it as a payment the next time you open the app.</p>';
-    var past='<p>Live tracking only sees new SMS. To add older bank SMS once, open <b>Import SMS</b> (the tab next to <b>Live Tracking</b>): add the <b>Gharwise past SMS</b> shortcut, then choose how many days to import.</p>';
+    var past='<p>Open the <b>Import SMS</b> tab to add older bank SMS.</p>';
     var done='<p>'+(n?'✅ <b>'+n+' bank SMS</b> have come in through the automation'+(st.last?', the last one '+esc(ago(new Date(st.last).toISOString())):'')+'.':'Waiting for the first bank SMS. Send yourself a test like “Rs 10 debited from a/c XX1234” from another phone, or wait for a real one.')+'</p>'+
       (st.waiting?'<p class="note">'+st.waiting+' waiting to be added.</p>':'')+'<button class="btn" data-lios="drain">Add waiting SMS now</button>';
     return [['Turn on live SMS',live],['Add older SMS (optional)',past],['Check it works',done]]};
   vSms=function(){if(S.smsStep>=3)S.smsStep=2;return wz("SMS tracking",smsSteps(),S.smsStep||0,"track")};
-  var PAST_URL=function(n){return "shortcuts://run-shortcut?name="+encodeURIComponent("Gharwise past SMS")+"&input=text&text="+encodeURIComponent(String(n))};
-  vImportSms=function(){var ok=ls("gwpastsc")==="1",days=Math.min(365,Math.max(1,parseInt(ls("gwpastdays")||"90",10)||90));
-    var h='<h2 style="margin:14px 0 2px">Import SMS</h2><div class="mute" style="margin-bottom:12px">Add older bank messages, once.</div>';
-    if(!ok){
-      return h+'<div class="card" style="font-size:14px;line-height:1.55"><b>Add the shortcut first</b>'+
-        '<p>Importing older SMS uses a shortcut called <b>Gharwise past SMS</b>. It is not added yet. Make it once in <b>Shortcuts</b> → <b>+</b>:</p><ol>'+
-        '<li>Name it <b>Gharwise past SMS</b>.</li>'+
-        '<li>Add <b>Get Numbers from Input</b> (the input is <b>Shortcut Input</b>). Gharwise sends it the number of days.</li>'+
-        '<li>Add <b>Find Messages</b>. Filter: <b>Date Sent</b> is in the last, then tap the number and choose the variable <b>Numbers</b>, <b>days</b>. Limit <b>500</b>.</li>'+
-        '<li>Add <b>Repeat with Each</b> (the messages).</li>'+
-        '<li>Inside it add <b>Add SMS to Gharwise</b>. Message = <b>Repeat Item</b> → <b>Content</b>. Date Received = <b>Repeat Item</b> → <b>Date Sent</b>.</li></ol>'+
-        '<a class="btn ghost" style="display:block;text-align:center;text-decoration:none;margin-bottom:8px" href="shortcuts://">Open Shortcuts</a>'+
-        '<button class="btn" data-lios="scok">I have added the shortcut</button>'+
-        '<p class="note">Messages that are not bank alerts are skipped by Gharwise. Importing twice is safe: payments already in the app are skipped.</p></div>'}
-    return h+'<div class="card" style="font-size:14px;line-height:1.55"><b>How many days back?</b>'+
-      '<p class="note" style="margin:4px 0 10px">Gharwise asks the <b>Gharwise past SMS</b> shortcut for the bank SMS of the last days you choose.</p>'+
-      '<div class="mobw" style="margin-bottom:10px"><input id="lidays" type="number" inputmode="numeric" min="1" max="365" value="'+days+'" style="width:100%"></div>'+
-      '<button class="btn" data-lios="runpast">Import last <span id="lidn">'+days+'</span> days</button>'+
-      '<p class="note">Shortcuts opens, reads your messages (allow access the first time) and brings you back here. If it says the shortcut can’t be found, <a href="#" data-lios="scno" style="color:var(--acc)">add the shortcut first</a>.</p></div>'};
-  document.addEventListener("input",function(e){var t=e.target;if(t&&t.id==="lidays"){var n=Math.min(365,Math.max(1,parseInt(t.value,10)||0));var sp=document.getElementById("lidn");if(sp)sp.textContent=n||"…"}});
-  document.addEventListener("click",function(e){var b=e.target&&e.target.closest&&e.target.closest('[data-lios="scok"],[data-lios="scno"],[data-lios="runpast"]');if(!b)return;e.preventDefault();var k=b.getAttribute("data-lios");
-    if(k==="scok"){ls("gwpastsc","1");render();return}
-    if(k==="scno"){ls("gwpastsc","");render();return}
-    var inp=document.getElementById("lidays"),n=Math.min(365,Math.max(1,parseInt(inp&&inp.value,10)||90));ls("gwpastdays",String(n));ls("gwpastrun","1");
-    var a=document.createElement("a");a.href=PAST_URL(n);document.body.appendChild(a);a.click();a.remove()});
-  /* back from Shortcuts after "Import last N days": add whatever it handed over */
+  /* Import SMS (iPhone): add the shortcut first (button on the Live Tracking tab), then pick a start date in the last 3 months. */
+  vImportSms=function(){var h='<h2 style="margin:14px 0 12px">Import SMS</h2>';
+    if(!scAdded())return h+'<button class="btn" data-trk="live">Add shortcut first</button>';
+    var d=impDateOK(S.impDate)?S.impDate:isoD(impDef());S.impDate=d;
+    return h+'<div class="card"><div class="in" style="font-weight:600;margin-bottom:12px">✅ Shortcut added</div><div class="mute">From</div>'+
+      '<input type="date" id="impd" value="'+d+'" min="'+isoD(impMin())+'" max="'+isoD(new Date())+'" style="display:block;width:100%;max-width:100%;min-width:0;box-sizing:border-box;margin:6px 0 14px;min-height:46px">'+
+      '<a class="btn" id="impgo" style="display:block;text-align:center;text-decoration:none" href="'+esc(impHref(d))+'">Import SMS</a></div>'};
+  /* Live Tracking tab: the one SMS shortcut card, short */
+  scCard=function(){
+    if(scAdded())return '<div class="card"><div class="sxh" style="margin-bottom:6px"><div class="t">✅</div><div><b>Shortcut added</b><small>Live and old bank SMS</small></div></div><a href="#" data-scx class="note" style="color:var(--acc)">Add again</a></div>';
+    return '<div class="card" style="border:2px solid var(--acc)"><div class="sxh" style="margin-bottom:12px"><div class="t">💬</div><div><b>Bank SMS shortcut</b><small>Live and old messages</small></div></div>'+scBtn("Add shortcut")+'</div>'};
+  /* back from Shortcuts after "Import SMS": add whatever it handed over */
+  document.addEventListener("click",function(e){if(e.target&&e.target.closest&&e.target.closest("#impgo"))ls("gwpastrun","1")});
   document.addEventListener("visibilitychange",function(){if(document.hidden||ls("gwpastrun")!=="1")return;ls("gwpastrun","");
     setTimeout(async function(){try{await GWL.drain();toast("Older SMS added ✓")}catch(x){}render()},1500)});
   document.addEventListener("click",async function(e){var b=e.target&&e.target.closest&&e.target.closest('[data-lios="drain"]');if(!b)return;b.disabled=true;try{await GWL.drain();toast(S.nsms&&S.nsms.waiting?"Some SMS could not be added":"Up to date ✓")}finally{b.disabled=false;render()}});
@@ -497,13 +484,16 @@ GWL.ios=function(){try{return !!(window.Capacitor&&Capacitor.getPlatform&&Capaci
     return '<button class="dc stl" data-go="sms"><span><i class="dot"></i><b>Live tracking is on</b></span><span class="note" style="margin:0">Last SMS '+esc(ago(new Date(st.last).toISOString()))+' ›</span></button>'};
   /* Tracking page: describe the iPhone way */
   var _vt=vTrack;vTrack=function(){return _vt().replace(/<b>SMS<\/b>: bank alerts are read on this phone the moment they arrive and saved here\./,'<b>SMS</b>: your Shortcuts automation hands each bank SMS to the app on this iPhone. It is saved here, nowhere else.')};
+  document.addEventListener("click",function(e){var a=e.target&&e.target.closest&&e.target.closest("[data-vca],[data-vcx]");if(!a)return;
+    if(a.hasAttribute("data-vcx")){e.preventDefault();ls("gwvsc","");render();return}
+    ls("gwvsc","1");setTimeout(function(){try{render()}catch(x){}},700)});
   /* Settings: voice = Siri / Back Tap / widget, all on this iPhone */
   var _nc=nativeCard;nativeCard=function(){var h=_nc.apply(this,arguments),i=h.indexOf(sxHead('🎤','Add an expense by voice','Say it, it is saved'));if(i<0)return h;
-    var j=h.lastIndexOf('</div></div>');var card='<div class="card">'+sxHead('🎤','Add an expense by voice','Say it, it is saved')+'<div class="note" style="margin:0;line-height:1.55">'+
-      '<p class="vi">Say <b>“Hey Siri, add expense in Gharwise”</b>, then “Grocery 120”. Nothing to set up.</p>'+
-      '<div class="vs"><span class="vn">1</span><div><b>Double-tap the back of the iPhone</b><p>Settings → Accessibility → Touch → Back Tap → Double Tap → <b>Add Expense</b> (Gharwise).</p></div></div>'+
-      '<div class="vs"><span class="vn">2</span><div><b>Home-screen widget</b><p>Press and hold the home screen → <b>+</b> → Gharwise → <b>Voice expense</b>. Tap the mic and speak. It also fits on the lock screen.</p></div></div>'+
-      '<p class="note" style="margin:8px 0 0">What you say waits on this iPhone and becomes a payment when you open Gharwise.</p></div></div>';
+    var j=h.lastIndexOf('</div></div>');var VL="https://www.icloud.com/shortcuts/13d1373c661a4dc5a39b553d9218bc0f",vOK=ls("gwvsc")==="1";
+    var card='<div class="card" style="text-align:center;padding:24px 16px"><div style="font-size:48px;line-height:1">🎤</div>'+
+      '<div style="font-size:20px;font-weight:700;margin:10px 0 2px">Add expense by voice</div><div class="mute" style="margin-bottom:18px">Say “Grocery 120”. Done.</div>'+
+      (vOK?'<div class="in" style="font-weight:600;margin-bottom:8px">✅ Voice shortcut added</div><a href="#" data-vcx class="note" style="color:var(--acc)">Add again</a>'
+          :'<a class="btn" data-vca style="display:block;text-align:center;text-decoration:none" href="'+esc(VL)+'" target="_blank" rel="noopener">Add voice shortcut</a>')+'</div>';
     return h.slice(0,h.lastIndexOf('<div class="card">',i))+card+h.slice(j+12)};
 }})();
 })();
