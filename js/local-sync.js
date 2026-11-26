@@ -73,7 +73,9 @@ async function ping(open){
   var mine=GWL.T("transactions").filter(function(t){return t.person===db.profile.name}),month=Date.now()-30*86400000;
   var p={open:!!open,platform:(window.Capacitor&&Capacitor.getPlatform?Capacitor.getPlatform():"web"),app_version:ver,sms_on:sms,email_on:!!(db.mail&&db.mail.on),
     voice_on:mine.some(function(t){return t.client&&new Date(t.txn_at||t.created_at).getTime()>month}),family_on:!!db.family,family_size:db.family?(db.family.members||1):0,
-    lock_on:ls("gwlock")==="1",reminders_on:ls("ndion")!=="0",payments:mine.length};
+    lock_on:ls("gwlock")==="1",reminders_on:ls("ndion")!=="0",payments:mine.length,
+    sms_shortcut:ls("gwsc2")==="1",voice_shortcut:ls("gwvsc")==="1",guide_sms:ls("gs_sms")==="1",guide_voice:ls("gs_voice")==="1",
+    budget_set:ls("gs_budget")==="1"||GWL.T("budgets").length>0,import_sms:ls("gwpastrun")==="1",voice_count:Number(ls("gwvc")||0),widget_count:Number(ls("gwwc")||0)};
   try{await srv("lm_ping",{p:p});GWL.lastPing=Date.now()}catch(e){}}
 GWL.ping=ping;
 

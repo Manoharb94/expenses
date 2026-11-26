@@ -569,3 +569,96 @@ $$;
 revoke all on function lm_set_push(text, text), lm_drop_push(text), lm_push_targets(uuid, uuid), lm_push_forget(text), lm_push_mine(uuid) from public, anon, authenticated;
 grant execute on function lm_set_push(text, text), lm_drop_push(text) to authenticated;
 grant execute on function lm_push_targets(uuid, uuid), lm_push_forget(text), lm_push_mine(uuid) to service_role;
+
+-- ============================================================================
+-- Part 4: setup progress and voice use for the admin page (counts and yes/no only; no amounts, no payees).
+-- Run this once in the Supabase SQL editor. Older app versions keep working: new fields they do not send stay as they were.
+-- ============================================================================
+alter table lm_usage add column if not exists sms_shortcut  boolean;   -- Gharwise SMS shortcut added
+alter table lm_usage add column if not exists voice_shortcut boolean;  -- Gharwise Voice shortcut added
+alter table lm_usage add column if not exists guide_sms     boolean;   -- finished the SMS steps (tapped Done)
+alter table lm_usage add column if not exists guide_voice   boolean;   -- finished the Voice steps (tapped Done)
+alter table lm_usage add column if not exists budget_set    boolean;   -- has at least one budget
+alter table lm_usage add column if not exists import_sms    boolean;   -- used Import SMS
+alter table lm_usage add column if not exists voice_count   int;       -- expenses added by voice, in total
+alter table lm_usage add column if not exists widget_count  int;       -- expenses added with the widget mic
+
+create or replace function lm_ping(p jsonb) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null then raise exception 'not logged in'; end if;
+  insert into lm_users (user_id) values (auth.uid()) on conflict do nothing;
+  insert into lm_usage as u (user_id, last_seen, opens, platform, app_version, sms_on, email_on, voice_on,
+                             family_on, family_size, lock_on, reminders_on, payments,
+                             sms_shortcut, voice_shortcut, guide_sms, guide_voice, budget_set, import_sms, voice_count, widget_count)
+  values (auth.uid(), now(), 1, left(p->>'platform', 20), left(p->>'app_version', 30),
+          (p->>'sms_on')::boolean, (p->>'email_on')::boolean, (p->>'voice_on')::boolean,
+          (p->>'family_on')::boolean, (p->>'family_size')::int, (p->>'lock_on')::boolean,
+          (p->>'reminders_on')::boolean, (p->>'payments')::int,
+          (p->>'sms_shortcut')::boolean, (p->>'voice_shortcut')::boolean, (p->>'guide_sms')::boolean,
+          (p->>'guide_voice')::boolean, (p->>'budget_set')::boolean, (p->>'import_sms')::boolean,
+          (p->>'voice_count')::int, (p->>'widget_count')::int)
+  on conflict (user_id) do update set
+    last_seen = now(),
+    opens = u.opens + case when coalesce((p->>'open')::boolean, false) then 1 else 0 end,
+    platform = excluded.platform, app_version = excluded.app_version,
+    sms_on = excluded.sms_on, email_on = excluded.email_on, voice_on = excluded.voice_on,
+    family_on = excluded.family_on, family_size = excluded.family_size,
+    lock_on = excluded.lock_on, reminders_on = excluded.reminders_on, payments = excluded.payments,
+    sms_shortcut = coalesce(excluded.sms_shortcut, u.sms_shortcut), voice_shortcut = coalesce(excluded.voice_shortcut, u.voice_shortcut),
+    guide_sms = coalesce(excluded.guide_sms, u.guide_sms), guide_voice = coalesce(excluded.guide_voice, u.guide_voice),
+    budget_set = coalesce(excluded.budget_set, u.budget_set), import_sms = coalesce(excluded.import_sms, u.import_sms),
+    voice_count = coalesce(excluded.voice_count, u.voice_count), widget_count = coalesce(excluded.widget_count, u.widget_count);
+end $$;
+
+create or replace function admin_local_stats() returns jsonb
+language plpgsql security definer set search_path = public, admin, auth stable as $$
+declare r jsonb;
+begin
+  if not exists (select 1 from admin.admins a join auth.users u on lower(u.email) = lower(a.email) where u.id = auth.uid()) then
+    raise exception 'not allowed';
+  end if;
+  select jsonb_build_object(
+    'generated_at', now(),
+    'users', (select count(*) from lm_usage),
+    'active_1d', (select count(*) from lm_usage where last_seen > now() - interval '1 day'),
+    'active_7d', (select count(*) from lm_usage where last_seen > now() - interval '7 days'),
+    'active_30d', (select count(*) from lm_usage where last_seen > now() - interval '30 days'),
+    'new_1d', (select count(*) from lm_usage where first_seen > now() - interval '1 day'),
+    'new_7d', (select count(*) from lm_usage where first_seen > now() - interval '7 days'),
+    'new_30d', (select count(*) from lm_usage where first_seen > now() - interval '30 days'),
+    'opens', (select coalesce(sum(opens), 0) from lm_usage),
+    'sms_on', (select count(*) from lm_usage where sms_on),
+    'email_on', (select count(*) from lm_usage where email_on),
+    'voice_on', (select count(*) from lm_usage where voice_on),
+    'family_on', (select count(*) from lm_usage where family_on),
+    'families', (select count(*) from lm_families),
+    'lock_on', (select count(*) from lm_usage where lock_on),
+    'reminders_on', (select count(*) from lm_usage where reminders_on),
+    'payments', (select coalesce(sum(payments), 0) from lm_usage),
+    'sms_shortcut', (select count(*) from lm_usage where sms_shortcut),
+    'voice_shortcut', (select count(*) from lm_usage where voice_shortcut),
+    'guide_sms', (select count(*) from lm_usage where guide_sms),
+    'guide_voice', (select count(*) from lm_usage where guide_voice),
+    'budget_set', (select count(*) from lm_usage where budget_set),
+    'import_sms', (select count(*) from lm_usage where import_sms),
+    'voice_expenses', (select coalesce(sum(voice_count), 0) from lm_usage),
+    'widget_expenses', (select coalesce(sum(widget_count), 0) from lm_usage),
+    'in_group', (select count(distinct user_id) from lm_group_members),
+    'groups', (select count(*) from lm_groups),
+    'platforms', (select coalesce(jsonb_object_agg(coalesce(platform, 'unknown'), n), '{}'::jsonb) from (select platform, count(*) n from lm_usage group by platform) p),
+    'versions', (select coalesce(jsonb_object_agg(coalesce(app_version, 'unknown'), n), '{}'::jsonb) from (select app_version, count(*) n from lm_usage group by app_version) v),
+    'list', (select coalesce(jsonb_agg(jsonb_build_object(
+                'phone', au.phone, 'first_seen', u.first_seen, 'last_seen', u.last_seen, 'opens', u.opens,
+                'platform', u.platform, 'version', u.app_version, 'sms', u.sms_on, 'email', u.email_on,
+                'voice', u.voice_on, 'family', u.family_on, 'family_size', u.family_size,
+                'lock', u.lock_on, 'reminders', u.reminders_on, 'payments', u.payments,
+                'sms_shortcut', u.sms_shortcut, 'voice_shortcut', u.voice_shortcut, 'guide_sms', u.guide_sms,
+                'guide_voice', u.guide_voice, 'budget_set', u.budget_set, 'import_sms', u.import_sms,
+                'voice_count', u.voice_count, 'widget_count', u.widget_count,
+                'groups', (select count(*) from lm_group_members gm where gm.user_id = u.user_id),
+                'mail_last', lu.mail_last) order by u.last_seen desc nulls last), '[]'::jsonb)
+             from lm_usage u join auth.users au on au.id = u.user_id left join lm_users lu on lu.user_id = u.user_id)
+  ) into r;
+  return r;
+end $$;

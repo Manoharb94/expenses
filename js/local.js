@@ -185,6 +185,7 @@ async function drain(){var P=smsP();if(GWL.testing||draining||!P||!P.takeInbox||
     var sms=items.filter(function(i){return i.k==="sms"}),voice=items.filter(function(i){return i.k==="voice"}),undo=items.filter(function(i){return i.k==="undo"});
     var g=ingestSms(sms),v=0;voice.forEach(function(i){if(ingestVoice(i)){v++;try{var pv=GWSMS.parseVoice(i.t)||{};ls("gwvlast",JSON.stringify({ms:i.ms||Date.now(),t:String(i.t||"").slice(0,40),m:pv.merchant||"",a:pv.amount||0,ty:pv.type||"out"}))}catch(x){}}});
     undo.forEach(function(u){var n=T("transactions").length;DB.t.transactions=T("transactions").filter(function(t){return !(u.cid&&t.client===u.cid)});if(T("transactions").length!==n)mark()});
+    if(v)try{ls("gwvc",String(Number(ls("gwvc")||0)+v))}catch(x){}
     if(g.saved||v||undo.length){await flush();if(typeof load==="function")await load(true);
       var parts=[];if(g.saved)parts.push(g.saved+" from SMS");if(v)parts.push(v+" by voice");if(parts.length)toast("New payments added: "+parts.join(", "))}}
   catch(e){}finally{draining=false}}
@@ -497,7 +498,7 @@ GWL.ios=function(){try{return !!(window.Capacitor&&Capacitor.getPlatform&&Capaci
       return N.saveVoice({text:r.text}).then(function(m){m=m||{};
         if(m.error){say("Open Gharwise and log in first","",false);return}
         return Promise.resolve(GWL.drain()).then(function(){var last=null;try{last=JSON.parse(ls("gwvlast")||"null")}catch(x){}
-          if(/^(saved|सेव)/i.test(m.message||"")){var ok=last&&last.a?("✓ Saved · "+(last.m||"")+" "+(last.ty==="in"?"+":"")+"₹"+Number(last.a).toLocaleString("en-IN")):"✓ Saved";say(ok,"“"+r.text+"”",false);setTimeout(function(){if(VLOpen)close()},2200)}
+          if(/^(saved|सेव)/i.test(m.message||"")){try{ls("gwwc",String(Number(ls("gwwc")||0)+1))}catch(x){}var ok=last&&last.a?("✓ Saved · "+(last.m||"")+" "+(last.ty==="in"?"+":"")+"₹"+Number(last.a).toLocaleString("en-IN")):"✓ Saved";say(ok,"“"+r.text+"”",false);setTimeout(function(){if(VLOpen)close()},2200)}
           else say(m.message||"Didn’t save","“"+r.text+"”",true)})})
     }).catch(function(){if(!cancelled)say("Can’t listen right now","Try again in a moment.",true)})}
   window.gwStartListen=startListen;
