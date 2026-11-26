@@ -557,7 +557,7 @@ GWL.ios=function(){try{return !!(window.Capacitor&&Capacitor.getPlatform&&Capaci
     var d=impDateOK(S.impDate)?S.impDate:isoD(impDef());S.impDate=d;
     return h+'<div class="card"><div class="in" style="font-weight:600;margin-bottom:12px">✅ Shortcut added</div><div class="mute">From</div>'+
       '<div style="width:100%;overflow:hidden;margin:6px 0 14px"><input type="date" id="impd" value="'+d+'" min="'+isoD(impMin())+'" max="'+isoD(new Date())+'" style="display:block;-webkit-appearance:none;appearance:none;width:100%;max-width:100%;min-width:0;box-sizing:border-box;margin:0;height:48px;line-height:48px;padding:0 14px;text-align:center"></div>'+
-      '<a class="btn" id="impgo" style="display:block;text-align:center;text-decoration:none" href="'+esc(impHref(d))+'">Import SMS</a></div>'};
+      '<a class="btn" id="impgo" style="display:block;text-align:center;text-decoration:none" href="'+esc(impHref(d))+'">Import SMS</a></div>'+'<div class="warnbox" style="margin-top:12px">⚠️ <b>You can import up to the past 3 months.</b><br>A longer range can make the iPhone shortcut time out. If it times out, choose the past 1 month.</div>'};
   /* Live Tracking tab: the one SMS shortcut card, short */
   scCard=function(){
     if(scAdded())return '<div class="card"><div class="sxh" style="margin-bottom:6px"><div class="t">✅</div><div><b>Shortcut added</b><small>Live and old bank SMS</small></div></div><a href="#" data-scx class="note" style="color:var(--acc)">Add again</a></div>';
