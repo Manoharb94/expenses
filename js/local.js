@@ -461,7 +461,7 @@ function gHead(ic,t,sub){return '<div class="mic">'+ic+'</div><h3 class="mh">'+t
 document.addEventListener("click",function(e){var c=e.target&&e.target.closest&&e.target.closest("[data-gchip]");if(c){var a=c.getAttribute("data-gchip").split("|");GCH[a[0]]=+a[1];render();return}
   var b=e.target&&e.target.closest&&e.target.closest("[data-gstep]");if(!b)return;var q=b.getAttribute("data-gstep").split("|"),key=q[0],k=q[1],n=GST[key]||0,len=(window.GSTLEN&&GSTLEN[key])||4;
   if(k==="prev")GST[key]=Math.max(0,n-1);
-  else if(k==="next"){if(n>=len-1){GST[key]=0;GCH[key]=0;go(GBACK[key]||"menu");return}GST[key]=n+1;GCH[key]=0}
+  else if(k==="next"){if(n>=len-1){try{if(key==="voice")ls("gs_voice","1");if(key==="sms")ls("gs_sms","1")}catch(x){}GST[key]=0;GCH[key]=0;go(GBACK[key]||"menu");return}GST[key]=n+1;GCH[key]=0}
   else{GST[key]=+k;GCH[key]=0}
   render();window.scrollTo(0,0)});
 /* when voice is already on, "Show usage guide" opens the usage guide (step 5) */

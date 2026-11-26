@@ -79,9 +79,10 @@ var _stR=render;render=function(){var r=_stR.apply(this,arguments);clearTimeout(
 /* the "Finish setting up" card on Home */
 function gsItems(){
   var sc=S.sc,smsOn=!!((sc&&sc.alert_count>0)||(S.nsms&&S.nsms.enabled));
-  var a=[{k:"sms",ic:"💬",t:"Turn on automatic tracking",done:smsOn,go:"track"}];
+  var a=[{k:"sms",ic:"💬",t:"Turn on automatic tracking",done:smsOn||ls("gs_sms")==="1",go:"track"}];
   if(nativeApp())a.push({k:"voice",ic:"🎤",t:phoneOS()==="ios"?"Add the voice shortcut":"Add the voice widget",done:ls("gs_voice")==="1",go:"set"});
-  a.push({k:"budget",ic:"🎯",t:"Set your first budget",done:(S.budgets||[]).length>0,go:"plan"});
+  if((S.budgets||[]).length>0)ls("gs_budget","1");
+  a.push({k:"budget",ic:"🎯",t:"Set your first budget",done:ls("gs_budget")==="1",go:"plan"});
   return a}
 function gsCard(){
   if(!S.loaded||ls("gs_off")==="1")return "";
@@ -91,7 +92,7 @@ function gsCard(){
     it.map(function(x){return '<button class="gr'+(x.done?' done':'')+'" data-gs="'+x.k+'" data-gsgo="'+x.go+'"><span class="ck">'+(x.done?'✓':'')+'</span><span>'+x.ic+' '+esc(x.t)+'</span><span class="arr">→</span></button>'}).join('')+'</div>'}
 document.addEventListener("click",function(e){var b=e.target&&e.target.closest&&e.target.closest("[data-gs]");if(!b)return;
   var k=b.getAttribute("data-gs");if(k==="off"){ls("gs_off","1");render();return}
-  if(k==="voice")ls("gs_voice","1");go(b.getAttribute("data-gsgo")||"home")});
+  go(b.getAttribute("data-gsgo")||"home")});
 document.addEventListener("click",function(e){var b=e.target&&e.target.closest&&e.target.closest("#tourgo");if(b){Object.keys(STOURS).forEach(function(k){ls("st_"+k,"")});ls("stmode","new");ls("gs_off","");go("home");toast("Tips will show the first time you open each screen")}});
 function showErr(m){var b=document.getElementById("errbar");if(!b){b=document.createElement("div");b.id="errbar";b.style.cssText="position:fixed;top:0;left:0;right:0;background:#b4432f;color:#fff;padding:8px 12px;font-size:13px;z-index:99";b.onclick=function(){b.remove()};document.body.appendChild(b)}b.textContent="Problem: "+m+" (tap to close, and send me this message)"}
 window.addEventListener("error",function(e){showErr(e.message)});
