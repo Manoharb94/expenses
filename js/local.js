@@ -475,6 +475,36 @@ GWL.ios=function(){try{return !!(window.Capacitor&&Capacitor.getPlatform&&Capaci
   smsStatus();setTimeout(function(){try{if(DB&&DB.profile&&Capacitor.Plugins.GharwiseNative)Capacitor.Plugins.GharwiseNative.setWidget({lang:(typeof LANG!=="undefined"?LANG:"en")})}catch(e){}},3000);
   document.addEventListener("visibilitychange",function(){if(!document.hidden)setTimeout(function(){smsStatus().then(function(){if(S.tab==="sms"||S.tab==="track"||S.tab==="home")render()})},900)});
   var _dr=GWL.drain;GWL.drain=async function(){await _dr();await smsStatus()};
+  /* Widget mic: the app opens on a Listening screen, hears the expense and saves it */
+  (function(){var st=document.createElement("style");st.textContent="#vlisten{position:fixed;inset:0;z-index:99999;background:rgba(20,10,40,.72);display:flex;align-items:center;justify-content:center;padding:24px}.vlbox{background:#fff;color:#1c1b22;border-radius:28px;padding:28px 22px;width:100%;max-width:340px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.35)}.vlmic{width:84px;height:84px;margin:0 auto 14px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#4c1d95);display:flex;align-items:center;justify-content:center;font-size:38px;animation:vlp 1.3s ease-in-out infinite}@keyframes vlp{0%,100%{box-shadow:0 0 0 0 rgba(124,58,237,.5)}50%{box-shadow:0 0 0 18px rgba(124,58,237,0)}}.vlt{font-size:20px;font-weight:800}.vls{font-size:14px;opacity:.65;margin-top:4px}.vlp{min-height:44px;margin:14px 0;font-size:17px;font-weight:600;color:#4c1d95}.vlbox .btn{margin-top:8px;width:100%}";document.head.appendChild(st)})();
+  var VLOpen=false;
+  function startListen(){var N=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.GharwiseNative;if(!N||!N.listen||VLOpen)return;
+    if(!(DB&&DB.profile)){toast("Open Gharwise and log in first");return}
+    VLOpen=true;var cancelled=false,box=document.createElement("div");box.id="vlisten";
+    box.innerHTML='<div class="vlbox"><div class="vlmic">🎤</div><div class="vlt">Listening…</div><div class="vls">Say “Grocery 120”</div><div class="vlp"></div><button class="btn" data-vl="stop">Done</button><button class="btn ghost" data-vl="cancel">Cancel</button></div>';
+    document.body.appendChild(box);
+    var q=function(c){return box.querySelector(c)},sub=null;
+    try{N.addListener("partial",function(e){var p=q(".vlp");if(p)p.textContent=e&&e.text?"“"+e.text+"”":""}).then(function(h){sub=h})}catch(x){}
+    function close(){try{if(sub&&sub.remove)sub.remove()}catch(x){}VLOpen=false;if(box.parentNode)box.parentNode.removeChild(box);try{render()}catch(x){}}
+    function say(t,sub2,again){q(".vlt").textContent=t;q(".vls").textContent=sub2||"";q(".vlp").textContent="";q(".vlmic").style.animation="none";q(".vlbox").querySelectorAll("button").forEach(function(b){b.remove()});
+      var b=document.createElement("button");b.className="btn";b.textContent=again?"Try again":"Close";b.onclick=function(){if(again){close();setTimeout(startListen,200)}else close()};q(".vlbox").appendChild(b)}
+    box.addEventListener("click",function(e){var b=e.target.closest&&e.target.closest("[data-vl]");if(!b)return;if(b.getAttribute("data-vl")==="cancel"){cancelled=true;try{N.stopListening()}catch(x){}close()}else{try{N.stopListening()}catch(x){}}});
+    N.listen().then(function(r){if(cancelled)return;r=r||{};
+      if(r.error==="speech"||r.error==="mic"){say("Allow the microphone","iPhone Settings › Gharwise › turn on Microphone and Speech Recognition",false);return}
+      if(r.error){say("Can’t listen right now","Try again in a moment.",true);return}
+      if(!r.text){say("Didn’t catch that","Say it like “Grocery 120”.",true);return}
+      q(".vlt").textContent="Saving…";
+      return N.saveVoice({text:r.text}).then(function(m){m=m||{};
+        if(m.error){say("Open Gharwise and log in first","",false);return}
+        return Promise.resolve(GWL.drain()).then(function(){var last=null;try{last=JSON.parse(ls("gwvlast")||"null")}catch(x){}
+          if(/^(saved|सेव)/i.test(m.message||"")){var ok=last&&last.a?("✓ Saved · "+(last.m||"")+" "+(last.ty==="in"?"+":"")+"₹"+Number(last.a).toLocaleString("en-IN")):"✓ Saved";say(ok,"“"+r.text+"”",false);setTimeout(function(){if(VLOpen)close()},2200)}
+          else say(m.message||"Didn’t save","“"+r.text+"”",true)})})
+    }).catch(function(){if(!cancelled)say("Can’t listen right now","Try again in a moment.",true)})}
+  window.gwStartListen=startListen;
+  function voicePending(){try{var N=Capacitor.Plugins.GharwiseNative;if(N&&N.pendingVoice)N.pendingVoice().then(function(r){if(r&&r.open)startListen()})}catch(e){}}
+  try{Capacitor.Plugins.GharwiseNative.addListener("openVoice",function(){setTimeout(voicePending,200)})}catch(e){}
+  setTimeout(voicePending,1800);document.addEventListener("visibilitychange",function(){if(!document.hidden)setTimeout(voicePending,400)});
+
   /* first launch: no folder to pick on iPhone */
   var _sv=setupView;setupView=function(){var h=_sv.apply(this,arguments);
     return h.replace('<h3 style="margin:0 0 8px">Pick a folder for your data</h3>','<h3 style="margin:0 0 8px">Where your data is kept</h3>')
