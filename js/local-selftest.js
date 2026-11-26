@@ -206,5 +206,5 @@ document.addEventListener("click",async function(e){var b=e.target&&e.target.clo
     if(a==="nums"){e.preventDefault();var v=prompt("Two Supabase test phone numbers for the family check, separated by a comma",testNums().join(","));if(v){ls("gwtestnums",v)}var c=prompt("Their test code (6 digits)",testOtp());if(c&&/^\d{6}$/.test(c.trim()))ls("gwtestotp",c.trim());ui();return}
     if(a==="run")run();else if(a==="again")run();else if(a==="close"){var o=document.getElementById("gwst");if(o)o.remove()}
     else if(a==="share"){var f=P("LocalFiles"),t=report();if(f)await f.shareFile({name:"gharwise-selfcheck.txt",text:t,mime:"text/plain",title:"Gharwise self-check"});else if(await copyText(t))toast("Report copied")}return}
-  var v=e.target&&e.target.closest&&e.target.closest("#gwver");if(v){var n=(+v.dataset.n||0)+1;v.dataset.n=n;if(n>=7){ls("gwdev","1");toast("Self-check unlocked");render()}else if(n>=4)toast((7-n)+" more taps")}});
+  var v=e.target&&e.target.closest&&e.target.closest("#gwver-off");if(v){var n=(+v.dataset.n||0)+1;v.dataset.n=n;if(n>=7){ls("gwdev","1");toast("Self-check unlocked");render()}else if(n>=4)toast((7-n)+" more taps")}});
 })();

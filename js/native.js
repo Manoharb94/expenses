@@ -160,10 +160,8 @@ function nativeCard(){
     if(wkOn())h+='<div class="ropt"><label><span>'+gwT("Day")+'</span><select id="wkd">'+dn.map(function(n,k){return opt(k,n,k===wkDay())}).join('')+'</select></label><label><span>'+gwT("Time")+'</span><input type="time" id="wkh" value="'+wkTime()+'"></label></div>';
     h+=row("⚠️","Budget alerts","Get a reminder when a budget has used up the percentage you choose","bat",baOn());
     if(baOn())h+='<div class="ropt"><label><span>'+gwT("When used")+'</span><select id="bap">'+[50,60,70,75,80,90,100].map(function(p){return '<option value="'+p+'"'+(p===baPct()?' selected':'')+'>'+p+'%</option>'}).join('')+'</select></label><label><span>'+gwT("Time")+'</span><input type="time" id="bah" value="'+baTime()+'"></label></div>'}
-  if(ndiIos()){h+=row("🔔","Remind me to categorise","A reminder every couple of days in the evening, only when payments are waiting","ndit",ndiOn());
-    h+='<button class="btn ghost s" id="nditest" style="margin:6px 0 2px">'+gwT("Send a test reminder now")+'</button>'}
+  if(ndiIos()){h+=row("🔔","Remind me to categorise","A reminder every couple of days in the evening, only when payments are waiting","ndit",ndiOn());}
   if(ndPlugin()&&S.nd)h+=row("🔔","Remind me to categorise","An evening nudge every day or two, only when payments are waiting","ndt",!!S.nd.on&&!!S.nd.allowed);
-  if(ndPlugin()&&S.nd&&ndPlugin().testNudge)h+='<button class="btn ghost s" id="ndtest" style="margin:6px 0 2px">'+gwT("Send a test reminder now")+'</button>';
   h+='</div>';
   h+='<div class="card">'+sxHead('🎤','Add an expense by voice','Say it, it is saved')+'<div class="note" style="margin:0">'+(ios
     ?'<p class="vi">'+gwT("Double-tap the back of your iPhone and say “Grocery 120”. It is saved.")+'</p>'+(scAdded()
