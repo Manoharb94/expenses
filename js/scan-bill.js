@@ -114,7 +114,7 @@ function billView(t,photo){var x=gSheet(gHead("Bill")+'<img src="'+photo+'" alt=
 function addSheet(pre,bill,scan){
   var sh=document.getElementById("sheet");
   var fp=(S.pf&&S.pf!=="__both")?S.pf:S.name;
-  var h='<div class="sheet"><div class="sx">'+sxHead("💵","Add cash payment","For money that did not come as a bank alert")+'<div class="sxs" data-for="xt"><button type="button" data-v="out" class="on">Money spent</button><button type="button" data-v="in">Money received</button></div><select id="xt" style="display:none"><option value="out">Money spent</option><option value="in">Money received</option></select><input id="xa" type="number" inputmode="decimal" placeholder="₹ Amount"><input id="xm" placeholder="Payee or note, e.g. vegetables">'+(bill?'<div class="row" style="justify-content:flex-start;gap:10px;margin:0 0 10px"><img src="'+bill+'" alt="" style="width:54px;height:54px;border-radius:10px;object-fit:cover"><span class="note" style="margin:0">'+(scan&&(scan.amount||scan.date||scan.category)?'Bill photo attached. Amount, date and category filled from the bill, please check them.':'Bill photo attached')+'</span></div>':'')+'<div class="sxc" data-for="xp">'+persons().map(function(n){return '<button type="button" data-v="'+esc(n)+'"'+(n===fp?' class="on"':'')+'>'+esc(n)+'</button>'}).join("")+'</div><select id="xp" style="display:none">'+persons().map(function(n){return '<option value="'+esc(n)+'"'+(n===fp?" selected":"")+'>'+esc(n)+'</option>'}).join("")+'</select><input id="xd" type="date" value="'+iso(new Date())+'"><select id="xc"><option value="">No category yet</option>';
+  var h='<div class="sheet"><div class="sx">'+sxHead("💵","Add cash payment","For money that did not come as a bank alert")+'<div class="sxs" data-for="xt"><button type="button" data-v="out" class="on">Money spent</button><button type="button" data-v="in">Money received</button></div><select id="xt" style="display:none"><option value="out">Money spent</option><option value="in">Money received</option></select><input id="xa" type="number" inputmode="decimal" placeholder="₹ Amount"><input id="xm" placeholder="Payee or note (optional)">'+(bill?'<div class="row" style="justify-content:flex-start;gap:10px;margin:0 0 10px"><img src="'+bill+'" alt="" style="width:54px;height:54px;border-radius:10px;object-fit:cover"><span class="note" style="margin:0">'+(scan&&(scan.amount||scan.date||scan.category)?'Bill photo attached. Amount, date and category filled from the bill, please check them.':'Bill photo attached')+'</span></div>':'')+'<div class="sxc" data-for="xp">'+persons().map(function(n){return '<button type="button" data-v="'+esc(n)+'"'+(n===fp?' class="on"':'')+'>'+esc(n)+'</button>'}).join("")+'</div><select id="xp" style="display:none">'+persons().map(function(n){return '<option value="'+esc(n)+'"'+(n===fp?" selected":"")+'>'+esc(n)+'</option>'}).join("")+'</select><input id="xd" type="date" value="'+iso(new Date())+'"><select id="xc"><option value="">No category yet</option>';
   var EVERY=EVERYDAY,OTYPES=[UNPL,"Salary / Income",RENT,LOUT,LIN,TRF,PASS,SELF,CCB,IGN];
   var okc=function(c){return !(typeof gNames==="function"&&gNames().indexOf(c)>=0&&UNBUILT(c))};
   EVERY.forEach(function(c){if(okc(c)&&CATS.indexOf(c)>=0)h+='<option>'+esc(c)+'</option>'});
@@ -141,8 +141,10 @@ function addSheet(pre,bill,scan){
     if(scan.category&&xc_&&[].some.call(xc_.options,function(o){return o.value===scan.category||o.text===scan.category}))xc_.value=scan.category}
   document.getElementById("xx").onclick=function(){sh.innerHTML=""};
   document.getElementById("xs").onclick=async function(){
-    var a=parseFloat(g("xa")),m=g("xm").trim();if(!(a>0)||!m){alert("Enter an amount and a description");return}
-    var key=mk(m),cat=g("xc"),known=S.txns.filter(function(x){return x.merchant_key===key&&x.category})[0];
+    var a=parseFloat(g("xa")),m=g("xm").trim();if(!(a>0)){alert("Enter an amount");return}
+    /* payee is optional: without one the payment is named after its category (or Expense / Money received) */
+    var blank=!m;if(blank){var c0=g("xc");m=(c0&&!/^g:/.test(c0))?c0:(g("xt")==="in"?"Money received":"Expense")}
+    var key=mk(m),cat=g("xc"),known=blank?null:S.txns.filter(function(x){return x.merchant_key===key&&x.category})[0];
     if(!cat&&known&&!(typeof gNames==="function"&&gNames().indexOf(known.category)>=0))cat=known.category;
     var grp=null;if(/^g:/.test(cat)){grp=gGet(cat.slice(2));cat="";
       if(!grp||grp.closed){alert("This group is closed");return}
@@ -172,7 +174,7 @@ function quickAddUI(sh){
   var hide=[xd,xc,sh.querySelector('.sxc[data-for="xp"]'),sh.querySelector("#xbr"),sh.querySelector(".sx > .note")];
   hide.forEach(function(e){if(e)e.dataset.qh="1"});
   var title=sh.querySelector(".sxh b"),sub=sh.querySelector(".sxh small"),ic=sh.querySelector(".sxh .t");
-  if(title)title.textContent="Quick add";if(sub)sub.textContent="Amount and payee. Nothing else needed.";if(ic)ic.textContent="⚡";
+  if(title)title.textContent="Quick add";if(sub)sub.textContent="Just the amount. Payee is optional.";if(ic)ic.textContent="⚡";
   var q=document.createElement("div");q.id="xq";
   var chipH=function(t,attr,on){return '<button type="button" class="fchip'+(on?' qon':'')+'" '+attr+'>'+esc(t)+'</button>'};
   var rp=recentPayees(5);
