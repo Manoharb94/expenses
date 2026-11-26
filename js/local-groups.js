@@ -40,9 +40,12 @@ GWL.inviteCrypto={seal:seal,unseal:unseal,myKeys:myKeys,pubHash:pubHash};
 /* ---------- invites: inbox (to me) ---------- */
 /* kept per login, so the self-check's test members never mix with yours */
 var INB={};function inbox(){return INB[myId()]||[]}function setInbox(v){INB[myId()]=v}GWL.inbox=inbox;
-async function fetchInbox(){var list=await srv("lm_invites_inbox",{}),k=await myKeys(),h=await pubHash(k.pub),out=[];
-  for(var i=0;i<(list||[]).length;i++){var x=list[i];if(x.sealed_for!==h)continue;
-    try{var o=await unseal(x.sealed);if(o.target!==x.target||o.kind!==x.kind||!o.key)continue;out.push({id:x.id,kind:x.kind,target:x.target,key:o.key,name:o.name||"",by:o.by||"Someone",at:x.created_at})}catch(e){}}
+async function fetchInbox(){var dbg={n:0,other:0,fail:[],err:"",at:Date.now()};GWL.inboxDbg=dbg;
+  var list,k,h,out=[];
+  try{list=await srv("lm_invites_inbox",{});k=await myKeys();h=await pubHash(k.pub)}catch(e){dbg.err=(e&&e.message)||String(e);throw e}
+  dbg.n=(list||[]).length;
+  for(var i=0;i<(list||[]).length;i++){var x=list[i];if(x.sealed_for!==h){dbg.other++;continue}
+    try{var o=await unseal(x.sealed);if(o.target!==x.target||o.kind!==x.kind||!o.key){dbg.fail.push("contents do not match");continue}out.push({id:x.id,kind:x.kind,target:x.target,key:o.key,name:o.name||"",by:o.by||"Someone",at:x.created_at})}catch(e){dbg.fail.push((e&&(e.name+": "+e.message))||String(e))}}
   var ch=JSON.stringify(out.map(function(x){return x.id}))!==JSON.stringify(inbox().map(function(x){return x.id}));setInbox(out);return ch}
 GWL.fetchInbox=fetchInbox;
 
