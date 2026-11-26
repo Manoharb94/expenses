@@ -462,12 +462,15 @@ GWL.ios=function(){try{return !!(window.Capacitor&&Capacitor.getPlatform&&Capaci
       (st.waiting?'<p class="note">'+st.waiting+' waiting to be added.</p>':'')+'<button class="btn" data-lios="drain">Add waiting SMS now</button>';
     return [['Turn on live SMS',live],['Add older SMS (optional)',past],['Check it works',done]]};
   vSms=function(){if(S.smsStep>=3)S.smsStep=2;return wz("SMS tracking",smsSteps(),S.smsStep||0,"track")};
+  /* the new "Gharwise SMS" shortcut (iCloud link). In Shortcuts it must be named exactly "Gharwise SMS": the app opens it by that name. A new flag, so it is added again once. */
+  SMS_SHORTCUT_LINK="https://www.icloud.com/shortcuts/ac4190c19e4441869b3b1f924ce8f905";SMS_IMPORT_LINK=SMS_SHORTCUT_LINK;
+  scAdded=function(){return ls("gwsc2")==="1"};scMark=function(v){ls("gwsc2",v?"1":"")};
   /* Import SMS (iPhone): add the shortcut first (button on the Live Tracking tab), then pick a start date in the last 3 months. */
   vImportSms=function(){var h='<h2 style="margin:14px 0 12px">Import SMS</h2>';
     if(!scAdded())return h+'<button class="btn" data-trk="live">Add shortcut first</button>';
     var d=impDateOK(S.impDate)?S.impDate:isoD(impDef());S.impDate=d;
     return h+'<div class="card"><div class="in" style="font-weight:600;margin-bottom:12px">✅ Shortcut added</div><div class="mute">From</div>'+
-      '<input type="date" id="impd" value="'+d+'" min="'+isoD(impMin())+'" max="'+isoD(new Date())+'" style="display:block;width:100%;max-width:100%;min-width:0;box-sizing:border-box;margin:6px 0 14px;min-height:46px">'+
+      '<div style="width:100%;overflow:hidden;margin:6px 0 14px"><input type="date" id="impd" value="'+d+'" min="'+isoD(impMin())+'" max="'+isoD(new Date())+'" style="display:block;-webkit-appearance:none;appearance:none;width:100%;max-width:100%;min-width:0;box-sizing:border-box;margin:0;height:48px;padding:0 14px;text-align:left"></div>'+
       '<a class="btn" id="impgo" style="display:block;text-align:center;text-decoration:none" href="'+esc(impHref(d))+'">Import SMS</a></div>'};
   /* Live Tracking tab: the one SMS shortcut card, short */
   scCard=function(){
