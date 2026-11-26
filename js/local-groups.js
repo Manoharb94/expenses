@@ -98,8 +98,8 @@ function pushP(){try{return window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugi
 var pushOn=false,saved={};   /* saved: tokens already sent to the server in this app session (sent again next launch, in case the server dropped it) */
 GWL.pushWait=async function(){for(var i=0;i<24;i++){if(String(ls("gwpush")||"").indexOf(GWL.uid()+":")===0&&saved[ls("gwpush")])return true;if(ls("gwpusherr"))return false;await new Promise(function(r){setTimeout(r,500)})}return false};
 GWL.pushWhy=function(){return "This phone is not registered for notifications: "+(ls("gwpusherr")||"no push token arrived from the phone (check Notifications are allowed for Gharwise, then try again)")};
-GWL.pushSetup=async function(){var P=pushP();if(!P)return "not in this build";if(!GWL.loggedIn()||GWL.testing)return "no";
-  try{var S2=Capacitor.Plugins.SmsTracker,a=S2&&S2.appInfo?await S2.appInfo():null;if(!a||!a.pushReady)return "not in this build"}catch(e){return "no"}
+GWL.pushSetup=async function(){var P=pushP();if(!P)return "not in this build";GWL.pushNo="";if(!GWL.loggedIn()){GWL.pushNo="you are logged out here (log in again from Menu → Account)";return "no"}if(GWL.testing){GWL.pushNo="the self-check is running";return "no"}
+  try{var S2=Capacitor.Plugins.SmsTracker,a=S2&&S2.appInfo?await S2.appInfo():null;if(!a||!a.pushReady)return "not in this build"}catch(e){GWL.pushNo="the app could not read its own info: "+((e&&(e.message||e.errorMessage))||e);return "no"}
   if(!pushOn){pushOn=true;
     P.addListener("registration",async function(t){var tok=t&&t.value;if(!tok){ls("gwpusherr","the phone gave an empty push token");return}var tag=GWL.uid()+":"+tok;if(saved[tag])return;
       try{await srv("lm_set_push",{p_token:tok,p_platform:(Capacitor.getPlatform&&Capacitor.getPlatform())||"android"});saved[tag]=1;ls("gwpush",tag);ls("gwpusherr","")}catch(e){ls("gwpusherr","the server did not accept the token: "+((e&&e.message)||e))}});

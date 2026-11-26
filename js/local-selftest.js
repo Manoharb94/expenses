@@ -182,7 +182,7 @@ GWL.inviteTestCleanup=async function(){if(ls("gwinvtest")!=="1"||running)return;
     if(tok)try{await asDev("B",function(){return GWL.srv("lm_drop_push",{p_token:tok})})}catch(e){}}catch(e){}
   FT={};if(tok)try{await GWL.srv("lm_set_push",{p_token:tok,p_platform:(Capacitor.getPlatform&&Capacitor.getPlatform())||"android"})}catch(e){}};
 GWL.inviteTest=async function(){if(running)throw new Error("The self-check is running");if(!GWL.loggedIn())throw new Error("Log in first (Menu → Account)");
-  var st=await GWL.pushSetup();if(st!=="on")throw new Error(st==="not in this build"?"This build has no Firebase file (google-services.json)":st==="not allowed"?"Allow notifications for Gharwise in Android settings":"Push notifications are not available");
+  var st=await GWL.pushSetup();if(st!=="on")throw new Error(st==="not in this build"?"This build has no Firebase file (google-services.json)":st==="not allowed"?"Allow notifications for Gharwise in Android settings":"Push notifications are not available: "+(GWL.pushNo||"unknown reason"));
   ls("gwpusherr","");if(!await GWL.pushWait())throw new Error(GWL.pushWhy());var tag=String(ls("gwpush")||"");
   var tok=tag.slice(tag.indexOf(":")+1);await GWL.inviteTestCleanup();await pair();
   ls("gwinvtok",tok);ls("gwinvtest","1");

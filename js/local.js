@@ -353,7 +353,7 @@ document.addEventListener("click",async function(e){var t=e.target&&e.target.clo
   var lm=t.closest("[data-lmenu]");
   if(lm){var a=lm.getAttribute("data-lmenu");
     if(a==="export")exportSheet();
-    else if(a==="pushtest"){lm.disabled=true;try{var st=await GWL.pushSetup();if(st!=="on")throw new Error(st==="not in this build"?"This build has no Firebase file (google-services.json)":st==="not allowed"?"Allow notifications for Gharwise in Android settings":"Push notifications are not available");
+    else if(a==="pushtest"){lm.disabled=true;try{var st=await GWL.pushSetup();if(st!=="on")throw new Error(st==="not in this build"?"This build has no Firebase file (google-services.json)":st==="not allowed"?"Allow notifications for Gharwise in Android settings":"Push notifications are not available: "+(GWL.pushNo||"unknown reason"));
         ls("gwpusherr","");if(!await GWL.pushWait())throw new Error(GWL.pushWhy());var r=await GWL.fn("lm-push",{test:true,delay:10});
         if(r&&r.status===404)throw new Error("The lm-push Edge Function is not deployed in Supabase");if(r&&r.note)throw new Error(r.note);if(r&&r.error)throw new Error(r.error);
         if(!r||!r.queued)throw new Error("The server has no push token for this phone even though it was just sent. Run the Supabase check from the notes, then send this message to me.");
