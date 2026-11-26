@@ -98,11 +98,18 @@ GWL.famInfo=async function(){var f=fam();if(!f||!SESS)return;try{var r=await srv
   if(!off&&r.members&&r.members!==f.members){f.members=r.members;GWL.mark("data",true)}}catch(e){}};
 /* put this account back into the family this phone holds the key for (the phone's key decides: a family it can't read is no use) */
 GWL.famRepair=async function(){var f=fam();if(!f)throw new Error("No family on this phone");if(!SESS)throw new Error("Log in first");
-  var r=await srv("lm_family_info",{});
-  if(r&&r.family_id!==f.id)await srv("lm_family_leave",{});
-  var n;try{n=await srv("lm_family_join",{p_family:f.id,p_join_hash:await joinHash(f.key)})}
-  catch(e){if(/not valid/i.test(e&&e.message||""))throw new Error("Your family no longer exists on the server. Tap “Leave this family”, then create a new one or join with a code.");throw e}
-  f.off=null;f.members=n;f.seq=0;f.pushed={};GWL.mark("data",true);await GWL.flush();await sync();ping(false);return n};
+  var hash=await joinHash(f.key),n,fresh=false;
+  async function join(){return srv("lm_family_join",{p_family:f.id,p_join_hash:hash})}
+  try{n=await join()}
+  catch(e){var m=e&&e.message||"";
+    if(/already in a family/i.test(m)){await srv("lm_family_leave",{});   /* a family this phone has no key for: of no use here */
+      try{n=await join()}catch(e2){if(!/not valid/i.test(e2&&e2.message||""))throw e2;n=null}}
+    else if(!/not valid/i.test(m))throw e;
+    if(n==null){ /* this phone's family is gone from the server: start it again, keeping everything on this phone */
+      try{await srv("lm_family_leave",{})}catch(x){}
+      var key=b64e(rnd(32)),id=await srv("lm_family_create",{p_join_hash:await joinHash(key)});
+      var d=GWL.db();d.family={id:id,key:key,created:new Date().toISOString(),seq:0,pushed:{},members:1};d.t.family_txns=[];n=1;fresh=true}}
+  f=fam();f.off=null;f.members=n;if(!fresh){f.seq=0;f.pushed={}}GWL.mark("data",true);GWL.mark("family",true);await GWL.flush();await sync();ping(false);return {members:n,fresh:fresh}};
 function payloadOf(t){return {id:t.id,amount:t.amount,type:t.type,merchant:t.merchant,merchant_key:t.merchant_key,category:t.category||null,txn_date:t.txn_date,note:t.note||null,person:t.person}}
 async function push(){
   var f=fam(),db=GWL.db(),me=db.profile.name,key=await aesKey(f.key);if(!f.pushed)f.pushed={};

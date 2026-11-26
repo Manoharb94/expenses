@@ -693,3 +693,29 @@ begin
 end $$;
 revoke all on function lm_rekey_targets(uuid) from public, anon, authenticated;
 grant execute on function lm_rekey_targets(uuid) to service_role;
+
+-- ============================================================================
+-- Part 6: keep the self-check away from real accounts, and clear invites to families that are gone.
+-- The self-check logs in with test numbers and replaces their keys and families. A number that a real phone
+-- has opened Gharwise with has app usage here, so the self-check now skips it.
+-- ============================================================================
+create or replace function lm_account_in_use() returns boolean
+language sql security definer set search_path = public stable as $$
+  select exists (select 1 from lm_usage where user_id = auth.uid() and opens > 0);
+$$;
+revoke all on function lm_account_in_use() from public, anon;
+grant execute on function lm_account_in_use() to authenticated;
+
+-- an invite to a family or group that no longer exists can never be opened: remove it
+create or replace function lm_invites_gone() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  delete from lm_invites where kind = tg_argv[0] and target = old.id;
+  return old;
+end $$;
+drop trigger if exists lm_families_invites_gone on lm_families;
+create trigger lm_families_invites_gone after delete on lm_families for each row execute function lm_invites_gone('family');
+drop trigger if exists lm_groups_invites_gone on lm_groups;
+create trigger lm_groups_invites_gone after delete on lm_groups for each row execute function lm_invites_gone('group');
+delete from lm_invites i where i.kind = 'family' and not exists (select 1 from lm_families f where f.id = i.target);
+delete from lm_invites i where i.kind = 'group'  and not exists (select 1 from lm_groups g where g.id = i.target);

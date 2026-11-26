@@ -387,7 +387,9 @@ document.addEventListener("click",async function(e){var t=e.target&&e.target.clo
       else if(f==="copy"){if(await copyText(GWL.famCode()))toast("Code copied")}
       else if(f==="sharecode"){var P=LF(),msg="Join my Gharwise family. In the Gharwise app: Menu → Family sharing → Join, and paste this code:\n\n"+GWL.famCode();if(P)await P.shareFile({name:"gharwise-family-code.txt",text:msg,mime:"text/plain",title:"Gharwise family code"});else if(await copyText(GWL.famCode()))toast("Code copied")}
       else if(f==="sync"){fb.disabled=true;if(GWL.famInfo)await GWL.famInfo();await GWL.sync();if(GWL.groupsSync)await GWL.groupsSync(true);fb.disabled=false;render();toast(DB.family&&DB.family.off?"Family sync is paused: tap Fix it":"Up to date")}
-      else if(f==="repair"){fb.disabled=true;var nr=await oldFam(function(){return GWL.famRepair()});await load(true);render();toast("Fixed. "+nr+(nr===1?" person":" people")+" in your family.")}
+      else if(f==="repair"){if(DB.family.off==="other"&&!confirm("Your account is in another family on the server, one this phone can’t open. Leave it and use this phone’s family?"))return;
+        fb.disabled=true;var nr=await GWL.famRepair();await load(true);render();
+        toast(nr.fresh?"Fixed. Your old family was gone, so a new one was started. Invite them again (the family code has changed).":"Fixed. "+nr.members+(nr.members===1?" person":" people")+" in your family.")}
       else if(f==="leave"){if(!confirm("Leave this family? Family payments are removed from this phone, and your payments are removed from the family's phones."))return;await GWL.famLeave();await load(true);render()}
     }catch(x){fb.disabled=false;showErr(x&&x.message||String(x))}}});
 /* A family invite must be answered: shown on top of everything whenever one is waiting (push tapped or not), until Accept or Reject */

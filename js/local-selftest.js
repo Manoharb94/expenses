@@ -25,7 +25,7 @@ var SMS=[
 var VOICE=[["spent 100 rs for auto",100,"out","Auto","Transport"],["paid ₹250 for groceries",250,"out","Groceries","Groceries"],["petrol 500",500,"out","Petrol","Fuel"],["received 1000 rupees from manohar",1000,"in","Manohar",null],["got 2k rupees from amma",2000,"in","Amma",null],["add expense 50 curves in gharwise",50,"out","Curves",null],["received one thousand from amma",1000,"in","Amma",null],["spent fifteen hundred on rent",1500,"out","Rent","House Rent"],["paid two lakh for rent",200000,"out","Rent","House Rent"]];
 
 var R=[],running=false,FT={};
-function testNums(){return String(ls("gwtestnums")||"919000000001,919000000002,919000000003").split(/[\s,]+/).filter(Boolean).map(function(n){n=n.replace(/\D/g,"");return n.length===10?"91"+n:n})}
+function testNums(){return String(ls("gwtestnums")||"919000000091,919000000092,919000000093").split(/[\s,]+/).filter(Boolean).map(function(n){n=n.replace(/\D/g,"");return n.length===10?"91"+n:n})}
 function testOtp(){return ls("gwtestotp")||"123456"}
 function need(){if(!FT.A||!FT.B)skip("test members could not log in")}
 async function asDev(who,fn){var d=FT[who],os=GWL._swapSess(d.sess),od=GWL.swapDb(d.db);GWL.inDev=(GWL.inDev||0)+1;try{return await fn()}finally{GWL.inDev--;GWL.swapDb(od);GWL._swapSess(os)}}
@@ -112,11 +112,7 @@ var TESTS=[
 ["iPhone","Data folder is in the Files app",async function(){if(!IOS())skip("Android phone");var s=await P("LocalFiles").folderStatus();must(s.ok,"not writable");return s.name}],
 ["Phone","App lock (fingerprint/face) available",async function(){var g=P("GharwiseNative");if(!g||!g.lockStatus)skip("not in the app");var s=await g.lockStatus();must(s&&s.available!==false,"this phone has no screen lock set")}],
 /* ---- family sync, end to end, between two Supabase TEST numbers (your real family is not touched) ---- */
-["Family sync","Two test members log in",async function(){var nums=testNums(),otp=testOtp(),own=String(GWL.phone()||"").replace(/\D/g,"").slice(-10);
-  var use=nums.filter(function(n){return n.replace(/\D/g,"").slice(-10)!==own});
-  if(use.length<2)throw new Error("needs two test numbers that are not this phone's login (now: "+nums.join(", ")+"). Tap “Test numbers” below to change them.");
-  for(var i=0;i<2;i++){var who=i?"B":"A";try{FT[who]={num:use[i],sess:await GWL._loginTest(use[i],otp)}}catch(e){throw new Error("+"+use[i]+" could not log in ("+(e.message||e)+"). Add it in Supabase → Authentication → Phone → Test phone numbers, code "+otp+".")}
-    var d=GWL.blankDb();d.profile={name:"Test "+who,created:new Date().toISOString()};FT[who].db=d;await asDev(who,function(){return GWL.publishKey()})}
+["Family sync","Two test members log in",async function(){await loginPair();
   for(var w of ["A","B"])await asDev(w,async function(){await GWL.srv("lm_family_leave",{})});
   return "+"+FT.A.num+" and +"+FT.B.num}],
 ["Family sync","A creates a family and invites B by mobile number",async function(){need();await asDev("A",function(){return GWL.famCreate()});
@@ -174,9 +170,19 @@ async function run(){if(running)return;running=true;R=[];FT={};ui();
   finally{try{await cleanupFamily()}catch(e){}FT={};GWL.swapDb(real);GWL.testing=false;running=false;try{await load(true);go("menu")}catch(e){}ui()}}
 
 /* ---- one-phone test of a real invite push: this phone pretends to be test member B, test member A invites B ---- */
-async function pair(){var nums=testNums(),otp=testOtp(),own=String(GWL.phone()||"").replace(/\D/g,"").slice(-10);
-  var use=nums.filter(function(n){return n.replace(/\D/g,"").slice(-10)!==own});if(use.length<2)throw new Error("needs two test numbers that are not this phone's login. Menu → Testing → Self-check → Test numbers.");
-  FT={};for(var i=0;i<2;i++){var who=i?"B":"A";FT[who]={num:use[i],sess:await GWL._loginTest(use[i],otp)};var d=GWL.blankDb();d.profile={name:"Test "+who,created:new Date().toISOString()};FT[who].db=d;await asDev(who,function(){return GWL.publishKey()})}}
+/* The self-check needs two accounts that no real phone uses: it replaces their keys, families and notifications.
+   A number that a real phone has opened Gharwise with (it has app usage on the server) is never touched. */
+async function loginPair(){var nums=testNums(),otp=testOtp(),own=String(GWL.phone()||"").replace(/\D/g,"").slice(-10);
+  var cand=nums.filter(function(n){return n.replace(/\D/g,"").slice(-10)!==own}),busy=[],got=[];
+  FT={};
+  for(var i=0;i<cand.length&&got.length<2;i++){var n=cand[i],who=got.length?"B":"A",sess;
+    try{sess=await GWL._loginTest(n,otp)}catch(e){throw new Error("+"+n+" could not log in ("+(e.message||e)+"). Add it in Supabase → Authentication → Phone → Test phone numbers, code "+otp+".")}
+    FT[who]={num:n,sess:sess,db:GWL.blankDb()};var inUse;
+    try{inUse=await asDev(who,function(){return GWL.srv("lm_account_in_use",{})})}catch(e){delete FT[who];throw new Error("the server is missing lm_account_in_use. Run Part 6 of local_mode.sql in Supabase.")}
+    if(inUse){busy.push(n);delete FT[who];continue}
+    var d=GWL.blankDb();d.profile={name:"Test "+who,created:new Date().toISOString()};FT[who].db=d;got.push(n);await asDev(who,function(){return GWL.publishKey()})}
+  if(got.length<2)throw new Error((busy.length?busy.map(function(n){return "+"+n}).join(", ")+(busy.length===1?" is":" are")+" used on a real phone, so the self-check leaves "+(busy.length===1?"it":"them")+" alone. ":"")+"It needs two test numbers nobody logs in with, e.g. 9000000091 and 9000000092 (code "+otp+") in Supabase → Authentication → Phone → Test phone numbers, then set them with “Test numbers” below.")}
+async function pair(){await loginPair()}
 GWL.inviteTestCleanup=async function(){if(ls("gwinvtest")!=="1"||running)return;var tok=ls("gwinvtok")||"";ls("gwinvtest","");ls("gwinvid","");
   try{await pair();try{await asDev("A",async function(){var l=await GWL.srv("lm_invites_sent",{})||[];for(var x of l){try{await GWL.srv("lm_invite_cancel",{p_id:x.id})}catch(e){}}})}catch(e){}for(var w of ["A","B"])try{await asDev(w,function(){return GWL.srv("lm_family_leave",{})})}catch(e){}
     if(tok)try{await asDev("B",function(){return GWL.srv("lm_drop_push",{p_token:tok})})}catch(e){}}catch(e){}
