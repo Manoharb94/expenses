@@ -180,9 +180,13 @@ window.gwBack=function(){
   }catch(e){}
   return false};
 
+/* Android: the voice widget is "added" once the home screen really has one: tick the setup box by itself */
+async function gwWidgetSync(){try{var P=gwNative();if(!P||!P.widgetCount||ls("gs_voice")==="1")return;var r=await P.widgetCount();
+  if(r&&r.count>0){ls("gs_voice","1");try{render()}catch(e){}}}catch(e){}}
+setTimeout(gwWidgetSync,3000);document.addEventListener("visibilitychange",function(){if(!document.hidden)setTimeout(gwWidgetSync,800)});
 document.addEventListener("click",async function(e){
   var b=e.target&&e.target.closest&&e.target.closest("#pinw");if(!b)return;
   var P=gwNative();
   try{var r=P&&P.pinWidget?await P.pinWidget():null;
-    if(!r||!r.supported)toast(gwT("Press and hold an empty spot on your home screen, choose Widgets, then Gharwise.")+(r&&r.why?" ("+r.why+")":""))}
+    if(!r||!r.supported)toast(gwT("Press and hold an empty spot on your home screen, choose Widgets, then Gharwise.")+(r&&r.why?" ("+r.why+")":""));[1500,4000,8000,15000,30000].forEach(function(t){setTimeout(gwWidgetSync,t)})}
   catch(er){toast(gwT("Press and hold an empty spot on your home screen, choose Widgets, then Gharwise."))}});

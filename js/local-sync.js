@@ -172,7 +172,7 @@ async function mailDecrypt(keys,it){
   return JSON.parse(td.decode(out))}
 GWL.mailDecrypt=async function(b64,it){return mailDecrypt(await mkeys(b64),it)};
 GWL.mailEnable=async function(months){if(!SESS)throw new Error("Log in first");var tok=await srv("lm_mail_token",{}),d=GWL.db();
-  if(!d.mail||!d.mail.key)d.mail={key:b64e(rnd(32))};d.mail.on=true;d.mail.token=tok;d.mail.months=months==null?1:months;d.mail.since=new Date().toISOString();GWL.mark("data",true);await GWL.flush();ping(false);return tok};
+  if(!d.mail||!d.mail.key)d.mail={key:b64e(rnd(32))};d.mail.on=true;d.mail.verified=false;d.mail.token=tok;d.mail.months=months==null?1:months;d.mail.since=new Date().toISOString();GWL.mark("data",true);await GWL.flush();ping(false);return tok};
 GWL.mailOff=async function(){try{await srv("lm_mail_off",{})}catch(e){}var d=GWL.db();d.mail=null;GWL.mark("data",true);await GWL.flush();ping(false)};
 GWL.mailStatus=async function(){if(!mail()||!SESS)return null;try{return await srv("lm_mail_status",{})}catch(e){return null}};
 var pulling=false;
