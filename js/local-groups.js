@@ -85,7 +85,7 @@ GWL.groupsSync=function(full){if(!GWL.loggedIn()||!D()||!D().profile)return Prom
       try{await resealSent()}catch(e){}
       if(D().family)try{var p=await srv("lm_family_pending",{});if(JSON.stringify(p)!==JSON.stringify(D().family.invites||[])){D().family.invites=p;GWL.mark("data",true);ch=true}}catch(e){}}
     return ch})();
-  return gsync.then(function(ch){gsync=null;if(ch&&!GWL.testing){}return ch},function(e){gsync=null;return false})};
+  return gsync.then(function(ch){gsync=null;try{if(!GWL.testing&&GWL.invitePrompt)GWL.invitePrompt()}catch(e){}return ch},function(e){gsync=null;return false})};
 
 var H={};
 var _idle=GWL.idle;GWL.idle=async function(){if(_idle)await _idle();try{if(gsync)await gsync}catch(e){}};

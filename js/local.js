@@ -389,6 +389,25 @@ document.addEventListener("click",async function(e){var t=e.target&&e.target.clo
       else if(f==="sync"){fb.disabled=true;await GWL.sync();fb.disabled=false;render();toast("Up to date")}
       else if(f==="leave"){if(!confirm("Leave this family? Family payments are removed from this phone, and your payments are removed from the family's phones."))return;await GWL.famLeave();await load(true);render()}
     }catch(x){fb.disabled=false;showErr(x&&x.message||String(x))}}});
+/* A family invite must be answered: shown on top of everything whenever one is waiting (push tapped or not), until Accept or Reject */
+var IPOpen=false;
+GWL.invitePrompt=function(){
+  if(IPOpen||GWL.testing||!GWL.loggedIn||!GWL.loggedIn()||!DB||!DB.profile)return;
+  var inv=(GWL.inbox?GWL.inbox():[]).filter(function(i){return i.kind==="family"})[0];if(!inv)return;
+  IPOpen=true;
+  var box=document.createElement("div");box.id="invprompt";
+  box.style.cssText="position:fixed;inset:0;z-index:100000;background:rgba(20,10,40,.74);display:flex;align-items:center;justify-content:center;padding:24px";
+  box.innerHTML='<div style="background:#fff;color:#1c1b22;border-radius:26px;padding:26px 22px;width:100%;max-width:340px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.4)"><div style="font-size:44px">👨‍👩‍👧</div><h3 style="margin:8px 0 6px;font-size:20px">'+esc(inv.by)+' invited you to their family</h3><p style="margin:0 0 16px;font-size:14px;opacity:.7">You will see each other’s payments. They stay encrypted between your phones.</p><button class="btn" data-ip="acc" style="width:100%">Accept</button><button class="btn ghost" data-ip="rej" style="width:100%;margin-top:8px">Reject</button></div>';
+  document.body.appendChild(box);
+  var busy=false;
+  box.addEventListener("click",async function(e){var b=e.target.closest&&e.target.closest("[data-ip]");if(!b||busy)return;busy=true;
+    var btns=box.querySelectorAll("button");btns.forEach(function(x){x.disabled=true});
+    try{var yes=b.getAttribute("data-ip")==="acc";await GWL.inviteRespond(inv.id,yes);if(yes){await load(true);toast("You joined the family")}else toast("Invite rejected");
+      box.remove();IPOpen=false;setTimeout(function(){GWL.invitePrompt()},300);try{render()}catch(x){}}
+    catch(x){busy=false;btns.forEach(function(y){y.disabled=false});toast((x&&x.message)||"Could not answer the invite. Try again.")}});
+};
+document.addEventListener("visibilitychange",function(){if(!document.hidden)setTimeout(function(){try{GWL.groupsSync&&GWL.groupsSync(true).then(function(){GWL.invitePrompt()})}catch(e){}},600)});
+setTimeout(function(){try{GWL.groupsSync&&GWL.groupsSync(true).then(function(){GWL.invitePrompt()})}catch(e){}},2500);
 function localFam(){
   var h=topbar("Family sharing","menu"),li=GWL.loggedIn&&GWL.loggedIn();
   if(!li)h+='<div class="note out" style="margin:10px 0">You are logged out, so family sync is paused. <a href="#" data-lmenu="login" style="color:var(--acc)">Log in</a></div>';
