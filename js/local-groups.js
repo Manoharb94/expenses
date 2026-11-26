@@ -96,23 +96,7 @@ GWL.grpc=function(fn,a){return H[fn]?H[fn](a||{}):undefined};GWL.grpcHas=functio
 function notify(id){if(GWL.testing&&!GWL.pushInTests)return;try{GWL.fn("lm-push",{invite:id,delay:GWL.pushDelay||0}).catch(function(){})}catch(e){}}
 function pushP(){try{return window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.PushNotifications||null}catch(e){return null}}
 var pushOn=false;
-/* Android: no Firebase. The phone asks Supabase itself every ~15 minutes (InviteJob + lm_invite_poll). */
-function isAnd(){try{return Capacitor.getPlatform()==="android"}catch(e){return false}}
-function andT(){try{var T=Capacitor.Plugins.SmsTracker;return T&&T.inviteWatch?T:null}catch(e){return null}}
-async function andSetup(){var T=andT();if(!T)return "not in this build";if(!GWL.loggedIn()||GWL.testing)return "no";
-  var ln=Capacitor.Plugins.LocalNotifications;if(ln){var pm=await ln.checkPermissions();if(pm.display!=="granted")pm=await ln.requestPermissions();if(pm.display!=="granted")return "not allowed"}
-  var tok=ls("gwpoll");if(!/^poll:[0-9a-f]{48}$/.test(tok||"")){var b=crypto.getRandomValues(new Uint8Array(24));tok="poll:"+Array.from(b).map(function(x){return ("0"+x.toString(16)).slice(-2)}).join("");ls("gwpoll",tok)}
-  var tag=GWL.uid()+":"+tok;if(ls("gwpush")!==tag){await srv("lm_set_push",{p_token:tok,p_platform:"android"});ls("gwpush",tag)}
-  await T.inviteWatch({url:URLB,apikey:KEY,token:tok});return "on"}
-/* one check in a few seconds (Testing menu): test=true shows the test notification once Supabase answered */
-GWL.pushSoon=async function(test){var T=andT();if(T)await T.inviteSoon({seconds:10,test:!!test})};
-GWL.pushAndroid=isAnd;
-/* a notification was tapped (Android: from InviteJob) */
-function onTap(kind){if(kind==="test"){setTimeout(function(){toast("Push notification works ✓")},800);return}
-  if(kind==="invite"){if(ls("gwinvtest")==="1"){setTimeout(function(){toast("Invite push works ✓")},800);GWL.inviteTestCleanup&&GWL.inviteTestCleanup();return}GWL.groupsSync(true)}}
-window.gwNotifTap=async function(){var T=andT();if(!T||!T.takeNotifTap)return;try{var r=await T.takeNotifTap();if(r&&r.kind)onTap(r.kind)}catch(e){}};
-document.addEventListener("visibilitychange",function(){if(!document.hidden)setTimeout(window.gwNotifTap,600)});setTimeout(window.gwNotifTap,2500);
-GWL.pushSetup=async function(){if(isAnd())return andSetup();var P=pushP();if(!P)return "not in this build";if(!GWL.loggedIn()||GWL.testing)return "no";
+GWL.pushSetup=async function(){var P=pushP();if(!P)return "not in this build";if(!GWL.loggedIn()||GWL.testing)return "no";
   try{var S2=Capacitor.Plugins.SmsTracker,a=S2&&S2.appInfo?await S2.appInfo():null;if(!a||!a.pushReady)return "not in this build"}catch(e){return "no"}
   if(!pushOn){pushOn=true;
     P.addListener("registration",async function(t){var tok=t&&t.value;if(!tok)return;var tag=GWL.uid()+":"+tok;if(ls("gwpush")===tag)return;try{await srv("lm_set_push",{p_token:tok,p_platform:(Capacitor.getPlatform&&Capacitor.getPlatform())||"android"});ls("gwpush",tag)}catch(e){}});
