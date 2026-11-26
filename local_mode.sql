@@ -568,3 +568,24 @@ $$;
 revoke all on function lm_set_push(text, text), lm_drop_push(text), lm_push_targets(uuid, uuid), lm_push_forget(text), lm_push_mine(uuid) from public, anon, authenticated;
 grant execute on function lm_set_push(text, text), lm_drop_push(text) to authenticated;
 grant execute on function lm_push_targets(uuid, uuid), lm_push_forget(text), lm_push_mine(uuid) to service_role;
+
+-- =====================================================================================
+-- PART 4: Android invite notifications through Supabase only (no Firebase).
+-- The Android app registers a random "poll:" address (lm_set_push). A background job on the phone asks this
+-- function every ~15 minutes whether invites are waiting, and shows the notification itself.
+-- It learns only invite ids, never who sent them or anything inside them.
+-- =====================================================================================
+create or replace function lm_invite_poll(p_token text) returns jsonb
+language plpgsql security definer set search_path = public, auth stable as $$
+declare uid uuid; ph text;
+begin
+  if p_token is null or p_token not like 'poll:%' or length(p_token) < 40 then raise exception 'bad token'; end if;
+  select user_id into uid from lm_push where token = p_token;
+  if uid is null then return jsonb_build_object('ok', false, 'ids', '[]'::jsonb); end if;
+  select regexp_replace(coalesce(phone, ''), '\D', '', 'g') into ph from auth.users where id = uid;
+  return jsonb_build_object('ok', true, 'ids', coalesce((
+    select jsonb_agg(i.id order by i.created_at) from lm_invites i
+     where i.to_phone = ph and i.sealed is not null and i.created_at > now() - interval '30 days'), '[]'::jsonb));
+end $$;
+revoke all on function lm_invite_poll(text) from public;
+grant execute on function lm_invite_poll(text) to anon, authenticated;

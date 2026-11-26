@@ -232,7 +232,7 @@ GWL.exportData=async function(fmt,r,how,pre){
 /* ---------- erase ---------- */
 async function eraseAll(serverToo){try{var P=smsP();if(P)await P.disable()}catch(e){}
   if(GWL.loggedIn&&GWL.loggedIn()){try{if(DB.family)await GWL.srv("lm_family_leave",{})}catch(e){}try{if(DB.mail)await GWL.srv("lm_mail_off",{})}catch(e){}
-    try{var pt=String(ls("gwpush")||"").split(":").slice(1).join(":");if(pt)await GWL.srv("lm_drop_push",{p_token:pt})}catch(e){}
+    try{var pt=String(ls("gwpush")||"").split(":").slice(1).join(":");if(pt)await GWL.srv("lm_drop_push",{p_token:pt})}catch(e){}try{var ST=Capacitor.Plugins.SmsTracker;if(ST&&ST.inviteStop)await ST.inviteStop()}catch(e){}
     
     if(serverToo)try{await GWL.srv("delete_my_account",{})}catch(e){}GWL.logout()}
   await idbClear();var keep={theme:1,accent:1,lang:1};try{Object.keys(localStorage).forEach(function(k){if(!keep[k])localStorage.removeItem(k)})}catch(e){}
@@ -338,7 +338,7 @@ function localMenu(){
   return topbar("Menu","home")+'<div class="msec">App settings</div><div class="card" style="padding:0 12px">'+rowB("","⚙️","Settings","Language, look, lock and reminders","rgba(120,130,150,.20)","set")+rowB("","🗂️","Categories","What each category has this month","rgba(255,150,40,.22)","cats")+'</div>'+
     '<div class="msec">Tracking & family</div><div class="card" style="padding:0 12px">'+rowB("","💬","Automated tracking","SMS, email, voice and bank statements","rgba(60,130,255,.20)","track")+rowB("","👨‍👩‍👧","Family sharing",fam,"rgba(140,100,255,.20)","fam")+rowB("","🎯","Goals","Save for things together","rgba(240,80,150,.20)","goals")+'</div>'+
     '<div class="msec">Your data</div><div class="card" style="padding:0 12px">'+rowB("folder","📁","Storage folder",GWL.folder.ok?esc(GWL.folder.name||"Chosen")+(GWL.lastBackup?" · backed up "+new Date(GWL.lastBackup).toLocaleTimeString("en-IN",{hour:"numeric",minute:"2-digit"}):""):"⚠ Not available","rgba(40,180,100,.20)")+rowB("export","📤","Export my data","PDF or CSV (Excel)","rgba(60,130,255,.20)")+'<a class="mr" href="privacy.html" target="_blank" rel="noopener" style="text-decoration:none"><i class="mt" style="background:rgba(120,130,150,.20)">🔒</i><span><b>Privacy</b><span>Payments stay on this phone; family data is encrypted</span></span><span class="go">›</span></a>'+
-    rowB("login","📱","Account",li?"+"+esc(String(GWL.phone()).replace(/^\+?91/,"91 ")):"⚠ Logged out · tap to log in","rgba(120,130,150,.20)")+rowB("erase","🗑️",'<span class="out">Erase all data on this phone</span>',"Payments, settings and family data","rgba(230,70,70,.18)")+'</div>'+(ls("gwdev")==="1"?'<div class="msec">Testing</div><div class="card" style="padding:0 12px"><button class="mr" data-st="run"><i class="mt" style="background:rgba(40,180,100,.20)">🧪</i><span><b>Run self-check</b><span>Tests every feature on this phone. Your data is not touched.</span></span><span class="go">›</span></button>'+rowB("pushtest","📲","Send me a test push in 10 seconds","Firebase → this phone. Leave the app after tapping.","rgba(60,130,255,.20)")+rowB("pushinvite","📨","Send me a test family invite in 10 seconds","A real invite push with one phone. Leave the app after tapping.","rgba(60,130,255,.20)")+'</div>':'')+'<div class="note" id="gwver" style="text-align:center;margin:14px 0;user-select:none">Gharwise on-phone version · '+T("transactions").length+' payments stored here</div>'}
+    rowB("login","📱","Account",li?"+"+esc(String(GWL.phone()).replace(/^\+?91/,"91 ")):"⚠ Logged out · tap to log in","rgba(120,130,150,.20)")+rowB("erase","🗑️",'<span class="out">Erase all data on this phone</span>',"Payments, settings and family data","rgba(230,70,70,.18)")+'</div>'+(ls("gwdev")==="1"?'<div class="msec">Testing</div><div class="card" style="padding:0 12px"><button class="mr" data-st="run"><i class="mt" style="background:rgba(40,180,100,.20)">🧪</i><span><b>Run self-check</b><span>Tests every feature on this phone. Your data is not touched.</span></span><span class="go">›</span></button>'+rowB("pushtest","📲","Send me a test push in 10 seconds","A notification to this phone. Leave the app after tapping.","rgba(60,130,255,.20)")+rowB("pushinvite","📨","Send me a test family invite in 10 seconds","A real invite push with one phone. Leave the app after tapping.","rgba(60,130,255,.20)")+'</div>':'')+'<div class="note" id="gwver" style="text-align:center;margin:14px 0;user-select:none">Gharwise on-phone version · '+T("transactions").length+' payments stored here</div>'}
 var EX={f:"pdf",r:"month"};
 function exportSheet(){var sh=document.getElementById("sheet");if(!sh)return;
   var chip=function(k,v,l){return '<button type="button" class="'+(EX[k]===v?'on':'')+'" data-ex="'+k+':'+v+'">'+l+'</button>'};
@@ -347,7 +347,8 @@ document.addEventListener("click",async function(e){var t=e.target&&e.target.clo
   var lm=t.closest("[data-lmenu]");
   if(lm){var a=lm.getAttribute("data-lmenu");
     if(a==="export")exportSheet();
-    else if(a==="pushtest"){lm.disabled=true;try{var st=await GWL.pushSetup();if(st!=="on")throw new Error(st==="not in this build"?"This build has no Firebase file (google-services.json)":st==="not allowed"?"Allow notifications for Gharwise in Android settings":"Push notifications are not available");
+    else if(a==="pushtest"){lm.disabled=true;try{var st=await GWL.pushSetup();if(st!=="on")throw new Error(st==="not in this build"?"This build can't show invite notifications (old build)":st==="not allowed"?"Allow notifications for Gharwise in the phone settings":"Notifications are not available");
+        if(GWL.pushAndroid()){await GWL.pushSoon(true);toast("Test push on its way. Leave the app now.");return}
         await new Promise(function(r){setTimeout(r,1500)});var r=await GWL.fn("lm-push",{test:true,delay:10});
         if(r&&r.status===404)throw new Error("The lm-push Edge Function is not deployed in Supabase");if(r&&r.note)throw new Error(r.note);if(r&&r.error)throw new Error(r.error);
         if(!r||!r.queued)throw new Error("This phone is not registered for notifications yet. Reopen the app while online and try again.");
@@ -432,7 +433,7 @@ document.addEventListener("click",async function(e){var b=e.target&&e.target.clo
     else if(a==="off"){if(!confirm("Turn off email tracking? Then delete the project in script.google.com too."))return;await GWL.mailOff();MS.st=null;render()}
   }catch(x){b.disabled=false;showErr(x&&x.message||String(x))}});
 GWL.newId=uid;GWL.db=function(){return DB};GWL.swapDb=function(d){var o=DB;DB=d;return o};GWL.blankDb=blank;GWL.files={write:fwrite,writeB64:fwriteB64,read:fread,del:fdelete};GWL.prep=prep;GWL.FILES=FILES;GWL.T=T;GWL.flush=flush;
-/* ===== iPhone (Gharwise Local for iOS) =====
+/* ===== iPhone (on-phone version for iOS) =====
    iPhone apps can't read SMS. Bank SMS come in through the person's own Shortcuts automation, which runs the app's
    "Add SMS to Gharwise" action. That action keeps the SMS on this iPhone (no server); the app collects them (drain). */
 GWL.ios=function(){try{return !!(window.Capacitor&&Capacitor.getPlatform&&Capacitor.getPlatform()==="ios"&&Capacitor.isNativePlatform())}catch(e){return false}};
@@ -444,7 +445,7 @@ GWL.ios=function(){try{return !!(window.Capacitor&&Capacitor.getPlatform&&Capaci
   /* first launch: no folder to pick on iPhone */
   var _sv=setupView;setupView=function(){var h=_sv.apply(this,arguments);
     return h.replace('<h3 style="margin:0 0 8px">Pick a folder for your data</h3>','<h3 style="margin:0 0 8px">Where your data is kept</h3>')
-      .replace(/Tracking and adding payments start after this\. Pick or create a folder such as <b>Documents › Gharwise<\/b>\. Keep it: if you change phones, copy it across and pick it again\./,'Everything stays on this iPhone, in <b>Files › On My iPhone › Gharwise Local</b>, and is included in your iPhone backup (iCloud or computer). If you change phones, restore your backup or copy that folder across.')
+      .replace(/Tracking and adding payments start after this\. Pick or create a folder such as <b>Documents › Gharwise<\/b>\. Keep it: if you change phones, copy it across and pick it again\./,'Everything stays on this iPhone, in <b>Files › On My iPhone › Gharwise</b>, and is included in your iPhone backup (iCloud or computer). If you change phones, restore your backup or copy that folder across.')
       .replace('>Choose folder<','>Use this iPhone<').replace(/<button class="btn ghost" data-l="pick" style="margin-top:8px">Choose a different folder<\/button>/g,'')};
   /* SMS tracking page: the Shortcuts automation */
   var smsSteps=function(){var st=S.nsms||{},n=st.count||0;
@@ -476,9 +477,9 @@ GWL.ios=function(){try{return !!(window.Capacitor&&Capacitor.getPlatform&&Capaci
   /* Settings: voice = Siri / Back Tap / widget, all on this iPhone */
   var _nc=nativeCard;nativeCard=function(){var h=_nc.apply(this,arguments),i=h.indexOf(sxHead('🎤','Add an expense by voice','Say it, it is saved'));if(i<0)return h;
     var j=h.lastIndexOf('</div></div>');var card='<div class="card">'+sxHead('🎤','Add an expense by voice','Say it, it is saved')+'<div class="note" style="margin:0;line-height:1.55">'+
-      '<p class="vi">Say <b>“Hey Siri, add expense in Gharwise Local”</b>, then “Grocery 120”. Nothing to set up.</p>'+
-      '<div class="vs"><span class="vn">1</span><div><b>Double-tap the back of the iPhone</b><p>Settings → Accessibility → Touch → Back Tap → Double Tap → <b>Add Expense</b> (Gharwise Local).</p></div></div>'+
-      '<div class="vs"><span class="vn">2</span><div><b>Home-screen widget</b><p>Press and hold the home screen → <b>+</b> → Gharwise Local → Quick add. Tap the mic and speak.</p></div></div>'+
+      '<p class="vi">Say <b>“Hey Siri, add expense in Gharwise”</b>, then “Grocery 120”. Nothing to set up.</p>'+
+      '<div class="vs"><span class="vn">1</span><div><b>Double-tap the back of the iPhone</b><p>Settings → Accessibility → Touch → Back Tap → Double Tap → <b>Add Expense</b> (Gharwise).</p></div></div>'+
+      '<div class="vs"><span class="vn">2</span><div><b>Home-screen widget</b><p>Press and hold the home screen → <b>+</b> → Gharwise → <b>Voice expense</b>. Tap the mic and speak. It also fits on the lock screen.</p></div></div>'+
       '<p class="note" style="margin:8px 0 0">What you say waits on this iPhone and becomes a payment when you open Gharwise.</p></div></div>';
     return h.slice(0,h.lastIndexOf('<div class="card">',i))+card+h.slice(j+12)};
 }})();

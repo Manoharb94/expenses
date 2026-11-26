@@ -105,8 +105,11 @@ var TESTS=[
   if(!un){must(!pend.length,"reminders are scheduled although everything is categorised");return "everything categorised, so none scheduled ✓"}
   must(pend.length>0,un+" uncategorised payments but no reminder is scheduled");var at=pend.map(function(x){return x.schedule&&x.schedule.at}).filter(Boolean).sort()[0];
   return pend.length+" scheduled"+(at?", next "+new Date(at).toLocaleString("en-IN",{weekday:"short",hour:"numeric",minute:"2-digit"}):"")}],
-["Phone","Invite notifications (push) are on",async function(){var s=P("SmsTracker"),pn=P("PushNotifications");if(!s||!pn)skip("not in the app / old build");var a=await s.appInfo();if(!a.pushReady)skip("this build has no Firebase file (google-services.json)");if(IOS()){var pm0=await pn.checkPermissions();must(pm0.receive==="granted","notifications not allowed: iPhone Settings → Gharwise Local → Notifications");must(String(ls("gwpush")||"").indexOf(GWL.uid()+":")===0,"this iPhone is not registered yet: reopen the app while online");return "registered (Apple push)"}
-  var pm=await pn.checkPermissions();must(pm.receive==="granted","notifications not allowed for Gharwise in Android settings");must(String(ls("gwpush")||"").indexOf(GWL.uid()+":")===0,"this phone is not registered yet: reopen the app while online");return "registered"}],
+["Phone","Invite notifications are on",async function(){var s=P("SmsTracker");if(!s)skip("not in the app");
+  if(IOS()){var pn=P("PushNotifications");if(!pn)skip("old build");var pm0=await pn.checkPermissions();must(pm0.receive==="granted","notifications not allowed: iPhone Settings → Gharwise → Notifications");must(String(ls("gwpush")||"").indexOf(GWL.uid()+":")===0,"this iPhone is not registered yet: reopen the app while online");return "registered (Apple push)"}
+  if(!s.inviteStatus)skip("old build");var n=P("LocalNotifications"),pm=n?await n.checkPermissions():{display:"granted"};must(pm.display==="granted","notifications not allowed for Gharwise in Android settings");
+  var w=await s.inviteStatus();must(w.watching,"not set up yet: reopen the app while online");must(String(ls("gwpush")||"").indexOf(GWL.uid()+":")===0,"this phone is not registered yet: reopen the app while online");
+  return "checks Supabase every ~15 min"+(w.last?", last "+Math.round((Date.now()-w.last)/60000)+" min ago":"")}],
 ["iPhone","Shortcuts action can hand SMS to the app",async function(){if(!IOS())skip("Android phone");var s=P("SmsTracker");must(s&&s.inboxTest,"old build");var r=await s.inboxTest();must(r.group,"App Group is missing in this build");must(r.ok,"the on-phone inbox did not work")}],
 ["iPhone","Live SMS automation is sending",async function(){if(!IOS())skip("Android phone");var st=await P("SmsTracker").status();if(!st.count)skip("no bank SMS yet: set up the automation (Automated tracking → SMS)");var d=Math.floor((Date.now()-st.last)/864e5);must(d<5,"no SMS for "+d+" days: check the automation in Shortcuts");return st.count+" SMS so far, last "+(d?d+" days ago":"today")}],
 ["iPhone","Data folder is in the Files app",async function(){if(!IOS())skip("Android phone");var s=await P("LocalFiles").folderStatus();must(s.ok,"not writable");return s.name}],
@@ -182,7 +185,7 @@ GWL.inviteTestCleanup=async function(){if(ls("gwinvtest")!=="1"||running)return;
     if(tok)try{await asDev("B",function(){return GWL.srv("lm_drop_push",{p_token:tok})})}catch(e){}}catch(e){}
   FT={};if(tok)try{await GWL.srv("lm_set_push",{p_token:tok,p_platform:(Capacitor.getPlatform&&Capacitor.getPlatform())||"android"})}catch(e){}};
 GWL.inviteTest=async function(){if(running)throw new Error("The self-check is running");if(!GWL.loggedIn())throw new Error("Log in first (Menu → Account)");
-  var st=await GWL.pushSetup();if(st!=="on")throw new Error(st==="not in this build"?"This build has no Firebase file (google-services.json)":st==="not allowed"?"Allow notifications for Gharwise in Android settings":"Push notifications are not available");
+  var st=await GWL.pushSetup();if(st!=="on")throw new Error(st==="not in this build"?"This build can't show invite notifications (old build)":st==="not allowed"?"Allow notifications for Gharwise in the phone settings":"Notifications are not available");
   await new Promise(function(r){setTimeout(r,1500)});var tag=String(ls("gwpush")||"");if(tag.indexOf(GWL.uid()+":")!==0)throw new Error("This phone is not registered for notifications yet. Reopen the app while online and try again.");
   var tok=tag.slice(tag.indexOf(":")+1);await GWL.inviteTestCleanup();await pair();
   ls("gwinvtok",tok);ls("gwinvtest","1");
@@ -190,6 +193,7 @@ GWL.inviteTest=async function(){if(running)throw new Error("The self-check is ru
   var r;try{r=await asDev("A",async function(){try{await GWL.srv("lm_family_leave",{})}catch(e){}await GWL.famCreate();GWL.pushDelay=10;GWL.pushInTests=true;try{return await GWL.invite("family",GWL.db().family.id,FT.B.num)}finally{GWL.pushDelay=0;GWL.pushInTests=false}})}
   catch(e){await GWL.inviteTestCleanup();throw e}
   if(!r||r.status!=="invited"){await GWL.inviteTestCleanup();throw new Error("The invite was not sent ("+(r&&r.status)+")")}
+  if(GWL.pushAndroid())await GWL.pushSoon(false);   /* Android: this phone asks Supabase in 10 s and finds the invite */
   FT={}};
 GWL.selftest=run;GWL.selftestResults=function(){return R};
 document.addEventListener("click",async function(e){var b=e.target&&e.target.closest&&e.target.closest("[data-st]");if(b){var a=b.getAttribute("data-st");
