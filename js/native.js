@@ -104,10 +104,16 @@ function ndiMake(){
 async function ndiSched(force){
   var P=lnPlugin();if(!P||!ndiIos())return;
   try{
+    if(!ndiOn()||!S.loaded){await P.cancel({notifications:[{id:9511},{id:9512},{id:9513}]});return}
+    var o=ndiMake();
+    if(!o){await P.cancel({notifications:[{id:9511},{id:9512},{id:9513}]});return}
+    /* the reminder is on by default, so ask for permission once, the first time a payment is waiting for a category */
+    var okp=await remPermit(false);
+    if(!okp&&!ls("ndiask")){ls("ndiask","1");okp=await remPermit(true)}
+    if(!okp)return;
+    /* keep reminders that are already planned: planning again on every app open pushed them back and they never arrived */
+    if(!force){try{var pend=await P.getPending(),mine=((pend&&pend.notifications)||[]).filter(function(n){return n.id>=9511&&n.id<=9513});if(mine.length>=2)return}catch(e){}}
     await P.cancel({notifications:[{id:9511},{id:9512},{id:9513}]});
-    if(!ndiOn()||!S.loaded)return;
-    if(!(await remPermit(false)))return;
-    var o=ndiMake();if(!o)return;
     var list=[],d=new Date(),r=function(a,b){return a+Math.floor(Math.random()*(b-a+1))},day=r(1,2);
     for(var i=0;i<3;i++){
       var at=new Date(d.getFullYear(),d.getMonth(),d.getDate()+day,r(18,20),r(0,59),0);
@@ -125,7 +131,7 @@ async function ndiTest(){
 document.addEventListener("change",async function(e){
   var t=e.target;if(!t||t.id!=="ndit")return;
   if(t.checked){if(!(await remPermit(true))){t.checked=false;toast(remMsg());return}}
-  ls("ndion",t.checked?"1":"0");ndiSched();toast(t.checked?gwT("Reminder on"):gwT("Reminder off"));if(S.tab==="set")render()});
+  ls("ndion",t.checked?"1":"0");ndiSched(true);toast(t.checked?gwT("Reminder on"):gwT("Reminder off"));if(S.tab==="set")render()});
 document.addEventListener("click",function(e){var b=e.target&&e.target.closest&&e.target.closest("#nditest");if(b)ndiTest()});
 
 /* ---------- Android: evening reminder when payments are still uncategorised ---------- */
