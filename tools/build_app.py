@@ -10,7 +10,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 APP = os.path.abspath(sys.argv[1]) if len(sys.argv) > 1 else os.path.join(os.path.dirname(ROOT), "gharwise-app")
 WWW = os.path.join(APP, "www")
 
-COPY_DIRS = ["js", "ocr", "vendor"]
+COPY_DIRS = ["js", "ocr", "vendor", "guide"]
 COPY_FILES = ["manifest.json", "privacy.html", "logo.svg", "icon.png", "icon-192.png", "icon-maskable.png",
               "apple-touch-icon.png", "favicon-32.png"]
 

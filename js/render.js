@@ -4,9 +4,9 @@ function render(){
   if(S.view||!S.code||!S.name){nav.classList.add("hide");el.innerHTML=authView();bindAuth(el);return}
   if(S.pf&&S.pf!=="__both"&&persons().indexOf(S.pf)<0)S.pf=S.name;
   nav.classList.remove("hide");
-  nav.querySelectorAll("button").forEach(function(b){b.classList.toggle("on",b.dataset.t===S.tab)});nav.classList.toggle("hide",["sms","mail","stmt"].indexOf(S.tab)>=0);
+  nav.querySelectorAll("button").forEach(function(b){b.classList.toggle("on",b.dataset.t===S.tab)});nav.classList.toggle("hide",["sms","mail","stmt","voice"].indexOf(S.tab)>=0);
   if(S.tab==="me")S.tab="menu";
-  var V={home:vDash,list:vTx,rep:function(){return vReports().replace('<h1>Reports</h1>',topbar("Analytics"))},plan:vBudget,goals:function(){return vGoals().replace('<h1>Goals</h1>',topbar("Goals","menu"))},stmt:function(){return topbar("Import","home")+vStmt()},menu:vMenu,set:vSet,fam:vFam,prof:vProfile,grps:vGroups,grpv:vGroup,grpo:vGroupOpts,cats:vCatsP,track:vTrack,sms:vSms,mail:vMail};
+  var V={home:vDash,list:vTx,rep:function(){return vReports().replace('<h1>Reports</h1>',topbar("Analytics"))},plan:vBudget,goals:function(){return vGoals().replace('<h1>Goals</h1>',topbar("Goals","menu"))},stmt:function(){return topbar("Import","home")+vStmt()},menu:vMenu,set:vSet,fam:vFam,prof:vProfile,grps:vGroups,grpv:vGroup,grpo:vGroupOpts,cats:vCatsP,track:vTrack,sms:vSms,mail:vMail,voice:(typeof vVoice==="function"?vVoice:vTrack)};
   el.innerHTML=(V[S.tab]||vDash)();tcApply(el);
   var hb=el.querySelector(".hb");if(hb){var to=parseFloat(hb.textContent.replace(/[^0-9.]/g,""))||0;if(!S._hbOnce&&to>0&&!window.matchMedia("(prefers-reduced-motion: reduce)").matches){var t0=performance.now(),fr=S._hb>0&&Math.abs(S._hb-to)<to?S._hb:0;(function step(n){var k=Math.min(1,(n-t0)/650),e=1-Math.pow(1-k,3);if(hb.isConnected)hb.textContent=money(Math.round(fr+(to-fr)*e));if(k<1)requestAnimationFrame(step);else if(hb.isConnected)hb.textContent=money(to)})(t0)}if(to>0)S._hbOnce=true;S._hb=to}
   var q=function(i){return document.getElementById(i)};

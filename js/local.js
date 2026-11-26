@@ -183,7 +183,7 @@ var draining=false;
 async function drain(){var P=smsP();if(GWL.testing||draining||!P||!P.takeInbox||!DB||!DB.profile)return;draining=true;
   try{var r=await P.takeInbox(),items=r&&r.items||[];if(!items.length)return;
     var sms=items.filter(function(i){return i.k==="sms"}),voice=items.filter(function(i){return i.k==="voice"}),undo=items.filter(function(i){return i.k==="undo"});
-    var g=ingestSms(sms),v=0;voice.forEach(function(i){if(ingestVoice(i))v++});
+    var g=ingestSms(sms),v=0;voice.forEach(function(i){if(ingestVoice(i)){v++;try{ls("gwvlast",JSON.stringify({ms:i.ms||Date.now(),t:String(i.t||"").slice(0,40)}))}catch(x){}}});
     undo.forEach(function(u){var n=T("transactions").length;DB.t.transactions=T("transactions").filter(function(t){return !(u.cid&&t.client===u.cid)});if(T("transactions").length!==n)mark()});
     if(g.saved||v||undo.length){await flush();if(typeof load==="function")await load(true);
       var parts=[];if(g.saved)parts.push(g.saved+" from SMS");if(v)parts.push(v+" by voice");if(parts.length)toast("New payments added: "+parts.join(", "))}}
@@ -429,7 +429,7 @@ document.addEventListener("click",function(e){var b=e.target&&e.target.closest&&
   else if(k==="next"){if(n>=3){var ok=MS.st&&MS.st.last_run&&(Date.now()-new Date(MS.st.last_run).getTime())<30*60000;if(ok){MS.steps=false}else{toast("Not connected yet. Run the script, then tap Check now.");return}}else MS.step=n+1}
   else MS.step=+k;
   render();window.scrollTo(0,0)});
-(function(){var st=document.createElement("style");st.textContent=".mprog{display:flex;gap:6px;margin:12px 0 0}.mprog button{flex:1;height:8px;border-radius:4px;background:rgba(120,120,130,.25);border:0;padding:0}.mprog button.on{background:var(--acc)}.mlab{display:flex;justify-content:space-between;align-items:baseline;margin:10px 2px 0}.mlab b{color:var(--acc);font-size:15px}.mic{width:54px;height:54px;border-radius:16px;background:var(--chip);display:flex;align-items:center;justify-content:center;font-size:28px}.mh{font-size:22px;margin:14px 0 6px}.mchips{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}.mchips span{background:var(--chip);border-radius:999px;padding:8px 12px;font-size:14px;font-weight:600}.mchips i{font-style:normal;color:var(--mute,#8a8794);align-self:center}.mnav{display:flex;gap:10px;margin:14px 0 20px}.mnav .btn{flex:1;margin:0}.mnav .p{flex:2}";document.head.appendChild(st)})();
+(function(){var st=document.createElement("style");st.textContent=".mprog{display:flex;gap:6px;margin:12px 0 0}.mprog button{flex:1;height:8px;border-radius:4px;background:rgba(120,120,130,.25);border:0;padding:0}.mprog button.on{background:var(--acc)}.mlab{display:flex;justify-content:space-between;align-items:baseline;margin:10px 2px 0}.mlab b{color:var(--acc);font-size:15px}.mic{width:54px;height:54px;border-radius:16px;background:var(--chip);display:flex;align-items:center;justify-content:center;font-size:28px}.mh{font-size:22px;margin:14px 0 6px}.mchips{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}.mchips span{background:var(--chip);border-radius:999px;padding:8px 12px;font-size:14px;font-weight:600}.mchips i{font-style:normal;color:var(--mute,#8a8794);align-self:center}.mnav{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;gap:10px;padding:12px 16px calc(14px + env(safe-area-inset-bottom));background:linear-gradient(rgba(0,0,0,0),var(--bg) 35%)}.mnav .btn{flex:1;margin:0}.mnav .p{flex:2}.gchips{display:flex;flex-wrap:wrap;gap:6px 4px;align-items:center;margin-top:14px}.gchips i{font-style:normal;color:var(--mute,#8a8794)}.gchips .gc{background:var(--chip);color:inherit;border:2px solid transparent;border-radius:999px;padding:7px 12px;font:inherit;font-size:14px;font-weight:600}.gchips button.gc{cursor:pointer}.gchips .gc.sel{background:var(--acc);color:#fff}.gpic{margin-top:12px;border-radius:14px;overflow:hidden;position:relative;background:#000;line-height:0}.gpic img{width:100%;display:block}.gring{position:absolute;width:44px;height:44px;border-radius:50%;border:3px solid #ffd43b;box-shadow:0 0 0 6px rgba(255,212,59,.3);transform:translate(-50%,-50%);pointer-events:none}.ghand{position:absolute;font-size:34px;line-height:1;transform:translate(-30%,-8%);filter:drop-shadow(0 2px 3px rgba(0,0,0,.5));pointer-events:none}.gcap{font-size:13px;font-weight:600;margin-top:8px}.gok{border:2px solid #2f9e6b;border-radius:16px;padding:12px 14px;margin-top:14px;font-weight:700}";document.head.appendChild(st)})();
 document.addEventListener("change",function(e){if(e.target&&e.target.id==="mmo2")MS.months=+e.target.value});
 document.addEventListener("click",function(e){var a=e.target&&e.target.closest&&e.target.closest("[data-limp]");if(!a)return;e.preventDefault();go("track");S.trkTab="sms";render();window.scrollTo(0,0);try{quiet(loadSc())}catch(x){}});
 document.addEventListener("click",async function(e){var b=e.target&&e.target.closest&&e.target.closest("[data-lsmsperm]");if(!b)return;b.disabled=true;
@@ -444,6 +444,25 @@ document.addEventListener("click",async function(e){var b=e.target&&e.target.clo
     else if(a==="off"){if(!confirm("Turn off email tracking? Then delete the project in script.google.com too."))return;await GWL.mailOff();MS.st=null;render()}
   }catch(x){b.disabled=false;showErr(x&&x.message||String(x))}});
 GWL.newId=uid;GWL.db=function(){return DB};GWL.swapDb=function(d){var o=DB;DB=d;return o};GWL.blankDb=blank;GWL.files={write:fwrite,writeB64:fwriteB64,read:fread,del:fdelete};GWL.prep=prep;GWL.FILES=FILES;GWL.T=T;GWL.flush=flush;
+/* guide steps: short steps with a progress bar, chips joined by ›, and a small picture under the chips (tap a chip to see where to tap) */
+var GST={},GCH={},GBACK={voice:"set",sms:"track"};
+var GPOS={"settings":[62.3,49.9],"access":[30.3,49.9],"touch":[24.3,49.9],"backtap":[17,49.9],"double":[19.1,49.9],"voice_pick":[30.2,50],"lib":[50,68.5],"newauto":[50,49.9],"message":[27.1,49.9],"contains":[84.5,49.9],"runimm":[24.2,49.9],"next":[87.1,49.9],"pick":[67,49.9]};
+/* list: [label, picture|"" , caption] ; a chip without a picture is plain text */
+function gChips(key,list){var cur=GCH[key]||0;if(!list[cur]||!list[cur][1])cur=0;
+  var h='<div class="gchips">'+list.map(function(c,i){return (i?'<i>›</i>':'')+(c[1]?'<button class="gc'+(i===cur?' sel':'')+'" data-gchip="'+key+'|'+i+'">'+c[0]+'</button>':'<span class="gc">'+c[0]+'</span>')}).join('')+'</div>',c=list[cur];
+  if(c&&c[1]){var p=GPOS[c[1]]||[50,50];h+='<div class="gpic"><img src="guide/'+c[1]+'.jpg" alt=""><div class="gring" style="left:'+p[0]+'%;top:'+p[1]+'%"></div><div class="ghand" style="left:'+p[0]+'%;top:'+p[1]+'%">👆</div></div><div class="gcap">'+c[2]+'</div>'}
+  return h}
+function gSteps(key,names,bodies,lastLabel){var n=Math.max(0,Math.min(names.length-1,GST[key]||0)),last=n===names.length-1;
+  return '<div class="mprog">'+names.map(function(_,i){return '<button data-gstep="'+key+'|'+i+'" aria-label="Step '+(i+1)+'"'+(i<=n?' class="on"':'')+'></button>'}).join('')+'</div>'+
+    '<div class="mlab"><b>Step '+(n+1)+' of '+names.length+'</b><span class="mute">'+names[n]+'</span></div><div class="card" style="padding:20px 18px">'+bodies[n]+'</div>'+
+    '<div class="mnav"><button class="btn ghost" data-gstep="'+key+'|prev"'+(n?'':' disabled style="opacity:.4"')+'>‹ Back</button><button class="btn p" data-gstep="'+key+'|next">'+(last?(lastLabel||"Done"):"Next ›")+'</button></div>'}
+function gHead(ic,t,sub){return '<div class="mic">'+ic+'</div><h3 class="mh">'+t+'</h3>'+(sub?'<div class="mute">'+sub+'</div>':'')}
+document.addEventListener("click",function(e){var c=e.target&&e.target.closest&&e.target.closest("[data-gchip]");if(c){var a=c.getAttribute("data-gchip").split("|");GCH[a[0]]=+a[1];render();return}
+  var b=e.target&&e.target.closest&&e.target.closest("[data-gstep]");if(!b)return;var q=b.getAttribute("data-gstep").split("|"),key=q[0],k=q[1],n=GST[key]||0,len=(window.GSTLEN&&GSTLEN[key])||4;
+  if(k==="prev")GST[key]=Math.max(0,n-1);
+  else if(k==="next"){if(n>=len-1){GST[key]=0;GCH[key]=0;go(GBACK[key]||"menu");return}GST[key]=n+1;GCH[key]=0}
+  else{GST[key]=+k;GCH[key]=0}
+  render();window.scrollTo(0,0)});
 /* ===== iPhone (on-phone version for iOS) =====
    iPhone apps can't read SMS. Bank SMS come in through the person's own Shortcuts automation, which runs the app's
    "Add SMS to Gharwise" action. That action keeps the SMS on this iPhone (no server); the app collects them (drain). */
@@ -472,7 +491,25 @@ GWL.ios=function(){try{return !!(window.Capacitor&&Capacitor.getPlatform&&Capaci
     var done='<p>'+(n?'✅ <b>'+n+' bank SMS</b> have come in through the automation'+(st.last?', the last one '+esc(ago(new Date(st.last).toISOString())):'')+'.':'Waiting for the first bank SMS. Send yourself a test like “Rs 10 debited from a/c XX1234” from another phone, or wait for a real one.')+'</p>'+
       (st.waiting?'<p class="note">'+st.waiting+' waiting to be added.</p>':'')+'<button class="btn" data-lios="drain">Add waiting SMS now</button>';
     return [['Turn on live SMS',live],['Add older SMS (optional)',past],['Check it works',done]]};
-  vSms=function(){if(S.smsStep>=3)S.smsStep=2;return wz("SMS tracking",smsSteps(),S.smsStep||0,"track")};
+  /* SMS tracking (iPhone): 4 short steps; the chips are tappable and show where to tap */
+  window.GSTLEN={voice:4,sms:4};
+  vSms=function(){var st=S.nsms||{},n=st.count||0,added=scAdded();
+    var openSc='<a class="btn ghost" href="shortcuts://" style="display:block;text-align:center;text-decoration:none;margin-top:14px">Open Shortcuts</a>';
+    var b0=gHead("💬","Add the bank SMS shortcut","One tap, then Add Shortcut.")+(added?'<div class="gok">✅ Shortcut added</div><a href="#" data-scx class="note" style="color:var(--acc);display:block;margin-top:10px">Add again</a>':scBtn("Add shortcut").replace('style="','style="margin-top:18px;'));
+    var b1=gHead("⚙️","Make the automation","Starts by itself when a bank SMS arrives.")+openSc+gChips("sms1",[["Automation","lib","Open the Automation tab"],["New Automation","newauto","Tap New Automation"],["Message","message","Tap Message"],["Message Contains","contains","Tap Choose, then type Rs"],["Run Immediately","runimm","Pick Run Immediately"],["Next","next","Tap Next"],["Gharwise SMS","pick","Pick the Gharwise SMS shortcut"]]);
+    var b2=gHead("🔁","Do it again for INR","Some banks write INR, not Rs.")+gChips("sms2",[["Message Contains","contains","Type INR this time"],["Run Immediately","runimm","Pick Run Immediately"],["Gharwise SMS","pick","Pick Gharwise SMS again"]]);
+    var b3=n?gHead("✅","Live tracking is on",n+" bank SMS saved"+(st.last?" · last "+esc(ago(new Date(st.last).toISOString())):""))+'<button class="btn" data-lios="drain" style="margin-top:16px">Add waiting SMS now</button><button class="btn ghost" data-limp style="margin-top:10px">Import older SMS</button>'
+      :gHead("🧪","Check it works","Send yourself “Rs 10 debited from a/c XX1234” from another phone.")+'<button class="btn" data-lios="drain" style="margin-top:16px">Check now</button><div class="note" style="margin-top:14px;font-weight:700">Waiting for the first bank SMS…</div>';
+    return topbar("SMS tracking","track")+gSteps("sms",["Add the shortcut","Make the automation","Repeat for INR","Check it works"],[b0,b1,b2,b3])};
+  /* Voice expense (iPhone): 4 short steps. "Voice is on" once a real voice expense has come in. */
+  var VOICE_LINK="https://www.icloud.com/shortcuts/13d1373c661a4dc5a39b553d9218bc0f";
+  window.vVoice=function(){var vOK=ls("gwvsc")==="1",last=null;try{last=JSON.parse(ls("gwvlast")||"null")}catch(x){}
+    var b0=gHead("🎤","Add the voice shortcut","One tap, then Add Shortcut.")+(vOK?'<div class="gok">✅ Voice shortcut added</div><a href="#" data-vcx class="note" style="color:var(--acc);display:block;margin-top:10px">Add again</a>':'<a class="btn" data-vca href="'+esc(VOICE_LINK)+'" target="_blank" rel="noopener" style="display:block;text-align:center;text-decoration:none;margin-top:18px">Add voice shortcut</a>');
+    var b1=gHead("▶️","Run it once","Allow when asked. Then say “Grocery 120”.")+'<a class="btn" href="shortcuts://" style="display:block;text-align:center;text-decoration:none;margin-top:18px">Open Shortcuts</a>'+gChips("voice1",[["Tap ▶","",""],["Allow","",""],["Say “Grocery 120”","",""]]);
+    var b2=gHead("👆","Double-tap the back","Optional. Start voice without opening anything.")+gChips("voice2",[["Settings","settings","Open Settings"],["Accessibility","access","Tap Accessibility"],["Touch","touch","Tap Touch"],["Back Tap","backtap","Scroll down, tap Back Tap"],["Double Tap","double","Tap Double Tap"],["Gharwise Voice","voice_pick","Pick Gharwise Voice"]])+'<button class="btn ghost" data-gstep="voice|next" style="margin-top:14px">Skip this step</button>';
+    var b3=last?gHead("✅","Voice is on","Last expense: "+esc(last.t)+" · "+esc(ago(new Date(last.ms).toISOString())))
+      :gHead("🗣️","Ask Siri","Hands-free, even from the lock screen.")+'<div class="gchips"><span class="gc">“Hey Siri, Gharwise Voice”</span></div><div class="gchips"><span class="gc">“Hey Siri, add expense in Gharwise”</span></div><div class="note" style="margin-top:14px;font-weight:700">Waiting for your first voice expense…</div><div class="note">Say one, then open Gharwise.</div>';
+    return topbar("Voice expense","set")+gSteps("voice",["Add the shortcut","Run it once","Double-tap the back","Ask Siri"],[b0,b1,b2,b3])};
   /* the new "Gharwise SMS" shortcut (iCloud link). In Shortcuts it must be named exactly "Gharwise SMS": the app opens it by that name. A new flag, so it is added again once. */
   SMS_SHORTCUT_LINK="https://www.icloud.com/shortcuts/ac4190c19e4441869b3b1f924ce8f905";SMS_IMPORT_LINK=SMS_SHORTCUT_LINK;
   scAdded=function(){return ls("gwsc2")==="1"};scMark=function(v){ls("gwsc2",v?"1":"")};
@@ -504,10 +541,10 @@ GWL.ios=function(){try{return !!(window.Capacitor&&Capacitor.getPlatform&&Capaci
   /* Settings: voice = Siri / Back Tap / widget, all on this iPhone */
   var _nc=nativeCard;nativeCard=function(){var h=_nc.apply(this,arguments),i=h.indexOf(sxHead('🎤','Add an expense by voice','Say it, it is saved'));if(i<0)return h;
     var j=h.lastIndexOf('</div></div>');var VL="https://www.icloud.com/shortcuts/13d1373c661a4dc5a39b553d9218bc0f",vOK=ls("gwvsc")==="1";
+    var vl=null;try{vl=JSON.parse(ls("gwvlast")||"null")}catch(x){}
     var card='<div class="card" style="text-align:center;padding:24px 16px"><div style="font-size:48px;line-height:1">🎤</div>'+
       '<div style="font-size:20px;font-weight:700;margin:10px 0 2px">Add expense by voice</div><div class="mute" style="margin-bottom:18px">Say “Grocery 120”. Done.</div>'+
-      (vOK?'<div class="in" style="font-weight:600;margin-bottom:8px">✅ Voice shortcut added</div><a href="#" data-vcx class="note" style="color:var(--acc)">Add again</a>'
-          :'<a class="btn" data-vca style="display:block;text-align:center;text-decoration:none" href="'+esc(VL)+'" target="_blank" rel="noopener">Add voice shortcut</a>')+'</div>';
+      (vl?'<div class="in" style="font-weight:600;margin-bottom:10px">✅ Voice is on</div><button class="btn ghost" data-go="voice">Show steps</button>':'<button class="btn" data-go="voice">Set up voice</button>')+'</div>';
     return h.slice(0,h.lastIndexOf('<div class="card">',i))+card+h.slice(j+12)};
 }})();
 })();
