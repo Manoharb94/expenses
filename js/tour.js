@@ -39,6 +39,7 @@ var STOURS={
   {sel:"@sxh:0",n:1,if:function(){return nativeApp()},t:"Speak to add an expense",d:function(){return phoneOS()==="ios"?VOICE_IOS:VOICE_AND}},
   {sel:"#tourgo",t:"Replay the tours",d:"Tap here any time to see these tips again."}]};
 function stEl(sel){if(!sel)return null;try{
+  if(sel==="@sxh:0"){var vc=document.getElementById("voicecard");if(vc)return vc}
   var m=/^@msec:(\d+)$/.exec(sel);if(m){var e=document.querySelectorAll("#app .msec")[+m[1]];return e&&e.nextElementSibling}
   m=/^@sxh:(\d+)$/.exec(sel);if(m){var x=document.querySelectorAll("#app .sxh")[+m[1]];return x&&x.closest(".card")}
   if(sel.charAt(0)==="^"){var y=document.querySelector(sel.slice(1));return y&&(y.closest(".dc,.card")||y)}
