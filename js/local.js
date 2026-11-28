@@ -690,7 +690,7 @@ document.addEventListener("click",function(e){var b=e.target&&e.target.closest&&
   vSms=function(){var st=S.nsms||{},n=st.count||0,added=scAdded();
     var openSc='<a class="btn ghost" href="shortcuts://" style="display:block;text-align:center;text-decoration:none;margin-top:14px">Open Shortcuts</a>';
     var b0=gHead("💬","Add the bank SMS shortcut","One tap, then Add Shortcut.")+(added?'<div class="gok">✅ Shortcut added</div><a href="#" data-scx class="note" style="color:var(--acc);display:block;margin-top:10px">Add again</a>':scBtn("Add shortcut").replace('style="','style="margin-top:18px;'));
-    var bR=gHead("▶️","Run it once","Allow when asked.")+playBtn("Gharwise SMS",18)+gChips("sms0",[["Tap ▶","",""],["Allow","",""]]);
+    var bR=gHead("▶️","Run it once","Allow when asked.")+playBtn(SMS_SHORTCUT_NAME,18)+gChips("sms0",[["Tap ▶","",""],["Allow","",""]]);
     var nf=newFlow();
     var sw='<div class="gsw"><button data-iosv="new"'+(nf?' class="sel"':'')+'>iOS 17 or Newer</button><button data-iosv="old"'+(nf?'':' class="sel"')+'>iOS 16 or Older</button></div>';
     var b1=sw+gHead("⚙️","Make the automation","Starts by itself when a bank SMS arrives.")+openSc+gChips("sms1",[["Automation","lib","Open the Automation tab"],["New Automation","newauto","Tap New Automation"],["Message","message","Tap Message"],["Message Contains","contains","Tap Choose, press the space bar once, then tap Done"],["Run Immediately","runimm","Pick Run Immediately"],["Next","next","Tap Next"],["Gharwise SMS","pick","Pick the Gharwise SMS shortcut"]]);
@@ -712,9 +712,9 @@ document.addEventListener("click",function(e){var b=e.target&&e.target.closest&&
     var b3=gHead("🗣️","Ask Siri","Hands-free, even from the lock screen.")+'<div class="vchat"><div class="vr me"><div class="vw">You</div><div class="vm">“Hey Siri, add expense in Gharwise”</div></div><div class="vr si"><div class="vw">Siri</div><div class="vm">What did you spend?</div></div><div class="vr me"><div class="vw">You</div><div class="vm">“Grocery 150”</div></div><div class="vr si"><div class="vw">Siri</div><div class="vm vok">✓ Saved · Groceries ₹150</div></div></div><div class="note" style="margin-top:12px">Say the amount with the item. It shows in Gharwise when you open it.</div>';
     var b4=(last?'<div class="gok" style="margin:0 0 14px">✅ Voice is on · '+lastTxt+'</div>':'<div class="note" style="margin:0 0 14px;font-weight:700">Waiting for your first voice expense…</div>')+'<h3 class="mh" style="margin:0 0 6px">Voice usage guide</h3><div class="vboth"><span>🗣️ Siri</span><span>👆 Back Tap</span><span>same words for both</span></div>'+tab+'<div class="note" style="margin-top:12px">Numbers can be words too: “one thousand”, “2k”, “one lakh”.</div>';
     return topbar("Voice expense","set")+gSteps("voice",["Add the shortcut","Run it once","Double-tap the back","Ask Siri","Usage guide"],[b0,b1,b2,b3,b4])};
-  /* the new "Gharwise SMS" shortcut (iCloud link). In Shortcuts it must be named exactly "Gharwise SMS": the app opens it by that name. A new flag, so it is added again once. */
-  SMS_SHORTCUT_LINK="https://www.icloud.com/shortcuts/ac4190c19e4441869b3b1f924ce8f905";SMS_IMPORT_LINK=SMS_SHORTCUT_LINK;
-  scAdded=function(){return ls("gwsc2")==="1"};scMark=function(v){ls("gwsc2",v?"1":"")};
+  /* the new "Gharwise SMS" shortcut (iCloud link). In Shortcuts it must be named exactly "Gharwise Old SMS": the app opens it by that name. A new flag, so it is added again once. */
+  SMS_SHORTCUT_LINK="https://www.icloud.com/shortcuts/e7537d36c7724dc1965dc789edf96e43";SMS_SHORTCUT_NAME="Gharwise Old SMS";SMS_IMPORT_NAME=SMS_SHORTCUT_NAME;SMS_IMPORT_LINK=SMS_SHORTCUT_LINK;
+  scAdded=function(){return ls("gwsc3")==="1"};scMark=function(v){ls("gwsc3",v?"1":"")};
   /* Import SMS (iPhone): add the shortcut first (button on the Live Tracking tab), then pick a start date in the last 3 months. */
   vImportSms=function(){var h='<h2 style="margin:14px 0 12px">Import SMS</h2>';
     if(!scAdded())return h+'<button class="btn" data-trk="live">Add shortcut first</button>';
