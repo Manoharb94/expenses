@@ -160,7 +160,14 @@ async function pull(){
   return changed}
 var syncing=null;
 async function sync(){if(!fam()||!SESS||fam().off)return;if(syncing)return syncing;
-  syncing=(async function(){try{await push();var n=await pull();GWL.lastSync=Date.now();if(n&&typeof load==="function"&&S.code){await GWL.flush();await load(true)}}catch(e){if(/not in a family/i.test(e&&e.message)){var f0=fam();if(f0&&f0.off!=="none"){f0.off="none";GWL.mark("data",true)}}}finally{syncing=null}})();
+  syncing=(async function(){var n=0,pe=null,qe=null;try{
+      try{await push()}catch(e){pe=e}
+      try{n=await pull()}catch(e){qe=e}
+      var er=pe||qe;GWL.syncErr=er?String(er&&er.message||er).slice(0,160):"";
+      if(er&&/not in a family/i.test(er.message||"")){var f0=fam();if(f0&&f0.off!=="none"){f0.off="none";GWL.mark("data",true)}}
+      if(!pe&&!qe)GWL.lastSync=Date.now();
+      if(n&&typeof load==="function"&&S.code){await GWL.flush();await load(true)}
+    }catch(e){}finally{syncing=null}})();
   return syncing}
 GWL.sync=sync;
 var stimer=null;GWL.syncSoon=function(){if(!fam())return;clearTimeout(stimer);stimer=setTimeout(sync,4000)};

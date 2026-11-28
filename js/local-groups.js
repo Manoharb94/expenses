@@ -83,7 +83,7 @@ GWL.inviteRespond=async function(id,accept){need();var inv=inbox().filter(functi
     setInbox(inbox().filter(function(x){return x.id!==id}));await GWL.flush();try{await GWL.sync()}catch(e){}return null}
   await srv("lm_invite_respond",{p_id:id,p_accept:false});setInbox(inbox().filter(function(x){return x.id!==id}));return null};
 
-var gsync=null,lastInbox=0;
+var gsync=null,lastInbox=0,lastQuick=0;
 GWL.groupsSync=function(full){if(GWL.testing&&!GWL.inDev)return Promise.resolve(false);if(!GWL.loggedIn()||!D()||!D().profile)return Promise.resolve(false);if(gsync)return gsync;
   gsync=(async function(){var ch=false;
     try{await publishKey()}catch(e){}
@@ -92,6 +92,7 @@ GWL.groupsSync=function(full){if(GWL.testing&&!GWL.inDev)return Promise.resolve(
       try{await resealSent()}catch(e){}
       if(D().family&&!GWL.testing&&GWL.famInfo)try{await GWL.famInfo()}catch(e){}
       if(D().family)try{var p=await srv("lm_family_pending",{});if(JSON.stringify(p)!==JSON.stringify(D().family.invites||[])){D().family.invites=p;GWL.mark("data",true);ch=true}}catch(e){}}
+    else if(Date.now()-lastQuick>12000){lastQuick=Date.now();try{if(await fetchInbox())ch=true}catch(e){}}   /* a new invite is noticed within about 15 seconds while the app is open */
     return ch})();
   return gsync.then(function(ch){gsync=null;try{if(!GWL.testing&&GWL.invitePrompt)GWL.invitePrompt()}catch(e){}return ch},function(e){gsync=null;return false})};
 
@@ -122,6 +123,6 @@ GWL.pushSetup=async function(){var P=pushP();if(!P)return "not in this build";GW
 
 /* ---------- when it runs ---------- */
 document.addEventListener("visibilitychange",function(){if(!document.hidden&&!GWL.testing&&GWL.loggedIn()&&D()&&D().profile&&S.code)GWL.groupsSync(true)});
-setInterval(function(){if(document.hidden||GWL.testing||!GWL.loggedIn()||!S.code)return;GWL.groupsSync(false)},45000);
+setInterval(function(){if(document.hidden||GWL.testing||!GWL.loggedIn()||!S.code)return;GWL.groupsSync(false)},15000);
 window.addEventListener("online",function(){if(GWL.loggedIn()&&S.code&&!GWL.testing)GWL.groupsSync(true)});
 })();
