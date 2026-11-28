@@ -654,17 +654,27 @@ GWL.ios=function(){try{return !!(window.Capacitor&&Capacitor.getPlatform&&Capaci
       (st.waiting?'<p class="note">'+st.waiting+' waiting to be added.</p>':'')+'<button class="btn" data-lios="drain">Add waiting SMS now</button>';
     return [['Turn on live SMS',live],['Add older SMS (optional)',past],['Check it works',done]]};
   /* SMS tracking (iPhone): 4 short steps; the chips are tappable and show where to tap */
-  window.GSTLEN={voice:5,sms:4};
+  /* iOS 17+ builds the automation in a new editor, so "Make the automation" has two versions: iOS 17 or newer (6 pictures) and iOS 16 or older (the first one). Picked from the phone's iOS version; the person can switch. */
+var iosMajor=function(){var m=/OS (\d+)[_.]/.exec(navigator.userAgent||"");return m?+m[1]:17};
+var newFlow=function(){return S.iosv?S.iosv==="new":iosMajor()>=17};
+window.GSTLEN={voice:5,get sms(){return newFlow()?5:4}};
+GPOS.n_plus=[50,59];GPOS.n_edit=[88,49.5];GPOS.n_auto=[22.5,49.9];GPOS.n_msg=[28,49.9];GPOS.n_exp=[27.7,49.9];GPOS.n_tog=[84.3,36.6];GPOS.n_conf=[84.3,63.2];GPOS.n_sender=[17.2,49.9];GPOS.n_text=[57,49.9];GPOS.n_search=[39.9,49.9];GPOS.n_msgvar=[39.6,49.9];GPOS.n_date=[33.5,49.9];GPOS.n_play=[83.9,62.6];
+(function(){var st=document.createElement("style");st.textContent=".gsw{display:flex;gap:4px;background:var(--chip);border-radius:999px;padding:3px;margin:0 0 14px}.gsw button{flex:1;border:0;background:transparent;color:inherit;font:inherit;font-size:13px;font-weight:700;border-radius:999px;padding:8px 6px}.gsw button.sel{background:var(--acc);color:#fff}";document.head.appendChild(st)})();
+document.addEventListener("click",function(e){var b=e.target&&e.target.closest&&e.target.closest("[data-iosv]");if(!b)return;S.iosv=b.getAttribute("data-iosv");GST.sms=2;GCH.sms1=0;GCH.sms2=0;GCH.sms3=0;render()});
   var playBtn=function(name,m){return '<a class="btn ghost" href="shortcuts://run-shortcut?name='+encodeURIComponent(name)+'" style="display:block;text-align:center;text-decoration:none;margin-top:'+(m||12)+'px">▶ Play shortcut</a><div class="note" style="margin-top:8px">Added it? Tap ▶ once and tap <b>Allow</b> when asked.</div>'};
 
   vSms=function(){var st=S.nsms||{},n=st.count||0,added=scAdded();
     var openSc='<a class="btn ghost" href="shortcuts://" style="display:block;text-align:center;text-decoration:none;margin-top:14px">Open Shortcuts</a>';
     var b0=gHead("💬","Add the bank SMS shortcut","One tap, then Add Shortcut.")+(added?'<div class="gok">✅ Shortcut added</div><a href="#" data-scx class="note" style="color:var(--acc);display:block;margin-top:10px">Add again</a>':scBtn("Add shortcut").replace('style="','style="margin-top:18px;'));
     var bR=gHead("▶️","Run it once","Allow when asked.")+playBtn("Gharwise SMS",18)+gChips("sms0",[["Tap ▶","",""],["Allow","",""]]);
-    var b1=gHead("⚙️","Make the automation","Starts by itself when a bank SMS arrives.")+openSc+gChips("sms1",[["Automation","lib","Open the Automation tab"],["New Automation","newauto","Tap New Automation"],["Message","message","Tap Message"],["Message Contains","contains","Tap Choose, press the space bar once, then tap Done"],["Run Immediately","runimm","Pick Run Immediately"],["Next","next","Tap Next"],["Gharwise SMS","pick","Pick the Gharwise SMS shortcut"]]);
+    var nf=newFlow();
+    var sw='<div class="gsw"><button data-iosv="new"'+(nf?' class="sel"':'')+'>iOS 17 or Newer</button><button data-iosv="old"'+(nf?'':' class="sel"')+'>iOS 16 or Older</button></div>';
+    var b1=sw+gHead("⚙️","Make the automation","Starts by itself when a bank SMS arrives.")+openSc+gChips("sms1",[["Automation","lib","Open the Automation tab"],["New Automation","newauto","Tap New Automation"],["Message","message","Tap Message"],["Message Contains","contains","Tap Choose, press the space bar once, then tap Done"],["Run Immediately","runimm","Pick Run Immediately"],["Next","next","Tap Next"],["Gharwise SMS","pick","Pick the Gharwise SMS shortcut"]]);
+    var n1=sw+gHead("⚙️","Make the automation","Starts by itself when a bank SMS arrives.")+openSc+gChips("sms2",[["Add +","n_plus","In Shortcuts, tap + to add a new shortcut"],["Edit","n_edit","Tap Edit"],["Automation","n_auto","Tap Automation at the bottom"],["Message","n_msg","Tap Message"],["Expand ›","n_exp","Tap the › arrow to open the settings"],["Automation On","n_tog","Switch Automation on"],["Confirm Off","n_conf","Switch Confirm Before Run off, so it runs by itself"]]);
+    var n2=sw+gHead("🔗","Connect the shortcut","Tells the automation what to do with each bank SMS.")+gChips("sms3",[["Sender → Message","n_sender","Tap Sender, then choose Message"],["Type a Space","n_text","Tap the empty box after “contains” and type one space"],["Add SMS to Gharwise","n_search","Search Add SMS to Gharwise and tap it"],["Message Field","n_msgvar","Tap the first Message and choose Message"],["Current Date","n_date","Tap Date Received and choose Current Date"],["Play ▶","n_play","Tap ▶ once and tap Allow"]]);
     var b2=n?gHead("✅","Live tracking is on",n+" bank SMS saved"+(st.last?" · last "+esc(ago(new Date(st.last).toISOString())):""))+'<button class="btn ghost" data-limp style="margin-top:16px">Import older SMS</button>'
       :gHead("🧪","Check it works","Send yourself “Rs 10 debited from a/c XX1234” from another phone, then open Gharwise.")+'<div class="note" style="margin-top:14px;font-weight:700">Waiting for the first bank SMS…</div>';
-    return topbar("SMS tracking","track")+gSteps("sms",["Add the shortcut","Run it once","Make the automation","Check it works"],[b0,bR,b1,b2])};
+    return topbar("SMS tracking","track")+(nf?gSteps("sms",["Add the shortcut","Run it once","Make the automation","Connect the shortcut","Check it works"],[b0,bR,n1,n2,b2]):gSteps("sms",["Add the shortcut","Run it once","Make the automation","Check it works"],[b0,bR,b1,b2]))};
   /* Voice expense (iPhone): 4 short steps. "Voice is on" once a real voice expense has come in. */
   var VOICE_LINK="https://www.icloud.com/shortcuts/13d1373c661a4dc5a39b553d9218bc0f";
   window.vVoice=function(){var vOK=ls("gwvsc")==="1",last=null;try{last=JSON.parse(ls("gwvlast")||"null")}catch(x){}
