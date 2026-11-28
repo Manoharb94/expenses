@@ -55,7 +55,7 @@ async function fileGone(){var P=LF();if(!P||!P.listFiles||!P.readFile||!GWL.fold
   catch(e){return false}}
 async function resetLocal(){try{var P=smsP();if(P&&P.disable)await P.disable()}catch(e){}
   try{await idbClear()}catch(e){}
-  var keep={theme:1,accent:1,lang:1};try{Object.keys(localStorage).forEach(function(k){if(!keep[k])localStorage.removeItem(k)})}catch(e){}
+  var keep={theme:1,accent:1,lang:1,gwsess:1};try{Object.keys(localStorage).forEach(function(k){if(!keep[k])localStorage.removeItem(k)})}catch(e){}
   try{localStorage.setItem("gwresetmsg","1")}catch(e){}
   DB=blank();location.reload()}
 GWL.fileGone=fileGone;
@@ -367,7 +367,7 @@ GWL.start=async function(){try{window.brandLoader(true,"")}catch(e){}try{await s
 async function start0(){
   try{DB=await idbGet("db")}catch(e){DB=null}if(!DB||!DB.t)DB=blank();TABLES.forEach(function(t){if(!DB.t[t])DB.t[t]=[]});
   await folderStatus();
-  if(!DB.profile){if(ls("gwresetmsg")==="1"){ls("gwresetmsg","");setTimeout(function(){toast("Your data file was deleted, so Gharwise was reset.")},900)}S.view="lsetup";SU.step=2;SU.mode="login";render();return}
+  if(!DB.profile){if(ls("gwresetmsg")==="1"){ls("gwresetmsg","");setTimeout(function(){toast("Your data file was deleted, so Gharwise was reset.")},900)}S.view="lsetup";SU.step=2;SU.mode="login";try{if(GWL.loggedIn()&&!SU.phone)SU.phone=String(GWL.phone()).replace(/\D/g,"").replace(/^91(?=\d{10}$)/,"")}catch(e){}render();return}
   if(!GWL.folder.ok){S.view="lfolder";render();return}
   if(await fileGone()){await resetLocal();return}
   if(ls("gwout")==="1"&&!(GWL.loggedIn&&GWL.loggedIn())){S.name=me();S.view="llogin";SU.mode="login";SU.step=2;render();return}
