@@ -43,6 +43,23 @@ async function fread(name){var P=LF();if(!P){var v=null;try{v=localStorage.getIt
   var r=await P.readFile({name:name});return r&&r.exists?r.text:null}
 async function fdelete(name){var P=LF();if(!P){try{localStorage.removeItem("gwfile:"+name)}catch(e){}return}if(P.deleteFile)try{await P.deleteFile({name:name})}catch(e){}}
 
+/* If the person deletes the data file from the folder (Files app on iPhone, file manager on Android), the app resets too.
+   Only a file that was there before and is now confirmed missing counts. A folder that cannot be reached never resets anything. */
+async function fileGone(){var P=LF();if(!P||!P.listFiles||!P.readFile||!GWL.folder.ok||!DB||!DB.profile)return false;
+  async function listed(){var r=await P.listFiles();return (r&&r.files||[]).some(function(f){return f&&f.name===FILES.data})}
+  try{if(await listed()){ls("gwfilewr","1");return false}
+    if(ls("gwfilewr")!=="1")return false;
+    await new Promise(function(r){setTimeout(r,700)});
+    if(await listed())return false;
+    var r2=await P.readFile({name:FILES.data});return !!(r2&&r2.exists===false)}
+  catch(e){return false}}
+async function resetLocal(){try{var P=smsP();if(P&&P.disable)await P.disable()}catch(e){}
+  try{await idbClear()}catch(e){}
+  var keep={theme:1,accent:1,lang:1};try{Object.keys(localStorage).forEach(function(k){if(!keep[k])localStorage.removeItem(k)})}catch(e){}
+  try{localStorage.setItem("gwresetmsg","1")}catch(e){}
+  DB=blank();location.reload()}
+GWL.fileGone=fileGone;
+
 var dirty={data:false,bills:false,family:false},stimer=null,saving=null;
 function mark(kind,quiet){dirty[kind||"data"]=true;dirty.data=true;if(GWL.testing)return;clearTimeout(stimer);stimer=setTimeout(flush,1200);if(!quiet&&kind!=="family"&&GWL.syncSoon)GWL.syncSoon()}
 GWL.mark=mark;
@@ -57,8 +74,9 @@ async function flush(){
     DB.saved_at=now();
     try{await idbPut("db",DB)}catch(e){}
     if(!GWL.folder.ok)return;
+    if(await fileGone()){await resetLocal();return}
     try{
-      if(d.data)await fwrite(FILES.data,JSON.stringify(mainCopy()));
+      if(d.data){await fwrite(FILES.data,JSON.stringify(mainCopy()));try{ls("gwfilewr","1")}catch(e){}}
       if(d.bills)await fwrite(FILES.bills,JSON.stringify({v:1,saved_at:now(),bills:T("txn_bills")}));
       if(d.family)await fwrite(FILES.family,JSON.stringify({v:1,saved_at:now(),family_txns:T("family_txns")}));
       GWL.lastBackup=Date.now();
@@ -341,11 +359,13 @@ function startApp(){APPON=true;S.auth={access:"local",refresh:"",exp:4e9,email:"
 GWL.start=async function(){
   try{DB=await idbGet("db")}catch(e){DB=null}if(!DB||!DB.t)DB=blank();TABLES.forEach(function(t){if(!DB.t[t])DB.t[t]=[]});
   await folderStatus();
-  if(!DB.profile){S.view="lsetup";SU.step=1;render();return}
+  if(!DB.profile){if(ls("gwresetmsg")==="1"){ls("gwresetmsg","");setTimeout(function(){toast("Your data file was deleted, so Gharwise was reset.")},900)}S.view="lsetup";SU.step=1;render();return}
   if(!GWL.folder.ok){S.view="lfolder";render();return}
+  if(await fileGone()){await resetLocal();return}
   if(ls("gwout")==="1"&&!(GWL.loggedIn&&GWL.loggedIn())){S.name=me();S.view="llogin";SU.mode="login";SU.step=2;render();return}
   startApp()};
 document.addEventListener("visibilitychange",function(){if(!document.hidden&&DB&&DB.profile)setTimeout(drain,400)});
+document.addEventListener("visibilitychange",function(){if(document.hidden||!DB||!DB.profile)return;setTimeout(async function(){try{await folderStatus();if(!saving&&await fileGone())await resetLocal()}catch(e){}},600)});
 setInterval(function(){if(!document.hidden&&DB&&DB.profile)drain()},15000);
 
 /* ---------- screens that change in the on-phone version ---------- */
@@ -435,7 +455,7 @@ document.addEventListener("click",async function(e){var t=e.target&&e.target.clo
       try{await flush()}catch(e){}GWL.logout();ls("gwout","1");var lb=document.getElementById("lgbar");if(lb)lb.remove();
       S.view="llogin";SU.mode="login";SU.step=2;SU.phone="";SU.err="";render();toast("Logged out")}
     else if(a==="login"){if(GWL.loggedIn()){toast("Logged in as +"+String(GWL.phone()).replace(/^\+/,""));return}S.view="llogin";SU.mode="login";SU.step=2;render()}
-    else if(a==="folder"){if(!confirm("Choose a different folder for your data? A full copy is saved there straight away."))return;var r=await pickFolder();if(r&&r.ok){dirty.data=dirty.bills=dirty.family=true;await flush();folderBar();toast("Saved to "+(r.name||"the new folder"));render()}}
+    else if(a==="folder"){if(GWL.folder&&GWL.folder.ios){toast("Your data is in the Gharwise folder in the Files app");return}if(!confirm("Choose a different folder for your data? A full copy is saved there straight away."))return;var r=await pickFolder();if(r&&r.ok){dirty.data=dirty.bills=dirty.family=true;await flush();folderBar();toast("Saved to "+(r.name||"the new folder"));render()}}
     else if(a==="erase"){if(!confirm("Delete all your Gharwise data on this phone? Payments, budgets, settings and family data are removed. This can't be undone."))return;
       var alsoFiles=confirm("Also delete the backup files in your folder ("+(GWL.folder.name||"folder")+")?\n\nOK = delete them too. Cancel = keep them, so you can restore later.");
       var alsoLogin=confirm("Also delete your login (mobile number) from Gharwise's server?\n\nOK = delete it. Cancel = keep it.");
