@@ -29,7 +29,9 @@ function parseSms(text){
   for(var i=0;i<res.length&&!amt;i++){m=res[i].exec(t);if(m)amt=num(m[1])}
   if(!amt||amt<=0)return null;
   var io=firstIdx(OUTW,t),ii=firstIdx(INW,t);
-  if(io<0&&ii<0)return null;
+  /* AutoPay / e-mandate alerts ("AutoPay (E-mandate) Success! For YouTube Txn Amt:INR149.00") have no "debited" word, but they are payments */
+  var auto=/\b(?:auto-?pay|e-?mandate)\b/i.test(t)&&/\b(?:success|successful|processed|executed)\b/i.test(t);
+  if(io<0&&ii<0&&!auto)return null;
   var type;
   if(/credited to (?:your|ur|a\/c|ac|acct|account)|received in your|deposited (?:in|to|into) your|credited in your|has been credited|is credited|was credited/i.test(t)&&!/debited (?:from|to)? ?(?:your|ur|a\/c)|has been debited|is debited|was debited/i.test(t))type="in";
   else if(/debited|spent|sent|paid|withdrawn|purchase|deducted/i.test(t)&&!/^(?:.{0,40})(?:credited|received)/i.test(t))type="out";
@@ -48,10 +50,11 @@ function parseSms(text){
     new RegExp("\\bby\\s+(?!(?:rs|inr|₹|\\d|neft|imps|rtgs|upi|a\\/c))"+W+E,"i"),
     /\binfo[:\s]+(?:upi\/)?([A-Za-z0-9 .&'_\/-]{2,40})/i,
     /([A-Za-z0-9._-]+@[A-Za-z]{2,})/];
+  if(auto){m=/\bfor\s+([A-Za-z0-9 .&'_-]{2,40}?)\s+(?:txn|amt|amount|dt|date)\b/i.exec(t);if(m){var c0=clean(m[1]);if(c0)mer=c0}}
   for(var j=0;j<P.length&&!mer;j++){m=P[j].exec(t);if(m){var c=clean(m[1]);if(c&&!/^(your|ur|a\/c|ac|acct|account|card|bank|upi)$/i.test(c)&&!/\b(a\/c|acct|account|card|your|ur)\b/i.test(c)&&!/^(neft|imps|rtgs|upi|atm)$/i.test(c))mer=c}}
   if(!mer)mer=type==="in"?"Money received":"UPI payment";
   var ref=(/(?:upi ref(?: no)?|ref(?:erence)?(?: no| number)?|refno|rrn|utr|txn id|transaction id)[:.\s#]*([A-Za-z0-9]{6,})/i.exec(t)||[])[1]||"";
-  var card=(/(?:a\/c|ac|acct|account|card)(?:\s*no\.?)?[^0-9]{0,12}[x*]*([0-9]{3,6})\b/i.exec(t)||[])[1]||"";
+  var card=(/(?:a\/c|ac|acct|account|card|\bcc)(?:\s*no\.?)?[^0-9]{0,12}[x*]*([0-9]{3,6})\b/i.exec(t)||[])[1]||"";
   return {amount:Math.round(amt*100)/100,type:type,merchant:mer,merchant_key:mkey(mer),ref:ref,card_last:card?card.slice(-4):""};
 }
 /** Reads a spoken expense like "spent 100 rs for auto" or "received 1000 from Manohar". */
