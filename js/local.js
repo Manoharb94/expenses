@@ -163,16 +163,16 @@ GWL.api=async function(path,opt){opt=opt||{};
 
 /* ---------- bank SMS and voice entries, read on the phone ---------- */
 function smsP(){try{return typeof smsPlugin==="function"?smsPlugin():null}catch(e){return null}}
-function ingestSms(items,via){via=via||"sms";var saved=0,skipped=0,bad=0,tx=T("transactions");
+function ingestSms(items,via){via=via||"sms";var saved=0,skipped=0,bad=0,smp=[],tx=T("transactions");
   var refs={},raws={},other={};tx.forEach(function(t){if(t.ref)refs[t.ref+"|"+t.amount]=1;if(t.raw){raws[t.txn_date+"|"+String(t.raw).replace(/\s+/g," ").slice(0,120)]=1;var k=t.txn_date+"|"+t.amount+"|"+t.type;other[k]=other[k]||{};other[k][t.via||"sms"]=1}});
-  (items||[]).forEach(function(it){var text=String(it.t||it.text||""),p=GWSMS.parseSms(text);if(!p){bad++;return}
+  (items||[]).forEach(function(it){var text=String(it.t||it.text||""),p=GWSMS.parseSms(text);if(!p){bad++;if(smp.length<2)smp.push(text.replace(/\s+/g," ").trim().slice(0,60));return}
     var d=it.ms?day(it.ms):(it.d&&/^\d{4}-\d{2}-\d{2}/.test(it.d)?String(it.d).slice(0,10):day());
     var rk=d+"|"+text.replace(/\s+/g," ").slice(0,120);
     if((p.ref&&refs[p.ref+"|"+p.amount])||raws[rk]){skipped++;return}
     var ok2=d+"|"+p.amount+"|"+p.type;if(other[ok2]&&Object.keys(other[ok2]).some(function(v){return v!==via})){skipped++;return}
     var r=prep("transactions",{amount:p.amount,type:p.type,merchant:p.merchant,merchant_key:p.merchant_key,txn_date:d,txn_at:it.ms?new Date(it.ms).toISOString():now(),raw:text,ref:p.ref||null,card_last:p.card_last||null,via:via});
     tx.push(r);if(p.ref)refs[p.ref+"|"+p.amount]=1;raws[rk]=1;other[ok2]=other[ok2]||{};other[ok2][via]=1;saved++});
-  if(saved)mark();return {saved:saved,skipped:skipped,bad:bad}}
+  if(saved)mark();return {saved:saved,skipped:skipped,bad:bad,samples:smp}}
 GWL.ingestSms=ingestSms;
 function ingestVoice(it){var p=GWSMS.parseVoice(it.t);if(!p)return false;
   if(it.cid&&T("transactions").some(function(t){return t.client===it.cid}))return false;
@@ -185,9 +185,9 @@ function impSummary(r,label){if(!r||!r.n)return "No SMS reached Gharwise. Check 
 GWL.impSummary=impSummary;
 var draining=false;
 async function drain(){var P=smsP();if(GWL.testing||draining||!P||!P.takeInbox||!DB||!DB.profile)return;draining=true;
-  try{var r=await P.takeInbox(),items=r&&r.items||[];if(!items.length){GWL.lastImport={n:0,at:Date.now()};return}
+  try{var r=await P.takeInbox(),items=r&&r.items||[];if(!items.length)return;
     var sms=items.filter(function(i){return i.k==="sms"}),voice=items.filter(function(i){return i.k==="voice"}),undo=items.filter(function(i){return i.k==="undo"});
-    var g=ingestSms(sms),v=0;if(sms.length){GWL.lastImport={n:sms.length,saved:g.saved,skipped:g.skipped,bad:g.bad,at:Date.now()};try{ls("gwlastimp",JSON.stringify(GWL.lastImport))}catch(x){}}voice.forEach(function(i){if(ingestVoice(i)){v++;try{var pv=GWSMS.parseVoice(i.t)||{};ls("gwvlast",JSON.stringify({ms:i.ms||Date.now(),t:String(i.t||"").slice(0,40),m:pv.merchant||"",a:pv.amount||0,ty:pv.type||"out"}))}catch(x){}}});
+    var g=ingestSms(sms),v=0;if(sms.length){GWL.lastImport={n:sms.length,saved:g.saved,skipped:g.skipped,bad:g.bad,samples:g.samples||[],at:Date.now()};try{ls("gwlastimp",JSON.stringify(GWL.lastImport))}catch(x){}}voice.forEach(function(i){if(ingestVoice(i)){v++;try{var pv=GWSMS.parseVoice(i.t)||{};ls("gwvlast",JSON.stringify({ms:i.ms||Date.now(),t:String(i.t||"").slice(0,40),m:pv.merchant||"",a:pv.amount||0,ty:pv.type||"out"}))}catch(x){}}});
     undo.forEach(function(u){var n=T("transactions").length;DB.t.transactions=T("transactions").filter(function(t){return !(u.cid&&t.client===u.cid)});if(T("transactions").length!==n)mark()});
     if(v)try{ls("gwvc",String(Number(ls("gwvc")||0)+v))}catch(x){}
     if(g.saved||v||undo.length){await flush();if(typeof load==="function")await load(true);
@@ -698,7 +698,7 @@ document.addEventListener("click",function(e){var b=e.target&&e.target.closest&&
   vImportSms=function(){var h='<h2 style="margin:14px 0 12px">Import SMS</h2>';
     if(!scAdded())return h+'<button class="btn" data-trk="live">Add shortcut first</button>';
     var d=impDateOK(S.impDate)?S.impDate:isoD(impDef());S.impDate=d;
-    var li=null;try{li=JSON.parse(ls("gwlastimp")||"null")}catch(x){}var lis=li&&li.n?'<div class="note" style="margin:0 0 12px"><b>Last import:</b> '+esc(impSummary(li))+'</div>':'';
+    var li=null;try{li=JSON.parse(ls("gwlastimp")||"null")}catch(x){}var lis=li&&li.n?'<div class="note" style="margin:0 0 12px"><b>Last import:</b> '+esc(impSummary(li))+(li.samples&&li.samples.length?'<br>Not read, for example: '+li.samples.map(function(x){return '“'+esc(x)+'”'}).join(' · '):'')+'</div>':'';
     return h+lis+'<div class="card"><div class="in" style="font-weight:600;margin-bottom:12px">✅ Shortcut added</div><div class="mute">From</div>'+
       '<div style="width:100%;overflow:hidden;margin:6px 0 14px"><input type="date" id="impd" value="'+d+'" min="'+isoD(impMin())+'" max="'+isoD(new Date())+'" style="display:block;-webkit-appearance:none;appearance:none;width:100%;max-width:100%;min-width:0;box-sizing:border-box;margin:0;height:48px;line-height:48px;padding:0 14px;text-align:center"></div>'+
       '<a class="btn" id="impgo" style="display:block;text-align:center;text-decoration:none" href="'+esc(impHref(d))+'">Import SMS</a></div>'+'<div class="warnbox" style="margin-top:12px">⚠️ <b>You can import up to the past 3 months.</b><br>A longer range can make the iPhone shortcut time out. If it times out, choose the past 1 month.</div>'};
@@ -709,7 +709,7 @@ document.addEventListener("click",function(e){var b=e.target&&e.target.closest&&
   /* back from Shortcuts after "Import SMS": add whatever it handed over */
   document.addEventListener("click",function(e){if(e.target&&e.target.closest&&e.target.closest("#impgo"))ls("gwpastrun","1")});
   document.addEventListener("visibilitychange",function(){if(document.hidden||ls("gwpastrun")!=="1")return;ls("gwpastrun","");
-    setTimeout(async function(){try{await GWL.drain();toast(impSummary(GWL.lastImport,"Older SMS"))}catch(x){}render()},1500)});
+    setTimeout(async function(){try{await GWL.drain();var li=null;try{li=JSON.parse(ls("gwlastimp")||"null")}catch(x){}toast(impSummary(li&&li.at&&Date.now()-li.at<240000?li:null))}catch(x){}render()},1500)});
   document.addEventListener("click",async function(e){var b=e.target&&e.target.closest&&e.target.closest('[data-lios="drain"]');if(!b)return;b.disabled=true;try{await GWL.drain();toast(S.nsms&&S.nsms.waiting?"Some SMS could not be added":"Up to date ✓")}finally{b.disabled=false;render()}});
   /* Home: "Live tracking is on" line from the automation's counter */
   trackLine=function(){var st=S.nsms;if(!st||!st.count||!S.loaded)return "";var days=st.last?Math.floor((Date.now()-st.last)/864e5):-1;
