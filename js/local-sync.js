@@ -100,13 +100,14 @@ GWL.famCreate=async function(){if(!SESS)throw new Error("Log in first");var key=
 GWL.famJoin=async function(code){if(!SESS)throw new Error("Log in first");var c=parseCode(code),n=await srv("lm_family_join",{p_family:c.id,p_join_hash:await joinHash(c.key)});
   GWL.db().family={id:c.id,key:c.key,created:new Date().toISOString(),seq:0,pushed:{},members:n};GWL.mark("data",true);await GWL.flush();await sync();ping(false);return n};
 GWL.famLeave=async function(){try{await srv("lm_family_leave",{})}catch(e){if(!/not logged/i.test(e.message))throw e}var d=GWL.db();d.family=null;d.t.family_txns=[];GWL.mark("family",true);await GWL.flush();ping(false)};
-/* does the server agree which family this phone is in? If not, sync pauses and Family sharing offers "Fix it" */
+/* does the server agree which family this phone is in? If not, sync pauses and Family Sync offers "Fix it" */
 GWL.famInfo=async function(){var f=fam();if(!f||!SESS)return;try{var r=await srv("lm_family_info",{});
   var off=!r?"none":r.family_id!==f.id?"other":null;
   if(off!==(f.off||null)){f.off=off;GWL.mark("data",true)}
   /* Together or on your own, never half and half: a phone that is out of the family, or one whose family just got smaller (someone left), drops the other people's payments */
   var gone=false;if(off){gone=GWL.T("family_txns").length>0||Object.keys(f.mem||{}).length>0}
   else if(r.members&&f.members&&r.members<f.members){gone=true}
+  if(gone&&!off&&r.members&&f.members&&r.members<f.members){f.prev=Object.keys(f.mem||{}).map(function(k){return f.mem[k]&&f.mem[k].name}).filter(Boolean)}
   if(gone){GWL.db().t.family_txns=[];f.mem={};f.seq=0;GWL.mark("data",true);if(!off&&GWL.syncSoon)GWL.syncSoon()}
   if(!off&&r.members&&r.members!==f.members){f.members=r.members;GWL.mark("data",true)}}catch(e){}};
 /* put this account back into the family this phone holds the key for (the phone's key decides: a family it can't read is no use) */
@@ -156,6 +157,8 @@ async function pull(){
       f.seq=Math.max(f.seq||0,Number(e.seq)||0)}
     GWL.db().t.family_txns=rows.filter(function(r){return r});
     if(list.length<1000)break}
+  if(f.prev&&seq0===0){var cur=Object.keys(f.mem||{}).map(function(k){return f.mem[k]&&f.mem[k].name}),mine=GWL.db().profile&&GWL.db().profile.name,lf=f.prev.filter(function(n){return n!==mine&&cur.indexOf(n)<0});delete f.prev;
+    f.left={names:lf.length?lf:["A family member"],at:Date.now()};GWL.mark("data",true);try{window.toast&&window.toast(f.left.names.join(", ")+" left Family Sync")}catch(e){}}
   if(changed)GWL.mark("family",true);else if((f.seq||0)!==seq0)GWL.mark("data",true);
   return changed}
 var syncing=null;

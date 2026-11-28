@@ -61,7 +61,7 @@ function inviterName(kind,target,from){if(!from||from===myId())return me();
 async function sealFor(id,kind,target,pub,from,quiet){var k=keyOf(kind,target);if(!k)return false;
   await srv("lm_invite_seal",{p_id:id,p_sealed:await seal(pub,{v:1,kind:kind,target:target,key:k.key,name:k.name,by:inviterName(kind,target,from)}),p_for:await pubHash(pub)});if(!quiet)notify(id);return true}
 GWL.invite=async function(kind,target,phone){need();var r;try{r=await srv("lm_invite",{p_kind:kind,p_target:target,p_phone:String(phone||"")})}
-  catch(e){if(kind==="family"&&/not in this family/i.test(e&&e.message||"")){if(GWL.famInfo)await GWL.famInfo();throw new Error("This phone’s family is out of step with the server. Tap “Fix it” at the top of Family sharing, then send the invite again.")}throw e}
+  catch(e){if(kind==="family"&&/not in this family/i.test(e&&e.message||"")){if(GWL.famInfo)await GWL.famInfo();throw new Error("This phone’s family is out of step with the server. Tap “Fix it” at the top of Family Sync, then send the invite again.")}throw e}
   if(r&&r.status==="invited"){if(r.pubkey)await sealFor(r.id,kind,target,r.pubkey);else r.status="waiting"}
   return r};
 /* invites waiting for someone who has now opened the app (or got a new phone): lock the key for them */
