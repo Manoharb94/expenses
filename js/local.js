@@ -731,7 +731,7 @@ document.addEventListener("click",function(e){var b=e.target&&e.target.closest&&
     var b4=(last?'<div class="gok" style="margin:0 0 14px">✅ Voice is on · '+lastTxt+'</div>':'<div class="note" style="margin:0 0 14px;font-weight:700">Waiting for your first voice expense…</div>')+'<h3 class="mh" style="margin:0 0 6px">Voice usage guide</h3><div class="vboth"><span>🗣️ Siri</span><span>👆 Back Tap</span><span>same words for both</span></div>'+tab+'<div class="note" style="margin-top:12px">Numbers can be words too: “one thousand”, “2k”, “one lakh”.</div>';
     return topbar("Voice expense","set")+gSteps("voice",["Add the shortcut","Run it once","Double-tap the back","Ask Siri","Usage guide"],[b0,b1,b2,b3,b4])};
   /* the new "Gharwise SMS" shortcut (iCloud link). In Shortcuts it must be named exactly "Gharwise Old SMS": the app opens it by that name. A new flag, so it is added again once. */
-  SMS_SHORTCUT_LINK="https://www.icloud.com/shortcuts/0945a025e856405d9be514f7ff468615";SMS_SHORTCUT_NAME="Gharwise Old SMS";SMS_IMPORT_NAME=SMS_SHORTCUT_NAME;SMS_IMPORT_LINK=SMS_SHORTCUT_LINK;
+  SMS_SHORTCUT_LINK="https://www.icloud.com/shortcuts/4266de178109489bb8fa26f408ab0fcf";SMS_SHORTCUT_NAME="Gharwise Old SMS";SMS_IMPORT_NAME=SMS_SHORTCUT_NAME;SMS_IMPORT_LINK=SMS_SHORTCUT_LINK;
   scAdded=function(){return ls("gwsc3")==="1"};scMark=function(v){ls("gwsc3",v?"1":"")};
   /* Import SMS (iPhone): add the shortcut first (button on the Live Tracking tab), then pick a start date in the last 3 months. */
   vImportSms=function(){var h='<h2 style="margin:14px 0 12px">Import SMS</h2>';
