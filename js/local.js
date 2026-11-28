@@ -179,11 +179,15 @@ function ingestVoice(it){var p=GWSMS.parseVoice(it.t);if(!p)return false;
   T("transactions").push(prep("transactions",{amount:p.amount,type:p.type,merchant:p.merchant,merchant_key:p.merchant_key,category:p.category||undefined,txn_date:day(it.ms),txn_at:it.ms?new Date(it.ms).toISOString():now(),client:it.cid||null,note:"Said: "+String(it.t).slice(0,80)}));
   mark();return true}
 GWL.addVoice=function(text){return ingestVoice({t:text,ms:Date.now()})};
+/* plain words for what the last SMS read did, so "it ran" and "payments were added" are never confused */
+function impSummary(r,label){if(!r||!r.n)return "No SMS reached Gharwise. Check the shortcut.";
+  var m=r.n+" SMS read: "+r.saved+" added as payments";if(r.skipped)m+=", "+r.skipped+" already in Gharwise";if(r.bad)m+=", "+r.bad+" not payments";return m}
+GWL.impSummary=impSummary;
 var draining=false;
 async function drain(){var P=smsP();if(GWL.testing||draining||!P||!P.takeInbox||!DB||!DB.profile)return;draining=true;
-  try{var r=await P.takeInbox(),items=r&&r.items||[];if(!items.length)return;
+  try{var r=await P.takeInbox(),items=r&&r.items||[];if(!items.length){GWL.lastImport={n:0,at:Date.now()};return}
     var sms=items.filter(function(i){return i.k==="sms"}),voice=items.filter(function(i){return i.k==="voice"}),undo=items.filter(function(i){return i.k==="undo"});
-    var g=ingestSms(sms),v=0;voice.forEach(function(i){if(ingestVoice(i)){v++;try{var pv=GWSMS.parseVoice(i.t)||{};ls("gwvlast",JSON.stringify({ms:i.ms||Date.now(),t:String(i.t||"").slice(0,40),m:pv.merchant||"",a:pv.amount||0,ty:pv.type||"out"}))}catch(x){}}});
+    var g=ingestSms(sms),v=0;if(sms.length){GWL.lastImport={n:sms.length,saved:g.saved,skipped:g.skipped,bad:g.bad,at:Date.now()};try{ls("gwlastimp",JSON.stringify(GWL.lastImport))}catch(x){}}voice.forEach(function(i){if(ingestVoice(i)){v++;try{var pv=GWSMS.parseVoice(i.t)||{};ls("gwvlast",JSON.stringify({ms:i.ms||Date.now(),t:String(i.t||"").slice(0,40),m:pv.merchant||"",a:pv.amount||0,ty:pv.type||"out"}))}catch(x){}}});
     undo.forEach(function(u){var n=T("transactions").length;DB.t.transactions=T("transactions").filter(function(t){return !(u.cid&&t.client===u.cid)});if(T("transactions").length!==n)mark()});
     if(v)try{ls("gwvc",String(Number(ls("gwvc")||0)+v))}catch(x){}
     if(g.saved||v||undo.length){await flush();if(typeof load==="function")await load(true);
@@ -694,7 +698,8 @@ document.addEventListener("click",function(e){var b=e.target&&e.target.closest&&
   vImportSms=function(){var h='<h2 style="margin:14px 0 12px">Import SMS</h2>';
     if(!scAdded())return h+'<button class="btn" data-trk="live">Add shortcut first</button>';
     var d=impDateOK(S.impDate)?S.impDate:isoD(impDef());S.impDate=d;
-    return h+'<div class="card"><div class="in" style="font-weight:600;margin-bottom:12px">✅ Shortcut added</div><div class="mute">From</div>'+
+    var li=null;try{li=JSON.parse(ls("gwlastimp")||"null")}catch(x){}var lis=li&&li.n?'<div class="note" style="margin:0 0 12px"><b>Last import:</b> '+esc(impSummary(li))+'</div>':'';
+    return h+lis+'<div class="card"><div class="in" style="font-weight:600;margin-bottom:12px">✅ Shortcut added</div><div class="mute">From</div>'+
       '<div style="width:100%;overflow:hidden;margin:6px 0 14px"><input type="date" id="impd" value="'+d+'" min="'+isoD(impMin())+'" max="'+isoD(new Date())+'" style="display:block;-webkit-appearance:none;appearance:none;width:100%;max-width:100%;min-width:0;box-sizing:border-box;margin:0;height:48px;line-height:48px;padding:0 14px;text-align:center"></div>'+
       '<a class="btn" id="impgo" style="display:block;text-align:center;text-decoration:none" href="'+esc(impHref(d))+'">Import SMS</a></div>'+'<div class="warnbox" style="margin-top:12px">⚠️ <b>You can import up to the past 3 months.</b><br>A longer range can make the iPhone shortcut time out. If it times out, choose the past 1 month.</div>'};
   /* Live Tracking tab: the one SMS shortcut card, short */
@@ -704,7 +709,7 @@ document.addEventListener("click",function(e){var b=e.target&&e.target.closest&&
   /* back from Shortcuts after "Import SMS": add whatever it handed over */
   document.addEventListener("click",function(e){if(e.target&&e.target.closest&&e.target.closest("#impgo"))ls("gwpastrun","1")});
   document.addEventListener("visibilitychange",function(){if(document.hidden||ls("gwpastrun")!=="1")return;ls("gwpastrun","");
-    setTimeout(async function(){try{await GWL.drain();toast("Older SMS added ✓")}catch(x){}render()},1500)});
+    setTimeout(async function(){try{await GWL.drain();toast(impSummary(GWL.lastImport,"Older SMS"))}catch(x){}render()},1500)});
   document.addEventListener("click",async function(e){var b=e.target&&e.target.closest&&e.target.closest('[data-lios="drain"]');if(!b)return;b.disabled=true;try{await GWL.drain();toast(S.nsms&&S.nsms.waiting?"Some SMS could not be added":"Up to date ✓")}finally{b.disabled=false;render()}});
   /* Home: "Live tracking is on" line from the automation's counter */
   trackLine=function(){var st=S.nsms;if(!st||!st.count||!S.loaded)return "";var days=st.last?Math.floor((Date.now()-st.last)/864e5):-1;
