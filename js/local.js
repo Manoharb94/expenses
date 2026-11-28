@@ -275,9 +275,10 @@ var SU={step:1,name:"",phone:"",found:null,busy:false,err:"",sent:0};GWL.su=SU;
 var STEPS=5;
 function dots(){return '<div style="display:flex;gap:6px;justify-content:center;margin:0 0 14px">'+[1,2,3,4,5].map(function(i){return '<i style="width:22px;height:5px;border-radius:3px;background:'+(i<=SU.step?'var(--acc)':'var(--line)')+'"></i>'}).join('')+'</div>'}
 function setupView(){
-  try{window.brandLoader(!!SU.busy,SU.ltxt||"")}catch(e){}
+  try{window.brandLoader(false)}catch(e){}
   var h='<div class="brand" style="margin-top:28px"><div style="font-size:44px">🏠</div><h1 style="margin:6px 0 2px">Gharwise</h1><div class="mute">Your money, kept on your phone</div></div><div class="card" style="margin-top:18px">';
-  var err=SU.err?'<div class="note out" style="margin-top:8px">'+esc(SU.err)+'</div>':'';
+  if(!document.getElementById("gwwarncss")){var wst=document.createElement("style");wst.id="gwwarncss";wst.textContent=".gwwarn{display:flex;gap:10px;align-items:flex-start;background:rgba(230,70,70,.10);border:1px solid rgba(230,70,70,.28);color:#c0352d;border-radius:14px;padding:11px 13px;margin:12px 0 14px;font-size:14px;line-height:1.35;font-weight:600}.gwwarn i{font-style:normal;flex:none;line-height:1.3}";document.head.appendChild(wst)}
+  var err=SU.err?'<div class="gwwarn" role="alert"><i>⚠️</i><span>'+esc(SU.err)+'</span></div>':'';
   if(S.view==="lfolder")return h+'<h3 style="margin:0 0 8px">Choose your storage folder again</h3><p class="mute" style="margin:0 0 12px">Gharwise keeps a copy of all your data in a folder on this phone. The phone no longer lets the app use the folder you chose. Pick it again (or a new one) to keep going.</p>'+err+'<button class="btn" data-l="pick">'+(SU.busy?'Waiting…':'Choose folder')+'</button></div>';
   if(S.view!=="llogin")h+=dots();
   if(SU.step===1)h+='<h3 style="margin:0 0 8px">Your payments stay on this phone</h3><ul style="margin:0 0 14px;padding-left:18px;line-height:1.6"><li>Payments, budgets and bank SMS are saved <b>only on this phone</b> and in a folder you choose.</li><li>You log in with your mobile number, so your family can find you and you can switch phones.</li><li>Family sharing is <b>encrypted on the phone</b>. Our server only passes on scrambled data it can’t read.</li></ul><button class="btn" data-l="next">Get started</button>';
@@ -321,7 +322,7 @@ document.addEventListener("click",async function(e){var b=e.target&&e.target.clo
     if(a!=="resend"&&!isMob(v)){SU.err="Enter a 10-digit mobile number";render();return}
     if(a==="signup"){if(nm.length<2){SU.err="Enter your name";render();return}if(pwv.length<8){SU.err="Password needs at least 8 characters";render();return}SU.pw=pwv}
     if(a==="pwlogin"&&!pwv){SU.err="Enter your password";render();return}
-    SU.ltxt={pwlogin:"Signing you in…",signup:"Creating your account…",forgot:"Sending the code…",resend:"Sending the code…"}[a]||"";SU.busy=true;SU.err="";render();var ph=phE164(v);
+    SU.busy=true;SU.err="";render();var ph=phE164(v);
     try{
       if(a==="pwlogin"){try{await GWL.pwLogin(ph,pwv)}catch(x){
           if(x&&x.code==="phone_not_confirmed"){SU.mode="signup";SU.pw=pwv;try{await GWL.smsResend(ph)}catch(y){}SU.busy=false;SU.step=3;SU.err="Your mobile is not verified yet. We sent you a code.";render();return}
@@ -343,13 +344,13 @@ document.addEventListener("click",async function(e){var b=e.target&&e.target.clo
         if(SU.mode==="forgot")await GWL.resetCode(ph);else await GWL.smsResend(ph);SU.sent=Date.now();SU.busy=false;render();toast("New code sent")}
     }catch(x){SU.busy=false;SU.err=x&&x.name==="TypeError"?"No internet. This needs the internet once.":(x&&x.message||String(x));render()}}
   else if(a==="verify"){var c=((document.getElementById("lotp")||{}).value||"").replace(/\D/g,"");if(c.length!==6){SU.err="Type the 6-digit code";render();return}
-    SU.ltxt="Checking the code…";SU.busy=true;SU.err="";render();try{await GWL.verifyOtp(phE164(SU.phone),c);
+    SU.busy=true;SU.err="";render();try{await GWL.verifyOtp(phE164(SU.phone),c);
       if(SU.mode==="forgot"){SU.busy=false;SU.step=6;render();return}
       if(SU.pw){try{await GWL.setPassword(SU.pw)}catch(y){}SU.pw=""}
       SU.busy=false;await afterLogin()}catch(x){SU.busy=false;SU.err=x&&x.message||String(x);render()}}
   else if(a==="savepw"){var p1=(document.getElementById("lpw")||{}).value||"",p2=(document.getElementById("lpw2")||{}).value||"";
     if(p1.length<8){SU.err="Password needs at least 8 characters";render();return}if(p1!==p2){SU.err="The two passwords do not match";render();return}
-    SU.ltxt="Saving your new password…";SU.busy=true;SU.err="";render();try{await GWL.setPassword(p1);SU.busy=false;toast("Password changed");await afterLogin()}catch(x){SU.busy=false;SU.err=x&&x.message||String(x);render()}}
+    SU.busy=true;SU.err="";render();try{await GWL.setPassword(p1);SU.busy=false;toast("Password changed");await afterLogin()}catch(x){SU.busy=false;SU.err=x&&x.message||String(x);render()}}
   else if(a==="name"){var n=(document.getElementById("lname")||{}).value||"";n=n.trim().replace(/\s+/g," ");if(n.length<2){SU.err="Please type your name";render();return}SU.name=n;SU.step=5;render()}
   else if(a==="pick"){SU.busy=true;render();try{var r=await pickFolder();SU.busy=false;if(r&&r.ok){SU.found=S.view==="lfolder"?null:await peekFolder();if(S.view==="lfolder"){dirty.data=dirty.bills=dirty.family=true;await flush();S.view="";startApp();return}}else if(!(r&&r.cancelled))SU.err="That folder can't be used. Pick a folder on the phone, for example in Documents."}catch(x){SU.busy=false;SU.err=String(x&&x.message||x)}render()}
   else if(a==="restore"){try{await restoreFrom(SU.found);S.view="";toast("Your data is back");startApp()}catch(x){SU.err="Could not read the data in this folder";render()}}
