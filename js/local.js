@@ -179,18 +179,10 @@ function ingestVoice(it){var p=GWSMS.parseVoice(it.t);if(!p)return false;
   T("transactions").push(prep("transactions",{amount:p.amount,type:p.type,merchant:p.merchant,merchant_key:p.merchant_key,category:p.category||undefined,txn_date:day(it.ms),txn_at:it.ms?new Date(it.ms).toISOString():now(),client:it.cid||null,note:"Said: "+String(it.t).slice(0,80)}));
   mark();return true}
 GWL.addVoice=function(text){return ingestVoice({t:text,ms:Date.now()})};
-/* Past-SMS import: the shortcut sends ONE text holding many messages (so iOS asks permission once, not once per message).
-   Format: parts split by ~~GW~~, each part "2026-11-28T14:10:00+05:30|message text". A plain single message still works. */
-function expandBatch(list){var out=[];(list||[]).forEach(function(i){var t=String(i.t||i.text||"");
-  if(t.indexOf("~~GW~~")<0){out.push(i);return}
-  t.split("~~GW~~").forEach(function(part){part=part.replace(/^\s+/,"");if(!part.trim())return;
-    var m=/^(\d{4}-\d{2}-\d{2}T[\d:.]+(?:Z|[+-]\d{2}:?\d{2})?)\s*\|([\s\S]*)$/.exec(part),ms=m?Date.parse(m[1]):NaN,body=(m?m[2]:part).trim();
-    if(body)out.push({k:"sms",t:body,ms:isNaN(ms)?i.ms:ms})})});return out}
-GWL.expandBatch=expandBatch;
 var draining=false;
 async function drain(){var P=smsP();if(GWL.testing||draining||!P||!P.takeInbox||!DB||!DB.profile)return;draining=true;
   try{var r=await P.takeInbox(),items=r&&r.items||[];if(!items.length)return;
-    var sms=expandBatch(items.filter(function(i){return i.k==="sms"})),voice=items.filter(function(i){return i.k==="voice"}),undo=items.filter(function(i){return i.k==="undo"});
+    var sms=items.filter(function(i){return i.k==="sms"}),voice=items.filter(function(i){return i.k==="voice"}),undo=items.filter(function(i){return i.k==="undo"});
     var g=ingestSms(sms),v=0;voice.forEach(function(i){if(ingestVoice(i)){v++;try{var pv=GWSMS.parseVoice(i.t)||{};ls("gwvlast",JSON.stringify({ms:i.ms||Date.now(),t:String(i.t||"").slice(0,40),m:pv.merchant||"",a:pv.amount||0,ty:pv.type||"out"}))}catch(x){}}});
     undo.forEach(function(u){var n=T("transactions").length;DB.t.transactions=T("transactions").filter(function(t){return !(u.cid&&t.client===u.cid)});if(T("transactions").length!==n)mark()});
     if(v)try{ls("gwvc",String(Number(ls("gwvc")||0)+v))}catch(x){}
