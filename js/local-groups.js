@@ -58,15 +58,15 @@ function keyOf(kind,target){if(kind==="family"){var f=D().family;return f&&f.id=
 function inviterName(kind,target,from){if(!from||from===myId())return me();
   
   var r=GWL.T("family_txns").filter(function(x){return x.member===from})[0];return r&&r.person||me()}
-async function sealFor(id,kind,target,pub,from){var k=keyOf(kind,target);if(!k)return false;
-  await srv("lm_invite_seal",{p_id:id,p_sealed:await seal(pub,{v:1,kind:kind,target:target,key:k.key,name:k.name,by:inviterName(kind,target,from)}),p_for:await pubHash(pub)});notify(id);return true}
+async function sealFor(id,kind,target,pub,from,quiet){var k=keyOf(kind,target);if(!k)return false;
+  await srv("lm_invite_seal",{p_id:id,p_sealed:await seal(pub,{v:1,kind:kind,target:target,key:k.key,name:k.name,by:inviterName(kind,target,from)}),p_for:await pubHash(pub)});if(!quiet)notify(id);return true}
 GWL.invite=async function(kind,target,phone){need();var r;try{r=await srv("lm_invite",{p_kind:kind,p_target:target,p_phone:String(phone||"")})}
   catch(e){if(kind==="family"&&/not in this family/i.test(e&&e.message||"")){if(GWL.famInfo)await GWL.famInfo();throw new Error("This phone’s family is out of step with the server. Tap “Fix it” at the top of Family sharing, then send the invite again.")}throw e}
   if(r&&r.status==="invited"){if(r.pubkey)await sealFor(r.id,kind,target,r.pubkey);else r.status="waiting"}
   return r};
 /* invites waiting for someone who has now opened the app (or got a new phone): lock the key for them */
 async function resealSent(){var list=await srv("lm_invites_sent",{})||[],n=0;
-  for(var i=0;i<list.length;i++){var x=list[i];if(!x.pubkey)continue;if(x.sealed_for===await pubHash(x.pubkey))continue;try{if(await sealFor(x.id,x.kind,x.target,x.pubkey,x.from_user))n++}catch(e){}}return n}
+  for(var i=0;i<list.length;i++){var x=list[i];if(!x.pubkey)continue;if(x.sealed_for===await pubHash(x.pubkey))continue;try{if(await sealFor(x.id,x.kind,x.target,x.pubkey,x.from_user,!!x.sealed_for))n++}catch(e){}}return n}
 GWL.resealSent=resealSent;
 
 GWL.inviteRespond=async function(id,accept){need();var inv=inbox().filter(function(x){return x.id===id})[0];
@@ -92,7 +92,8 @@ GWL.groupsSync=function(full){if(GWL.testing&&!GWL.inDev)return Promise.resolve(
       try{await resealSent()}catch(e){}
       if(D().family&&!GWL.testing&&GWL.famInfo)try{await GWL.famInfo()}catch(e){}
       if(D().family)try{var p=await srv("lm_family_pending",{});if(JSON.stringify(p)!==JSON.stringify(D().family.invites||[])){D().family.invites=p;GWL.mark("data",true);ch=true}}catch(e){}}
-    else if(Date.now()-lastQuick>12000){lastQuick=Date.now();try{if(await fetchInbox())ch=true}catch(e){}}   /* a new invite is noticed within about 15 seconds while the app is open */
+    else if(Date.now()-lastQuick>12000){lastQuick=Date.now();try{if(await fetchInbox())ch=true}catch(e){}
+      if(D().family&&(D().family.invites||[]).length)try{var p2=await srv("lm_family_pending",{});if(JSON.stringify(p2)!==JSON.stringify(D().family.invites||[])){D().family.invites=p2;GWL.mark("data",true);ch=true}}catch(e){}}   /* a new invite is noticed within about 15 seconds while the app is open */
     return ch})();
   return gsync.then(function(ch){gsync=null;try{if(!GWL.testing&&GWL.invitePrompt)GWL.invitePrompt()}catch(e){}return ch},function(e){gsync=null;return false})};
 
@@ -114,7 +115,7 @@ GWL.pushSetup=async function(){var P=pushP();if(!P)return "not in this build";GW
     P.addListener("registration",async function(t){var tok=t&&t.value;if(!tok){ls("gwpusherr","the phone gave an empty push token");return}var tag=GWL.uid()+":"+tok;if(saved[tag])return;
       try{await srv("lm_set_push",{p_token:tok,p_platform:(Capacitor.getPlatform&&Capacitor.getPlatform())||"android"});saved[tag]=1;ls("gwpush",tag);ls("gwpusherr","")}catch(e){ls("gwpusherr","the server did not accept the token: "+((e&&e.message)||e))}});
     P.addListener("registrationError",function(ev){ls("gwpusherr","the phone could not register: "+((ev&&(ev.error||ev.message))||"unknown reason"))});
-    P.addListener("pushNotificationReceived",function(ev){if(GWL.testing)return;try{var d0=ev&&ev.data||{};if(isTestPush(d0)){toast("Invite push works ✓");GWL.inviteTestCleanup&&GWL.inviteTestCleanup();return}}catch(e){}GWL.groupsSync(true)});
+    P.addListener("pushNotificationReceived",function(ev){if(GWL.testing)return;try{var d0=ev&&ev.data||{};if(isTestPush(d0)){toast("Invite push works ✓");GWL.inviteTestCleanup&&GWL.inviteTestCleanup();return}}catch(e){}try{P.removeAllDeliveredNotifications&&P.removeAllDeliveredNotifications()}catch(e){}GWL.groupsSync(true)});
     P.addListener("pushNotificationActionPerformed",function(ev){if(GWL.testing)return;try{var dt=ev&&ev.notification&&ev.notification.data||{};if(dt.kind==="test"){setTimeout(function(){toast("Push notification works ✓")},800);return}if(isTestPush(dt)){setTimeout(function(){toast("Invite push works ✓")},800);GWL.inviteTestCleanup&&GWL.inviteTestCleanup();return}}catch(e){}GWL.groupsSync(true)})}
   try{await P.createChannel({id:"invites",name:"Invites",description:"When someone invites you to their family or a group",importance:4,visibility:1})}catch(e){}
   var pm=await P.checkPermissions();if(pm.receive==="prompt"||pm.receive==="prompt-with-rationale")pm=await P.requestPermissions();

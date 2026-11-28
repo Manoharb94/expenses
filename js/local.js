@@ -521,7 +521,9 @@ GWL.invitePrompt=function(){
     var btns=box.querySelectorAll("button");btns.forEach(function(x){x.disabled=true});
     try{var yes=b.getAttribute("data-ip")==="acc";await GWL.inviteRespond(inv.id,yes);if(yes){await load(true);toast("You joined the family")}else toast("Invite rejected");
       box.remove();IPOpen=false;setTimeout(function(){GWL.invitePrompt()},300);try{render()}catch(x){}}
-    catch(x){busy=false;btns.forEach(function(y){y.disabled=false});toast((x&&x.message)||"Could not answer the invite. Try again.")}});
+    catch(x){var gone=/no longer available/i.test((x&&x.message)||"");if(gone){try{await GWL.fetchInbox()}catch(e){}box.remove();IPOpen=false;toast("That invite is already answered");try{await GWL.groupsSync(true)}catch(e){}try{await load(true)}catch(e){}try{render()}catch(e){}return}busy=false;btns.forEach(function(y){y.disabled=false});toast((x&&x.message)||"Could not answer the invite. Try again.")}});
+  try{var PN=Capacitor.Plugins.PushNotifications;PN&&PN.removeAllDeliveredNotifications&&PN.removeAllDeliveredNotifications()}catch(e){}
+  var wt=setInterval(function(){if(!document.getElementById("invprompt")){clearInterval(wt);return}if(!(GWL.inbox().some(function(i){return i.id===inv.id}))&&!busy){box.remove();IPOpen=false;clearInterval(wt);setTimeout(function(){GWL.invitePrompt()},300)}},3000);
 };
 document.addEventListener("visibilitychange",function(){if(!document.hidden)setTimeout(function(){try{GWL.groupsSync&&GWL.groupsSync(true).then(function(){GWL.invitePrompt()})}catch(e){}},600)});
 setTimeout(function(){try{GWL.groupsSync&&GWL.groupsSync(true).then(function(){GWL.invitePrompt()})}catch(e){}},2500);
